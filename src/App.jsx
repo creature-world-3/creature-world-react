@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, signInWithRedirect, getRedirectResult, signOut, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase/config.js';
 import Header from './components/Header.jsx';
@@ -105,6 +105,11 @@ export default function App() {
     return () => document.body.classList.remove('raid-theme');
   }, [activeTab]);
 
+  // ── 리다이렉트 로그인 결과 처리 (카카오톡 인앱브라우저 등) ──
+  useEffect(() => {
+    getRedirectResult(auth).catch(e => console.error('redirect result error:', e));
+  }, []);
+
   // ── 인증 상태 감지 + Firestore 로드 ──
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -146,12 +151,8 @@ export default function App() {
     }, 1000);
   }, [gs, user]);
 
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-    } catch (e) {
-      if (e.code !== 'auth/popup-closed-by-user') console.error(e);
-    }
+  const handleLogin = () => {
+    signInWithRedirect(auth, new GoogleAuthProvider());
   };
 
   const handleLogout = async () => {
