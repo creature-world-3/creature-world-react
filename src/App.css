@@ -135,7 +135,7 @@
     repeating-linear-gradient(-45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 12px);
 }
 .draw-back::after { content: ''; position: absolute; inset: 10px; border: 1.5px solid rgba(255,255,255,0.2); border-radius: 10px; }
-.draw-back-logo { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.05rem; color: rgba(255,255,255,0.85); letter-spacing: 2px; position: relative; z-index: 1; }
+.draw-back-logo { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.05rem; color: rgba(255,255,255,0.85); letter-spacing: 2px; position: relative; z-index: 1; text-align: center; }
 .draw-back-hint { font-size: 0.82rem; color: rgba(255,255,255,0.65); position: relative; z-index: 1; animation: hintBlink 1.5s ease-in-out infinite; }
 .draw-card-wrap.empty .draw-back { background: linear-gradient(135deg, #b0c8d8, #c8dde8); box-shadow: none; }
 .draw-card-wrap.empty .draw-back-hint { animation: none; opacity: 0.5; }
@@ -421,6 +421,7 @@
   animation: fadeInOverlay 0.2s ease;
 }
 @keyframes fadeInOverlay { from{opacity:0} to{opacity:1} }
+.card-detail-overlay { z-index: 250; }
 .card-zoom-inner {
   display: flex; flex-direction: column; align-items: center; gap: 20px;
   animation: zoomCardIn 0.25s cubic-bezier(.34,1.56,.64,1);

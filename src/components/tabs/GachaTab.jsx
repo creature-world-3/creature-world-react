@@ -46,7 +46,7 @@ function CardDetailModal({ item, onClose }) {
   const { card, cond, count } = item;
   const cs = condStyle(card.grade, cond);
   return (
-    <div className="card-zoom-overlay" onClick={onClose}>
+    <div className="card-zoom-overlay card-detail-overlay" onClick={onClose}>
       <div className="card-zoom-inner" onClick={e => e.stopPropagation()}>
         <div className={`zoom-card grade-${card.grade}`}>
           <div className="card-header">

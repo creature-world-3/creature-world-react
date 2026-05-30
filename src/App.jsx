@@ -19,8 +19,7 @@ import './App.css';
 
 const TAB_ORDER = ['gacha', 'synth', 'shop', 'dex', 'board', 'trade', 'raid'];
 
-const KAKAO_JS_KEY      = '86daeae42ced20dec5fb375bf0b15aec';
-const KAKAO_REDIRECT_URI = 'https://creature-world-react.vercel.app';
+const KAKAO_JS_KEY = '86daeae42ced20dec5fb375bf0b15aec';
 
 export const BASE_STATE = {
   tickets: 5, ownedCards: [],
@@ -113,17 +112,20 @@ export default function App() {
   }, [activeTab]);
 
   // ── 공통: Firestore 유저 데이터 로드/생성 ──
-  const loadUserData = async (uid) => {
+  const loadUserData = async (uid, profileData = null) => {
     const snap = await getDoc(doc(db, 'users', uid));
     if (snap.exists()) {
       const loaded = applyDailyReset({ ...BASE_STATE, ...snap.data() });
       setGs(loaded);
       if (!loaded.nickname) setShowNicknameModal(true);
     } else {
-      const newState = { ...BASE_STATE };
+      const newState = {
+        ...BASE_STATE,
+        ...(profileData?.nickname ? { nickname: profileData.nickname } : {}),
+      };
       await setDoc(doc(db, 'users', uid), newState);
       setGs(newState);
-      setShowNicknameModal(true);
+      if (!newState.nickname) setShowNicknameModal(true);
     }
     isFirstLoad.current = true;
   };
@@ -144,9 +146,9 @@ export default function App() {
         K.API.request({ url: '/v2/user/me', success: res, fail: rej })
       );
       const uid         = `kakao_${userInfo.id}`;
-      const displayName = userInfo.kakao_account?.profile?.nickname || `카카오유저`;
+      const displayName = userInfo.kakao_account?.profile?.nickname || '카카오유저';
       const photoURL    = userInfo.kakao_account?.profile?.thumbnail_image_url || null;
-      await loadUserData(uid);
+      await loadUserData(uid, { nickname: displayName });
       setUser({ uid, displayName, photoURL, isKakao: true });
       setAuthReady(true);
     };
@@ -154,29 +156,7 @@ export default function App() {
     const init = async () => {
       initKakao();
 
-      // 1) Kakao 리다이렉트 코드 처리
-      const params = new URLSearchParams(window.location.search);
-      const code   = params.get('code');
-      if (code && window.Kakao) {
-        window.history.replaceState({}, '', '/');
-        try {
-          const resp = await fetch('/api/kakao-token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, redirect_uri: KAKAO_REDIRECT_URI }),
-          });
-          const data = await resp.json();
-          if (data.access_token) {
-            localStorage.setItem('kakao_token', data.access_token);
-            await loginWithKakaoToken(data.access_token);
-            return;
-          }
-        } catch (e) {
-          console.error('Kakao code exchange error:', e);
-        }
-      }
-
-      // 2) 저장된 Kakao 토큰 복원
+      // 1) 저장된 Kakao 토큰 복원 (자동 로그인)
       const storedToken = localStorage.getItem('kakao_token');
       if (storedToken && window.Kakao) {
         try {
@@ -244,8 +224,30 @@ export default function App() {
   };
 
   const handleKakaoLogin = () => {
-    if (!window.Kakao) return;
-    window.Kakao.Auth.authorize({ redirectUri: KAKAO_REDIRECT_URI });
+    const K = window.Kakao;
+    if (!K || !K.isInitialized()) return;
+    K.Auth.login({
+      scope: 'profile_nickname,profile_image',
+      success: async (authObj) => {
+        try {
+          localStorage.setItem('kakao_token', authObj.access_token);
+          K.Auth.setAccessToken(authObj.access_token);
+          const userInfo = await new Promise((res, rej) =>
+            K.API.request({ url: '/v2/user/me', success: res, fail: rej })
+          );
+          const uid         = `kakao_${userInfo.id}`;
+          const displayName = userInfo.kakao_account?.profile?.nickname || '카카오유저';
+          const photoURL    = userInfo.kakao_account?.profile?.thumbnail_image_url || null;
+          await loadUserData(uid, { nickname: displayName });
+          setUser({ uid, displayName, photoURL, isKakao: true });
+        } catch (e) {
+          console.error('Kakao login error:', e);
+        }
+      },
+      fail: (err) => {
+        console.error('Kakao login failed:', err);
+      },
+    });
   };
 
   const handleSaveNickname = async () => {
