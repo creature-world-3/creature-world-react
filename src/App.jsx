@@ -161,7 +161,12 @@ export default function App() {
   }, [gs, user]);
 
   const handleLogin = () => {
-    signInWithRedirect(auth, new GoogleAuthProvider());
+    signInWithRedirect(auth, new GoogleAuthProvider()).catch(e => {
+      console.error('login error:', e);
+      clearTimeout(toastTimer.current);
+      setToast('로그인 중 오류가 발생했어요. 다시 시도해주세요.');
+      toastTimer.current = setTimeout(() => setToast(null), 3000);
+    });
   };
 
   const handleLogout = async () => {
@@ -242,6 +247,7 @@ export default function App() {
         <Route path="/terms"   element={<TermsPage />} />
         <Route path="*" element={
           <div className="login-screen">
+            {toast && <div className="cw-toast">{toast}</div>}
             <div className="login-card">
               <img src="/fox_sleep.png" alt="fox" className="login-mascot" />
               <div className="login-logo">CREATURE WORLD</div>
