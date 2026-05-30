@@ -29,6 +29,7 @@ export const BASE_STATE = {
   testEventDate: null,
   sessionMinutes: 0, sessionBonus: false, sessionDate: null,
   raidCard: null,
+  claimedRaids: {},
   nickname: null,
 };
 
@@ -107,9 +108,15 @@ export default function App() {
   const [interacted, setInteracted] = useState(false);
   const homeAudioRef = useRef(null);
   const raidAudioRef = useRef(null);
+  const musicOnRef   = useRef(musicOn);
+  const activeTabRef = useRef('gacha');
   const toastTimer  = useRef(null);
   const saveTimer   = useRef(null);
   const isFirstLoad = useRef(true);
+
+  // ref 동기화 (이벤트 핸들러 클로저에서 최신값 접근용)
+  useEffect(() => { musicOnRef.current = musicOn; }, [musicOn]);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   // ── 레이드 탭 배경 테마 ──
   useEffect(() => {
@@ -136,7 +143,14 @@ export default function App() {
     homeAudioRef.current = home;
     raidAudioRef.current = raid;
 
-    const onFirstInteraction = () => setInteracted(true);
+    const onFirstInteraction = () => {
+      // 브라우저 autoplay 정책: 사용자 제스처 컨텍스트 안에서 직접 play() 호출
+      if (musicOnRef.current) {
+        const isRaid = activeTabRef.current === 'raid';
+        (isRaid ? raid : home).play().catch(() => {});
+      }
+      setInteracted(true);
+    };
     document.addEventListener('click', onFirstInteraction, { once: true });
     document.addEventListener('touchstart', onFirstInteraction, { once: true, passive: true });
 

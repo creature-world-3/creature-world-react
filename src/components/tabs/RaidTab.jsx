@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   doc, setDoc, updateDoc, getDoc,
   onSnapshot, serverTimestamp,
@@ -7,19 +7,33 @@ import {
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
 
-const RAID_ID        = 'current_boss';
+// ── 상수 ──
 const BOSS_HP        = 3_000_000;
 const MAX_PARTS      = 10;
 const DURATION_MS    = 14 * 24 * 60 * 60 * 1000;
 const TICK_MS        = 3_000;
 const MIN_REWARD_DMG = 10_000;
-const RAID_CARD_ID   = 'raid_cursed_doll';
 
-const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND' };
-const GRADE_COLOR = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b' };
-const GRADE_RANGE = { n: [1, 10], r: [21, 30], sr: [31, 40], ur: [41, 50], lg: [91, 100] };
-const GRADE_ORDER = { n: 0, r: 1, sr: 2, ur: 3, lg: 4 };
+const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND' };
+const GRADE_COLOR = { n:'#888', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b' };
+const GRADE_RANGE = { n:[1,10], r:[21,30], sr:[31,40], ur:[41,50], lg:[91,100] };
+const GRADE_ORDER = { n:0, r:1, sr:2, ur:3, lg:4 };
 
+// ── 보스 설정 (보스 추가 시 여기에 항목 추가) ──
+const BOSS_CONFIGS = [
+  {
+    id:              'current_boss',
+    name:            '저주받은 인형의 왕',
+    img:             '/boss_cursed_doll.png',
+    raidCardId:      'raid_cursed_doll',
+    hp:              BOSS_HP,
+    maxParticipants: MAX_PARTS,
+    durationMs:      DURATION_MS,
+    desc:            '저주에 걸린 인형들의 왕. 14일간 도전 가능.',
+  },
+];
+
+// ── 유틸 ──
 function calcDmg(grade, cond) {
   const [min, max] = GRADE_RANGE[grade] || [1, 10];
   return Math.floor(Math.random() * (max - min + 1)) + min + (cond || 1);
@@ -32,7 +46,6 @@ function dmgRange(grade, cond) {
   const [min, max] = GRADE_RANGE[grade] || [1, 10];
   return `${min + (cond || 1)}~${max + (cond || 1)}`;
 }
-
 function fmtTimeLeft(ts) {
   if (!ts) return '';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
@@ -45,36 +58,90 @@ function fmtTimeLeft(ts) {
   if (hrs  > 0) return `${hrs}시간 ${mins}분 남음`;
   return `${mins}분 남음`;
 }
+function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
 let _rUid = 0;
 const genUid = () => `raid_${++_rUid}_${Date.now()}`;
 
-// raids/current_boss 문서 초기 구조
-const INITIAL_RAID = () => ({
-  bossName:        '저주받은 인형의 왕',
-  hp:              BOSS_HP,
-  maxHp:           BOSS_HP,
-  maxParticipants: MAX_PARTS,
+const INITIAL_RAID = (boss) => ({
+  bossId:          boss.id,
+  bossName:        boss.name,
+  hp:              boss.hp,
+  maxHp:           boss.hp,
+  maxParticipants: boss.maxParticipants,
   startDate:       serverTimestamp(),
-  endDate:         Timestamp.fromDate(new Date(Date.now() + DURATION_MS)),
-  participants:    {},   // uid → 참여자 정보 맵
+  endDate:         Timestamp.fromDate(new Date(Date.now() + boss.durationMs)),
+  participants:    {},
   status:          'active',
 });
 
+// ── 보스 목록 컴포넌트 (보스 여럿일 때 표시) ──
+function BossList({ bosses, raidDataMap, onSelect }) {
+  return (
+    <div className="raid-boss-list">
+      <div className="raid-boss-list-title">레이드 보스 목록</div>
+      {bosses.map(boss => {
+        const raid   = raidDataMap[boss.id];
+        const hp     = Math.max(0, raid?.hp || 0);
+        const hpPct  = Math.min(100, (hp / boss.hp) * 100);
+        const status = raid?.status || 'loading';
+        const hpColor = hpPct > 50 ? '#4a9eff' : hpPct > 20 ? '#fbbf24' : '#ff4444';
+        return (
+          <div key={boss.id} className="raid-boss-list-item" onClick={() => onSelect(boss.id)}>
+            <img src={boss.img} alt={boss.name} className="raid-boss-list-img" />
+            <div className="raid-boss-list-info">
+              <div className="raid-boss-list-name">{boss.name}</div>
+              <div className={`raid-status-badge raid-status-${status}`}>
+                {status === 'active' ? '⚔️ 진행 중' : status === 'defeated' ? '💀 처치 완료' : '⌛ 종료됨'}
+              </div>
+              {raid && (
+                <>
+                  <div className="raid-boss-list-hp-bar">
+                    <div className="raid-boss-list-hp-fill" style={{ width: `${hpPct}%`, background: hpColor }} />
+                  </div>
+                  <div className="raid-boss-list-hp-text">
+                    HP {hp.toLocaleString()} / {boss.hp.toLocaleString()}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="raid-boss-list-enter">입장 →</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── 메인 컴포넌트 ──
 export default function RaidTab({ gs, setGs, user }) {
-  const [raid, setRaid]               = useState(null);
-  const [showPicker, setShowPicker]   = useState(false);
-  const [showRewardModal, setShowRewardModal] = useState(false);
-  const [cardSort, setCardSort]       = useState('dmg-desc');
-  const [toast, setToast]             = useState(null);
-  const [timeLeft, setTimeLeft]       = useState('');
-  const [ticking, setTicking]         = useState(false);
-  const [shaking, setShaking]         = useState(false);
-  const [hpFlash, setHpFlash]         = useState(false);
-  const [dmgFloats, setDmgFloats]     = useState([]);
-  const toastRef = useRef(null);
+  // 보스 1개면 자동 입장, 여럿이면 목록 표시
+  const [selectedBossId, setSelectedBossId] = useState(
+    BOSS_CONFIGS.length === 1 ? BOSS_CONFIGS[0].id : null,
+  );
+  const [raidDataMap, setRaidDataMap]     = useState({});
+  const [showPicker, setShowPicker]       = useState(false);
+  const [isChanging, setIsChanging]       = useState(false);
+  const [cardSort, setCardSort]           = useState('dmg-desc');
+  const [toast, setToast]                 = useState(null);
+  const [timeLeft, setTimeLeft]           = useState('');
+  const [ticking, setTicking]             = useState(false);
+  const [shaking, setShaking]             = useState(false);
+  const [hpFlash, setHpFlash]             = useState(false);
+  const [dmgFloats, setDmgFloats]         = useState([]);
+  const [refreshing, setRefreshing]       = useState(false);
+  const [showRewardInfo, setShowRewardInfo] = useState(false);
+
+  // 보상 플로우: null → 'card-back' → 'shaking' → 'flipping' → 'revealed'
+  const [rewardPhase, setRewardPhase]   = useState(null);
+  const [rewardResult, setRewardResult] = useState(null);
+
+  const toastRef    = useRef(null);
   const tickRef     = useRef(null);
   const raidDataRef = useRef(null);
+
+  const bossConfig = BOSS_CONFIGS.find(b => b.id === selectedBossId);
+  const raid       = selectedBossId ? (raidDataMap[selectedBossId] ?? null) : null;
 
   const showToast = (msg) => {
     clearTimeout(toastRef.current);
@@ -82,30 +149,31 @@ export default function RaidTab({ gs, setGs, user }) {
     toastRef.current = setTimeout(() => setToast(null), 3000);
   };
 
-  // ── raids/current_boss 단일 문서 구독 ──
-  // participants도 이 문서 안의 맵 필드로 관리
+  // ── 모든 보스 문서 onSnapshot 구독 ──
   useEffect(() => {
-    const raidRef = doc(db, 'raids', RAID_ID);
+    const unsubs = BOSS_CONFIGS.map(boss => {
+      const raidRef = doc(db, 'raids', boss.id);
+      getDoc(raidRef).then(snap => {
+        if (!snap.exists()) {
+          setDoc(raidRef, INITIAL_RAID(boss)).catch(e => console.error('raid init:', e));
+        }
+      }).catch(e => console.error('raid getDoc:', e));
 
-    // 문서 없으면 생성
-    getDoc(raidRef).then(snap => {
-      if (!snap.exists()) {
-        setDoc(raidRef, INITIAL_RAID()).catch(e => console.error('raid init error:', e));
-      }
-    }).catch(e => console.error('raid getDoc error:', e));
-
-    const unsub = onSnapshot(
-      raidRef,
-      snap => { setRaid(snap.exists() ? { id: snap.id, ...snap.data() } : null); },
-      err  => console.error('raid snapshot error:', err),
-    );
-    return () => unsub();
+      return onSnapshot(
+        raidRef,
+        snap => {
+          const data = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+          setRaidDataMap(prev => ({ ...prev, [boss.id]: data }));
+        },
+        err => console.error('raid snapshot:', err),
+      );
+    });
+    return () => unsubs.forEach(u => u());
   }, []);
 
-  // raid 최신값을 ref로 유지 (interval closure 용)
   useEffect(() => { raidDataRef.current = raid; }, [raid]);
 
-  // ── 남은 시간 ──
+  // ── 남은 시간 카운트다운 ──
   useEffect(() => {
     if (raid?.endDate) setTimeLeft(fmtTimeLeft(raid.endDate));
     const id = setInterval(() => {
@@ -114,49 +182,52 @@ export default function RaidTab({ gs, setGs, user }) {
     return () => clearInterval(id);
   }, [raid?.endDate]);
 
-  // ── 만료 자동 처리 ──
+  // ── 만료 자동 처리 + 만료 시 카드 잠금 해제 ──
   useEffect(() => {
-    if (!raid || raid.status !== 'active' || !raid.endDate) return;
-    const end = raid.endDate.toDate ? raid.endDate.toDate() : new Date(raid.endDate);
-    if (end < new Date()) {
-      updateDoc(doc(db, 'raids', RAID_ID), { status: 'expired' }).catch(console.error);
+    if (!raid || !selectedBossId) return;
+    if (raid.status === 'active' && raid.endDate) {
+      const end = raid.endDate.toDate ? raid.endDate.toDate() : new Date(raid.endDate);
+      if (end < new Date()) {
+        updateDoc(doc(db, 'raids', selectedBossId), { status: 'expired' }).catch(console.error);
+      }
     }
-    if (raid.status === 'expired' && gs?.raidCard?.raidId === RAID_ID) {
+    if (raid.status === 'expired' && gs?.raidCard?.raidId === selectedBossId) {
       setGs(prev => ({ ...prev, raidCard: null }));
     }
-  }, [raid?.status]);
+  }, [raid?.status, selectedBossId]);
 
-  // participants: 문서 안의 맵에서 파생
-  const parts   = raid?.participants || {};
-  const myPart  = user ? (parts[user.uid] || null) : null;
+  const parts      = raid?.participants || {};
+  const myPart     = user ? (parts[user.uid] || null) : null;
+  const myDmg      = myPart?.damage || 0;
+  const hasClaimed = !!(gs?.claimedRaids?.[selectedBossId] || myPart?.rewardClaimed);
+  const canShowReward = raid?.status === 'defeated' && myDmg >= MIN_REWARD_DMG && !hasClaimed;
 
-  // ── 자동 데미지 틱 (3초마다 단일 문서 업데이트) ──
+  // ── 자동 데미지 틱 (3초마다) ──
   useEffect(() => {
     clearInterval(tickRef.current);
     if (!myPart || raid?.status !== 'active' || !user) { setTicking(false); return; }
 
     setTicking(true);
-
     tickRef.current = setInterval(async () => {
-      const dmg = calcDmg(myPart.cardGrade, myPart.cardCondition);
-      // 공격 애니메이션 즉시 트리거 (optimistic)
+      const dmg     = calcDmg(myPart.cardGrade, myPart.cardCondition);
       const floatId = Date.now() + Math.random();
-      const floatX  = 25 + Math.random() * 50;
-      const floatY  = 28 + Math.random() * 28;
       setShaking(true);
       setHpFlash(true);
-      setDmgFloats(prev => [...prev, { id: floatId, value: dmg, x: floatX, y: floatY }]);
+      setDmgFloats(prev => [
+        ...prev,
+        { id: floatId, value: dmg, x: 25 + Math.random() * 50, y: 28 + Math.random() * 28 },
+      ]);
       setTimeout(() => setShaking(false), 600);
       setTimeout(() => setHpFlash(false), 480);
       setTimeout(() => setDmgFloats(prev => prev.filter(f => f.id !== floatId)), 1300);
 
       try {
-        const cur      = raidDataRef.current;
+        const cur = raidDataRef.current;
         if (!cur || cur.status !== 'active') return;
-        const localHp  = Math.max(0, cur.hp ?? 0);
+        const localHp = Math.max(0, cur.hp ?? 0);
         if (localHp <= 0) return;
-        const actual   = Math.min(dmg, localHp);
-        await updateDoc(doc(db, 'raids', RAID_ID), {
+        const actual  = Math.min(dmg, localHp);
+        await updateDoc(doc(db, 'raids', selectedBossId), {
           hp: increment(-actual),
           [`participants.${user.uid}.damage`]: increment(actual),
           ...(localHp - actual <= 0 ? { status: 'defeated' } : {}),
@@ -165,69 +236,136 @@ export default function RaidTab({ gs, setGs, user }) {
     }, TICK_MS);
 
     return () => { clearInterval(tickRef.current); setTicking(false); };
-  }, [!!myPart, raid?.status, user?.uid]);
+  }, [!!myPart, myPart?.cardGrade, myPart?.cardCondition, raid?.status, user?.uid, selectedBossId]);
 
-  // ── 참여: participants 맵에 유저 정보 추가 ──
+  // ── 수동 새로고침 ──
+  const handleRefresh = useCallback(async () => {
+    if (!selectedBossId) return;
+    setRefreshing(true);
+    try {
+      const snap = await getDoc(doc(db, 'raids', selectedBossId));
+      if (snap.exists()) {
+        setRaidDataMap(prev => ({ ...prev, [selectedBossId]: { id: snap.id, ...snap.data() } }));
+      }
+    } catch (e) { console.error('refresh:', e); }
+    finally { setRefreshing(false); }
+  }, [selectedBossId]);
+
+  // ── 참여 / 카드 교체 ──
   const handleJoin = async (card) => {
     if (!user) return;
     const partCount = Object.keys(parts).length;
-    if (partCount >= MAX_PARTS) { showToast('참여 인원이 가득 찼어요!'); return; }
-
+    if (!isChanging && partCount >= (bossConfig?.maxParticipants || MAX_PARTS)) {
+      showToast('참여 인원이 가득 찼어요!'); return;
+    }
     const lockedUid = gs?.raidCard?.uid;
     const inst = (gs?.ownedCards || []).find(c => c.id === card.id && c.uid !== lockedUid);
     if (!inst) { showToast('카드를 찾을 수 없어요'); return; }
 
-    try {
-      // dot-notation으로 해당 uid 필드만 업데이트 → 다른 참여자 데이터 보존
-      await updateDoc(
-        doc(db, 'raids', RAID_ID),
-        {
-          [`participants.${user.uid}`]: {
-            uid:           user.uid,
-            displayName:   user.displayName,
-            photoURL:      user.photoURL || null,
-            cardUid:       inst.uid,
-            cardId:        card.id,
-            cardImg:       card.img,
-            cardName:      card.name,
-            cardGrade:     card.grade,
-            cardCondition: inst.condition,
-            damage:        0,
-            joinedAt:      serverTimestamp(),
-            rewardClaimed: false,
-          },
-        },
-      );
-      setGs(prev => ({
-        ...prev,
-        raidCard: { uid: inst.uid, cardId: card.id, raidId: RAID_ID },
-      }));
-      setShowPicker(false);
-      showToast(`${card.name} (${GRADE_LABEL[card.grade]})로 레이드 참여! ⚔️`);
-    } catch (e) {
-      console.error('join error:', e);
-      showToast('참여 중 오류가 발생했어요');
-    }
-  };
+    const partData = {
+      uid:           user.uid,
+      displayName:   user.displayName,
+      photoURL:      user.photoURL || null,
+      cardUid:       inst.uid,
+      cardId:        card.id,
+      cardImg:       card.img,
+      cardName:      card.name,
+      cardGrade:     card.grade,
+      cardCondition: inst.condition,
+      damage:        isChanging ? (myPart?.damage || 0) : 0,
+      joinedAt:      isChanging ? (myPart?.joinedAt || serverTimestamp()) : serverTimestamp(),
+      rewardClaimed: myPart?.rewardClaimed || false,
+    };
 
-  // ── 보상 수령 ──
-  const handleClaimReward = async () => {
-    if (!user || !myPart) return;
-    const raidCard = CARDS.find(c => c.id === RAID_CARD_ID);
     try {
-      await updateDoc(doc(db, 'raids', RAID_ID), {
-        [`participants.${user.uid}.rewardClaimed`]: true,
+      await updateDoc(doc(db, 'raids', selectedBossId), {
+        [`participants.${user.uid}`]: partData,
       });
       setGs(prev => ({
         ...prev,
-        raidCard: null,
-        ownedCards: raidCard
-          ? [...prev.ownedCards, { uid: genUid(), id: RAID_CARD_ID, condition: 10 }]
-          : prev.ownedCards,
+        raidCard: { uid: inst.uid, cardId: card.id, raidId: selectedBossId },
       }));
-      showToast('🎉 레이드 보상 수령! RAID 한정 카드 획득!');
-    } catch (e) { console.error('reward error:', e); }
+      setShowPicker(false);
+      setIsChanging(false);
+      showToast(isChanging
+        ? `${card.name}으로 카드 교체! ⚔️`
+        : `${card.name} (${GRADE_LABEL[card.grade]})로 레이드 참여! ⚔️`,
+      );
+    } catch (e) {
+      console.error('join error:', e);
+      showToast('오류가 발생했어요');
+    }
   };
+
+  // ── 보상 시작: 결과를 미리 결정하고 카드 뒷면 표시 ──
+  const handleStartReward = () => {
+    const raidCardId = bossConfig?.raidCardId;
+    const alreadyHas = raidCardId && (gs?.ownedCards || []).some(c => c.id === raidCardId);
+
+    let result;
+    if (alreadyHas || Math.random() >= 0.3) {
+      result = { type: 'tickets', amount: randInt(200, 400) };
+    } else {
+      result = { type: 'card', cardId: raidCardId };
+    }
+    setRewardResult(result);
+    setRewardPhase('card-back');
+  };
+
+  // ── 카드 클릭: 2초 흔들기 → 스케일 아웃 → 결과 표시 ──
+  const handleCardClick = () => {
+    if (rewardPhase !== 'card-back') return;
+    setRewardPhase('shaking');
+    setTimeout(() => {
+      setRewardPhase('flipping');
+      setTimeout(() => setRewardPhase('revealed'), 350);
+    }, 2000);
+  };
+
+  // ── 보상 수령 확정 ──
+  const handleConfirmReward = async () => {
+    if (!user || !rewardResult || !selectedBossId) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        [`claimedRaids.${selectedBossId}`]: true,
+      });
+      setGs(prev => {
+        const next = {
+          ...prev,
+          raidCard:     null,
+          claimedRaids: { ...(prev.claimedRaids || {}), [selectedBossId]: true },
+        };
+        if (rewardResult.type === 'tickets') {
+          next.tickets = prev.tickets + rewardResult.amount;
+        } else {
+          const raidCard = CARDS.find(c => c.id === rewardResult.cardId);
+          if (raidCard) {
+            next.ownedCards = [...prev.ownedCards, { uid: genUid(), id: rewardResult.cardId, condition: 10 }];
+          }
+        }
+        return next;
+      });
+      setRewardPhase(null);
+      setRewardResult(null);
+      showToast(rewardResult.type === 'tickets'
+        ? `뽑기권 ${rewardResult.amount}장 획득! 🎉`
+        : '🎉 RAID 한정 카드 획득!',
+      );
+    } catch (e) {
+      console.error('reward error:', e);
+      showToast('오류가 발생했어요. 잠시 후 다시 시도해주세요.');
+    }
+  };
+
+  // ── 보스 목록 화면 ──
+  if (selectedBossId === null) {
+    return (
+      <div className="raid-wrap">
+        <div className="raid-atmosphere" />
+        <BossList bosses={BOSS_CONFIGS} raidDataMap={raidDataMap} onSelect={setSelectedBossId} />
+      </div>
+    );
+  }
 
   // ── 로딩 ──
   if (!raid) return (
@@ -238,28 +376,108 @@ export default function RaidTab({ gs, setGs, user }) {
   );
 
   const hp          = Math.max(0, raid.hp || 0);
-  const hpPct       = Math.min(100, (hp / BOSS_HP) * 100);
+  const maxHp       = bossConfig?.hp || BOSS_HP;
+  const hpPct       = Math.min(100, (hp / maxHp) * 100);
   const hpColor     = hpPct > 50 ? '#4a9eff' : hpPct > 20 ? '#fbbf24' : '#ff4444';
-  const myDmg       = myPart?.damage || 0;
-  const canReward   = raid.status === 'defeated' && myDmg >= MIN_REWARD_DMG && !myPart?.rewardClaimed;
   const sortedParts = Object.values(parts).sort((a, b) => (b.damage || 0) - (a.damage || 0));
   const partCount   = Object.keys(parts).length;
+  const maxParts    = bossConfig?.maxParticipants || MAX_PARTS;
   const lockedUid   = gs?.raidCard?.uid;
   const availCards  = CARDS.filter(c =>
-    !c.raid && (gs?.ownedCards || []).some(o => o.id === c.id && o.uid !== lockedUid)
+    !c.raid && (gs?.ownedCards || []).some(o => o.id === c.id && o.uid !== lockedUid),
   ).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
+  const raidCardDef = bossConfig ? CARDS.find(c => c.id === bossConfig.raidCardId) : null;
 
   return (
     <div className="raid-wrap">
       <div className="raid-atmosphere" />
       {toast && <div className="cw-toast">{toast}</div>}
 
+      {/* ── 보스 여럿일 때 뒤로가기 ── */}
+      {BOSS_CONFIGS.length > 1 && (
+        <button className="raid-back-btn" onClick={() => setSelectedBossId(null)}>← 보스 목록</button>
+      )}
+
+      {/* ── 보상 카드 플립 오버레이 ── */}
+      {rewardPhase && (
+        <div className="raid-reward-overlay">
+          <div className="raid-reward-flip-area">
+            {(rewardPhase === 'card-back' || rewardPhase === 'shaking') && (
+              <>
+                <div className="raid-reward-overlay-hint">
+                  {rewardPhase === 'card-back' ? '카드를 클릭해서 열어보세요!' : '두근두근...'}
+                </div>
+                <div
+                  className={`raid-reward-card-back${rewardPhase === 'shaking' ? ' raid-reward-card-shaking' : ''}`}
+                  onClick={handleCardClick}
+                >
+                  <div className="raid-reward-card-shine" />
+                  <div className="raid-reward-card-label">RAID</div>
+                </div>
+              </>
+            )}
+            {rewardPhase === 'flipping' && (
+              <div className="raid-reward-card-back raid-reward-card-scale-out">
+                <div className="raid-reward-card-shine" />
+                <div className="raid-reward-card-label">RAID</div>
+              </div>
+            )}
+            {rewardPhase === 'revealed' && rewardResult && (
+              <div className="raid-reward-revealed">
+                <div className="raid-reward-result-title">
+                  {rewardResult.type === 'card' ? '🎉 RAID 한정 카드 획득!' : `🎟️ 뽑기권 ${rewardResult.amount}장!`}
+                </div>
+                {rewardResult.type === 'card' && raidCardDef ? (
+                  <div className="raid-reward-result-card">
+                    <img src={`/${raidCardDef.img}`} alt={raidCardDef.name} />
+                    <div className="raid-reward-result-card-glow" />
+                    <div className="raid-reward-grade-tag">RAID</div>
+                  </div>
+                ) : (
+                  <div className="raid-reward-ticket-wrap">
+                    <div className="raid-reward-ticket-icon">🎟️</div>
+                    <div className="raid-reward-ticket-amount">{rewardResult.amount}</div>
+                    <div className="raid-reward-ticket-label">장</div>
+                  </div>
+                )}
+                <button className="raid-reward-confirm-btn" onClick={handleConfirmReward}>
+                  수령하기
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 보상 정보 모달 ── */}
+      {showRewardInfo && (
+        <div className="card-zoom-overlay" onClick={() => setShowRewardInfo(false)}>
+          <div className="raid-reward-info-modal" onClick={e => e.stopPropagation()}>
+            {raidCardDef && (
+              <div className="raid-reward-info-card-wrap">
+                <img src={`/${raidCardDef.img}`} alt={raidCardDef.name} className="raid-reward-info-card-img" />
+                <div className="raid-reward-grade-tag">RAID</div>
+              </div>
+            )}
+            <div className="raid-reward-info-body">
+              <div className="raid-reward-info-title">클리어 보상 안내</div>
+              <div className="raid-reward-info-row">✅ <span>10,000 데미지 이상 기여 시 수령 가능</span></div>
+              <div className="raid-reward-info-row">🎴 <span>RAID 카드 미보유 → 30% 확률로 카드 획득</span></div>
+              <div className="raid-reward-info-row">🎟️ <span>그 외 → 뽑기권 200~400장 랜덤 지급</span></div>
+              <div className="raid-reward-info-row">♾️ <span>레이드 도전 횟수는 무제한</span></div>
+              <div className="raid-reward-info-row">🔒 <span>보상은 보스 1마리당 1회만 수령 가능</span></div>
+            </div>
+            <button className="zoom-close" onClick={() => setShowRewardInfo(false)}>닫기 ✕</button>
+          </div>
+        </div>
+      )}
+
       {/* ── 보스 섹션 ── */}
       <div className="raid-boss-section">
         <div className="raid-boss-img-wrap">
           <img
-            src="/boss_cursed_doll.png"
-            alt="저주받은 인형의 왕"
+            src={bossConfig?.img || '/boss_cursed_doll.png'}
+            alt={bossConfig?.name}
             className={`raid-boss-img${shaking ? ' raid-boss-shaking' : ''}`}
           />
           <div className="raid-boss-vignette" />
@@ -277,7 +495,7 @@ export default function RaidTab({ gs, setGs, user }) {
         </div>
 
         <div className="raid-boss-info">
-          <div className="raid-boss-name">저주받은 인형의 왕</div>
+          <div className="raid-boss-name">{bossConfig?.name}</div>
           <div className={`raid-status-badge raid-status-${raid.status}`}>
             {raid.status === 'active' ? '⚔️ 진행 중' : raid.status === 'defeated' ? '💀 처치 완료' : '⌛ 종료됨'}
           </div>
@@ -286,45 +504,20 @@ export default function RaidTab({ gs, setGs, user }) {
           )}
           <div className="raid-hp-row">
             <span className="raid-hp-label-text">HP</span>
-            <span className="raid-hp-num">{hp.toLocaleString()} / {BOSS_HP.toLocaleString()}</span>
+            <span className="raid-hp-num">{hp.toLocaleString()} / {maxHp.toLocaleString()}</span>
           </div>
           <div className="raid-hp-bar">
             <div className="raid-hp-fill" style={{ width: `${hpPct}%`, background: hpColor }} />
             {hpFlash && <div className="raid-hp-flash-overlay" />}
           </div>
           <div className="raid-meta-row">
-            <div className="raid-meta">참여 <strong>{partCount}</strong> / {MAX_PARTS}명</div>
-            <button className="raid-clear-reward-btn" onClick={() => setShowRewardModal(true)}>
+            <div className="raid-meta">참여 <strong>{partCount}</strong> / {maxParts}명</div>
+            <button className="raid-clear-reward-btn" onClick={() => setShowRewardInfo(true)}>
               🏆 클리어 보상
             </button>
           </div>
         </div>
       </div>
-
-      {/* ── 클리어 보상 모달 ── */}
-      {showRewardModal && (
-        <div className="card-zoom-overlay" onClick={() => setShowRewardModal(false)}>
-          <div className="raid-reward-modal" onClick={e => e.stopPropagation()}>
-            <div className="raid-reward-card-wrap">
-              <img src="/boss_cursed_doll.png" alt="저주받은 인형의 왕" className="raid-reward-card-img" />
-              <div className="raid-reward-card-glow" />
-              <div className="raid-reward-card-footer">
-                <div className="raid-reward-card-name">저주받은 인형의 왕</div>
-                <div className="raid-reward-grade-tag">RAID</div>
-              </div>
-            </div>
-            <div className="raid-reward-modal-info">
-              <div className="raid-reward-modal-title">저주받은 인형의 왕</div>
-              <div className="raid-reward-grade-badge">✦ RAID 한정 등급</div>
-              <div className="raid-reward-modal-desc">
-                보스 처치 완료 후<br />
-                <strong>10,000 데미지 이상 기여</strong> 시 획득 가능
-              </div>
-            </div>
-            <button className="zoom-close" onClick={() => setShowRewardModal(false)}>닫기 ✕</button>
-          </div>
-        </div>
-      )}
 
       {/* ── 내 참여 상태 ── */}
       {myPart ? (
@@ -333,6 +526,14 @@ export default function RaidTab({ gs, setGs, user }) {
             내 참여 카드
             {ticking && raid.status === 'active' && (
               <span className="raid-tick-dot" title="자동 공격 중" />
+            )}
+            {raid.status === 'active' && (
+              <button
+                className="raid-change-card-btn"
+                onClick={() => { setIsChanging(true); setShowPicker(true); }}
+              >
+                카드 교체
+              </button>
             )}
           </div>
           <div className="raid-my-row">
@@ -361,14 +562,15 @@ export default function RaidTab({ gs, setGs, user }) {
               }
             </div>
           </div>
+
           {raid.status === 'defeated' && (
-            myPart?.rewardClaimed ? (
+            hasClaimed ? (
               <button className="raid-reward-btn raid-reward-btn-done" disabled>
                 ✅ 보상 수령 완료
               </button>
             ) : myDmg >= MIN_REWARD_DMG ? (
-              <button className="raid-reward-btn" onClick={handleClaimReward}>
-                🏆 레이드 보상 수령하기
+              <button className="raid-reward-btn" onClick={handleStartReward}>
+                🏆 보상 받기
               </button>
             ) : (
               <button className="raid-reward-btn raid-reward-btn-disabled" disabled>
@@ -386,11 +588,14 @@ export default function RaidTab({ gs, setGs, user }) {
             <div className="raid-over-msg">
               {raid.status === 'defeated' ? '보스가 이미 처치되었습니다!' : '레이드 기간이 종료되었습니다.'}
             </div>
-          ) : partCount >= MAX_PARTS ? (
-            <div className="raid-over-msg">참여 인원이 가득 찼어요! ({MAX_PARTS}/{MAX_PARTS})</div>
+          ) : partCount >= maxParts ? (
+            <div className="raid-over-msg">참여 인원이 가득 찼어요! ({partCount}/{maxParts})</div>
           ) : (
             <>
-              <button className="raid-join-btn" onClick={() => setShowPicker(p => !p)}>
+              <button
+                className="raid-join-btn"
+                onClick={() => { setIsChanging(false); setShowPicker(p => !p); }}
+              >
                 ⚔️ 레이드 참여하기
               </button>
               <div className="raid-join-sub">카드 1장을 선택해 보스에게 도전하세요</div>
@@ -400,12 +605,14 @@ export default function RaidTab({ gs, setGs, user }) {
       )}
 
       {/* ── 카드 픽커 ── */}
-      {showPicker && !myPart && raid.status === 'active' && (
+      {showPicker && raid.status === 'active' && (
         <div className="raid-picker">
           <div className="raid-picker-header">
-            <div className="raid-picker-title">참여할 카드를 선택하세요</div>
+            <div className="raid-picker-title">
+              {isChanging ? '교체할 카드를 선택하세요' : '참여할 카드를 선택하세요'}
+            </div>
             <div className="raid-sort-btns">
-              {[['dmg-desc','강한순'], ['dmg-asc','약한순'], ['grade','등급순']].map(([val, label]) => (
+              {[['dmg-desc', '강한순'], ['dmg-asc', '약한순'], ['grade', '등급순']].map(([val, label]) => (
                 <button
                   key={val}
                   className={`raid-sort-btn${cardSort === val ? ' active' : ''}`}
@@ -414,9 +621,11 @@ export default function RaidTab({ gs, setGs, user }) {
               ))}
             </div>
           </div>
-          <div className="raid-picker-hint">
-            ⚠️ 선택한 카드는 보스 처치 완료 전까지 복귀 불가
-            &nbsp;·&nbsp; 10,000 데미지 이상 기여 시 RAID 한정 카드 보상
+          <div className="raid-picker-hint" style={isChanging ? { color: '#fbbf24' } : {}}>
+            {isChanging
+              ? '⚔️ 교체 시 누적 데미지는 유지됩니다'
+              : '⚠️ 선택한 카드는 보스 처치 전까지 잠금 · 10,000 데미지 이상 시 보상'
+            }
           </div>
           {availCards.length === 0 ? (
             <p className="raid-picker-empty">보유한 카드가 없어요!</p>
@@ -431,7 +640,7 @@ export default function RaidTab({ gs, setGs, user }) {
                 if (cardSort === 'dmg-asc')  return dA - dB;
                 return GRADE_ORDER[b.grade] - GRADE_ORDER[a.grade];
               }).map(card => {
-                const inst   = (gs?.ownedCards || []).find(o => o.id === card.id && o.uid !== lockedUid);
+                const inst = (gs?.ownedCards || []).find(o => o.id === card.id && o.uid !== lockedUid);
                 return (
                   <div
                     key={card.id}
@@ -444,26 +653,41 @@ export default function RaidTab({ gs, setGs, user }) {
                       <div className="raid-picker-grade" style={{ color: GRADE_COLOR[card.grade] }}>
                         {GRADE_LABEL[card.grade]}
                       </div>
-                      <div className="raid-picker-dmg">{dmgRange(card.grade, inst?.condition || 1)}dmg / 틱</div>
+                      <div className="raid-picker-dmg">{dmgRange(card.grade, inst?.condition || 1)}dmg/틱</div>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
+          <button
+            className="raid-picker-close-btn"
+            onClick={() => { setShowPicker(false); setIsChanging(false); }}
+          >
+            닫기
+          </button>
         </div>
       )}
 
-      {/* ── 참여자 현황 (실시간) ── */}
+      {/* ── 참여자 현황 ── */}
       <div className="raid-participants">
-        <div className="raid-section-title">참여자 현황 ({partCount}/{MAX_PARTS})</div>
+        <div className="raid-section-header">
+          <div className="raid-section-title">참여자 현황 ({partCount}/{maxParts})</div>
+          <button
+            className={`raid-refresh-btn${refreshing ? ' refreshing' : ''}`}
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            {refreshing ? '...' : '↻ 새로고침'}
+          </button>
+        </div>
         {sortedParts.length === 0 ? (
           <div className="raid-no-parts">아직 참여자가 없어요! 첫 번째로 참여해보세요.</div>
         ) : (
           <div className="raid-parts-grid">
             {sortedParts.map((p, i) => {
-              const isMe     = p.uid === user?.uid;
-              const barPct   = Math.min(100, ((p.damage || 0) / MIN_REWARD_DMG) * 100);
+              const isMe      = p.uid === user?.uid;
+              const barPct    = Math.min(100, ((p.damage || 0) / MIN_REWARD_DMG) * 100);
               const qualified = (p.damage || 0) >= MIN_REWARD_DMG;
               return (
                 <div key={p.uid} className={`raid-part-item${isMe ? ' raid-part-me' : ''}`}>
@@ -497,7 +721,7 @@ export default function RaidTab({ gs, setGs, user }) {
             })}
           </div>
         )}
-        <div className="raid-reward-hint">✓ = 10,000 데미지 달성 시 RAID 한정 카드 보상</div>
+        <div className="raid-reward-hint">✓ = 10,000 데미지 달성 시 보상 수령 가능</div>
       </div>
     </div>
   );

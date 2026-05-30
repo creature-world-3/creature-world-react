@@ -1468,7 +1468,7 @@
   .trade-form { padding: 12px; }
   .trade-price-row { flex-direction: column; gap: 10px; }
 
-  /* 레이드 */
+  /* 레이드: 480px 기준 (375px 는 아래 블록에서 별도 처리) */
   .raid-boss-img-wrap { height: 260px; }
   .raid-picker-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .raid-parts-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -1783,9 +1783,19 @@ body.raid-theme::before {
   border: 1.5px solid rgba(220,50,120,0.25);
   padding: 16px; backdrop-filter: blur(6px);
 }
-.raid-section-title {
-  font-size: 0.85rem; font-weight: 900; color: rgba(255,200,220,0.9); margin-bottom: 14px;
+.raid-section-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
 }
+.raid-section-title {
+  font-size: 0.85rem; font-weight: 900; color: rgba(255,200,220,0.9);
+}
+.raid-refresh-btn {
+  font-size: 0.75rem; padding: 4px 10px; border-radius: 8px;
+  background: rgba(180,50,120,0.25); border: 1px solid rgba(220,80,150,0.4);
+  color: rgba(255,180,220,0.9); cursor: pointer; transition: background 0.15s;
+}
+.raid-refresh-btn:hover { background: rgba(200,60,140,0.4); }
+.raid-refresh-btn.refreshing { opacity: 0.5; cursor: default; }
 .raid-no-parts {
   text-align: center; color: rgba(255,180,200,0.4); font-size: 0.85rem; padding: 24px 0;
 }
@@ -2063,4 +2073,248 @@ body.raid-theme::before {
 .music-toggle-btn:hover { transform: scale(1.12); box-shadow: 0 4px 16px rgba(74,158,255,0.35); }
 body.raid-theme .music-toggle-btn {
   background: rgba(30,5,35,0.85); border-color: rgba(220,50,120,0.4);
+}
+
+/* ═══════════════════════════════════════
+   RAID: 보스 목록 (보스 여럿일 때)
+═══════════════════════════════════════ */
+.raid-boss-list { display:flex; flex-direction:column; gap:14px; position:relative; z-index:1; }
+.raid-boss-list-title {
+  font-size:1.05rem; font-weight:900; color:rgba(255,200,220,0.9); text-align:center; margin-bottom:4px;
+}
+.raid-boss-list-item {
+  display:flex; align-items:center; gap:14px;
+  background:rgba(25,5,30,0.85); border:1.5px solid rgba(220,50,120,0.3);
+  border-radius:16px; padding:14px 16px; cursor:pointer;
+  transition:border-color 0.18s, transform 0.15s;
+}
+.raid-boss-list-item:hover { border-color:rgba(220,50,120,0.75); transform:translateY(-2px); }
+.raid-boss-list-img { width:72px; height:72px; object-fit:cover; border-radius:10px; flex-shrink:0; }
+.raid-boss-list-info { flex:1; min-width:0; }
+.raid-boss-list-name {
+  font-size:0.95rem; font-weight:700; color:rgba(255,180,200,0.9); margin-bottom:5px;
+}
+.raid-boss-list-hp-bar {
+  height:5px; background:rgba(255,255,255,0.1); border-radius:3px; margin-top:8px; overflow:hidden;
+}
+.raid-boss-list-hp-fill { height:100%; border-radius:3px; transition:width 0.3s; }
+.raid-boss-list-hp-text { font-size:0.68rem; color:rgba(255,255,255,0.45); margin-top:3px; }
+.raid-boss-list-enter { font-size:0.82rem; color:rgba(220,80,150,0.9); font-weight:700; white-space:nowrap; }
+
+/* ── 뒤로가기 버튼 ── */
+.raid-back-btn {
+  background:rgba(180,50,120,0.2); border:1px solid rgba(220,80,150,0.35);
+  color:rgba(255,180,220,0.85); border-radius:8px; padding:6px 14px;
+  font-size:0.78rem; cursor:pointer; align-self:flex-start; position:relative; z-index:1;
+}
+
+/* ═══════════════════════════════════════
+   RAID: 카드 교체 버튼
+═══════════════════════════════════════ */
+.raid-change-card-btn {
+  font-size:0.68rem; padding:3px 8px; border-radius:6px;
+  background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.35);
+  color:#fbbf24; cursor:pointer; margin-left:8px; transition:background 0.15s;
+}
+.raid-change-card-btn:hover { background:rgba(251,191,36,0.3); }
+
+/* ── 픽커 닫기 버튼 ── */
+.raid-picker-close-btn {
+  margin-top:12px; width:100%; padding:9px; border-radius:8px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+  color:rgba(255,255,255,0.5); cursor:pointer; font-size:0.8rem;
+  transition:background 0.15s;
+}
+.raid-picker-close-btn:hover { background:rgba(255,255,255,0.1); }
+
+/* ═══════════════════════════════════════
+   RAID: 보상 카드 플립 오버레이
+═══════════════════════════════════════ */
+.raid-reward-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.88);
+  z-index:500; display:flex; align-items:center; justify-content:center;
+}
+.raid-reward-flip-area {
+  display:flex; flex-direction:column; align-items:center; gap:24px;
+}
+.raid-reward-overlay-hint {
+  font-size:0.9rem; color:rgba(255,215,0,0.85); text-align:center;
+  font-weight:700; letter-spacing:0.5px;
+}
+
+/* 황금 카드 뒷면 */
+.raid-reward-card-back {
+  width:160px; height:240px; border-radius:14px;
+  background:linear-gradient(135deg,#8b6914,#ffd700 30%,#b8860b 60%,#ffd700 80%,#8b6914);
+  border:3px solid #ffd700;
+  box-shadow:0 0 30px rgba(255,215,0,0.55), 0 0 60px rgba(255,215,0,0.25), inset 0 0 20px rgba(255,255,255,0.1);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  position:relative; overflow:hidden; transition:transform 0.15s;
+  user-select:none;
+}
+.raid-reward-card-back:hover:not(.raid-reward-card-shaking) { transform:scale(1.04); }
+.raid-reward-card-shine {
+  position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(125deg,transparent 30%,rgba(255,255,255,0.35) 50%,transparent 70%);
+  animation:raidCardShine 2.2s linear infinite;
+}
+@keyframes raidCardShine {
+  0%   { transform:translateX(-140%) skewX(-15deg); }
+  100% { transform:translateX(240%)  skewX(-15deg); }
+}
+.raid-reward-card-label {
+  font-size:2.2rem; font-weight:900; color:rgba(80,40,0,0.85);
+  letter-spacing:5px; text-shadow:0 2px 6px rgba(0,0,0,0.25);
+  position:relative; z-index:1;
+}
+
+/* 흔들기 애니메이션 */
+@keyframes raidRewardShake {
+  0%,100% { transform:translateX(0) rotate(0deg); }
+  10%      { transform:translateX(-10px) rotate(-4deg); }
+  20%      { transform:translateX(10px)  rotate( 4deg); }
+  30%      { transform:translateX(-12px) rotate(-5deg); }
+  40%      { transform:translateX(12px)  rotate( 5deg); }
+  50%      { transform:translateX(-8px)  rotate(-3deg); }
+  60%      { transform:translateX(8px)   rotate( 3deg); }
+  70%      { transform:translateX(-14px) rotate(-6deg); }
+  80%      { transform:translateX(14px)  rotate( 6deg); }
+  90%      { transform:translateX(-6px)  rotate(-2deg); }
+}
+.raid-reward-card-shaking {
+  animation:raidRewardShake 0.18s ease-in-out infinite !important;
+  cursor:default !important;
+  box-shadow:0 0 50px rgba(255,215,0,0.9), 0 0 100px rgba(255,150,0,0.5) !important;
+}
+
+/* 스케일 아웃 (flipping 단계) */
+@keyframes raidCardScaleOut {
+  0%   { transform:scale(1); opacity:1; }
+  100% { transform:scale(0); opacity:0; }
+}
+.raid-reward-card-scale-out {
+  animation:raidCardScaleOut 0.35s ease-in forwards !important;
+  cursor:default !important;
+}
+
+/* 결과 공개 */
+@keyframes raidRewardReveal {
+  0%   { transform:scale(0.6); opacity:0; }
+  60%  { transform:scale(1.08); }
+  100% { transform:scale(1);   opacity:1; }
+}
+.raid-reward-revealed {
+  display:flex; flex-direction:column; align-items:center; gap:18px;
+  animation:raidRewardReveal 0.45s cubic-bezier(.34,1.56,.64,1);
+}
+.raid-reward-result-title {
+  font-size:1.25rem; font-weight:900; color:#ffd700;
+  text-shadow:0 0 20px rgba(255,215,0,0.8); text-align:center;
+}
+.raid-reward-result-card {
+  width:160px; height:240px; border-radius:14px; overflow:hidden;
+  border:3px solid #ffd700; box-shadow:0 0 30px rgba(255,215,0,0.5);
+  position:relative;
+}
+.raid-reward-result-card img { width:100%; height:100%; object-fit:cover; }
+.raid-reward-result-card-glow {
+  position:absolute; inset:0; border-radius:inherit;
+  box-shadow:inset 0 0 30px rgba(255,215,0,0.3);
+  animation:raidCardGlowPulse 1.5s ease-in-out infinite;
+}
+@keyframes raidCardGlowPulse {
+  0%,100% { box-shadow:inset 0 0 20px rgba(255,215,0,0.2); }
+  50%     { box-shadow:inset 0 0 40px rgba(255,215,0,0.6); }
+}
+.raid-reward-grade-tag {
+  position:absolute; bottom:0; left:0; right:0;
+  background:linear-gradient(135deg,#b8860b,#ffd700);
+  color:#1a0820; font-size:0.7rem; font-weight:900;
+  text-align:center; padding:4px 0; letter-spacing:2px;
+}
+.raid-reward-ticket-wrap {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+}
+.raid-reward-ticket-icon { font-size:3.5rem; }
+.raid-reward-ticket-amount {
+  font-size:5rem; font-weight:900; color:#ffd700; font-family:'Nunito',sans-serif;
+  text-shadow:0 0 20px rgba(255,215,0,0.8); line-height:1;
+}
+.raid-reward-ticket-label { font-size:1.1rem; color:rgba(255,215,0,0.8); font-weight:700; }
+.raid-reward-confirm-btn {
+  padding:14px 48px; border-radius:14px; border:none;
+  background:linear-gradient(135deg,#ffd700,#ff9800);
+  color:#1a0820; font-size:1rem; font-weight:900; cursor:pointer;
+  box-shadow:0 4px 20px rgba(255,215,0,0.4); transition:transform 0.15s;
+  font-family:'Noto Sans KR',sans-serif;
+}
+.raid-reward-confirm-btn:hover { transform:scale(1.05); }
+
+/* ── 보상 정보 모달 ── */
+.raid-reward-info-modal {
+  background:rgba(20,5,25,0.97); border-radius:18px;
+  border:1.5px solid rgba(220,50,120,0.35); padding:22px 20px;
+  width:min(360px,90vw); display:flex; flex-direction:column; gap:16px;
+  align-items:center; position:relative;
+  box-shadow:0 8px 40px rgba(0,0,0,0.6);
+}
+.raid-reward-info-card-wrap {
+  width:120px; height:180px; border-radius:12px; overflow:hidden;
+  border:2px solid #ffd700; box-shadow:0 0 20px rgba(255,215,0,0.35); position:relative;
+}
+.raid-reward-info-card-img { width:100%; height:100%; object-fit:cover; }
+.raid-reward-info-body { width:100%; }
+.raid-reward-info-title {
+  font-size:0.92rem; font-weight:900; color:white; margin-bottom:10px; text-align:center;
+}
+.raid-reward-info-row {
+  display:flex; gap:8px; font-size:0.78rem; color:rgba(255,200,220,0.8);
+  margin-bottom:6px; line-height:1.5; align-items:flex-start;
+}
+.raid-reward-info-row span { flex:1; }
+
+/* ═══════════════════════════════════════
+   모바일 375px 최적화 (기존 480px 블록에 추가)
+═══════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* 레이드: 보스 이미지 높이 압축 */
+  .raid-boss-img-wrap { height: 200px !important; }
+  .raid-boss-info { padding: 10px 14px; gap: 6px; }
+  .raid-boss-name { font-size: 1rem; }
+  .raid-hp-bar { height: 9px; }
+  .raid-hp-num { font-size: 0.72rem; }
+  .raid-time-left { font-size: 0.65rem; }
+
+  /* 레이드: 내 카드 섹션 압축 */
+  .raid-my-card { padding: 12px 14px; gap: 9px; }
+  .raid-my-img  { width: 58px; height: 78px; }
+  .raid-my-name { font-size: 0.82rem; }
+  .raid-my-stat { font-size: 0.74rem; }
+
+  /* 레이드: 참여 버튼 */
+  .raid-join-btn { padding: 14px 36px; font-size: 0.95rem; }
+
+  /* 레이드: 참여자 그리드 3열 고정 */
+  .raid-parts-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .raid-picker-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+
+  /* 보상 카드 작게 */
+  .raid-reward-card-back, .raid-reward-result-card { width: 140px; height: 210px; }
+  .raid-reward-ticket-amount { font-size: 4rem; }
+
+  /* 뽑기탭: 더 압축 */
+  .draw-card-wrap { width: 136px; height: 204px; }
+  .draw-actions   { width: 136px; }
+
+  /* 거래소: 카드이미지 작게 */
+  .trade-card-img { width: 36px; height: 48px; }
+  .trade-item-name { font-size: 0.76rem; }
+}
+
+@media (max-width: 380px) {
+  /* 375px 기기 (iPhone SE 등) 극단적 압축 */
+  .status-bar { grid-template-columns: repeat(2, 1fr); display: grid; gap: 5px; }
+  .status-card:nth-child(3), .status-card:nth-child(4) { display: none; }
+  .raid-boss-img-wrap { height: 170px !important; }
+  .raid-parts-grid { grid-template-columns: repeat(2, 1fr); }
 }
