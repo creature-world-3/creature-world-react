@@ -18,12 +18,12 @@ const RUN_MS        = 60_000;
 const TICKS_PER_RUN = Math.floor(RUN_MS / TICK_MS); // 20틱
 
 const GRADE_RANGE = {
-  n:    [1,  10 ],
-  r:    [21, 30 ],
-  sr:   [31, 40 ],
-  ur:   [41, 50 ],
-  lg:   [91, 100],
-  raid: [91, 100],
+  n:    [1,   10 ],
+  r:    [21,  30 ],
+  sr:   [31,  40 ],
+  ur:   [41,  50 ],
+  lg:   [91,  100],
+  raid: [101, 120],
 };
 
 function avgDmg(grade, cond) {

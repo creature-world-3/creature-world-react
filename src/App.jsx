@@ -105,6 +105,7 @@ export default function App() {
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [nicknameInput, setNicknameInput]         = useState('');
   const [showWelcomeNotice, setShowWelcomeNotice] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const [musicOn, setMusicOn]   = useState(() => localStorage.getItem('music_on') !== 'false');
   const [interacted, setInteracted] = useState(false);
   const homeAudioRef = useRef(null);
@@ -304,17 +305,21 @@ export default function App() {
   };
 
   const handleKakaoLogin = () => {
+    setLoginError('');
     const K = window.Kakao;
-    if (!K) return;
-    // SDK가 초기화 안 됐으면 재시도
-    if (!K.isInitialized()) K.init(KAKAO_JS_KEY);
+    if (!K) { setLoginError('카카오 SDK를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.'); return; }
 
-    // 인앱브라우저 감지 (카카오톡·인스타·페북 등 popup 차단 환경)
+    try {
+      if (!K.isInitialized()) K.init(KAKAO_JS_KEY);
+    } catch (e) {
+      setLoginError('카카오 초기화 실패. 새로고침 후 다시 시도해주세요.');
+      return;
+    }
+
+    // 인앱브라우저 (카카오톡·인스타 등): implicit grant 리다이렉트
     const ua    = navigator.userAgent || '';
     const inApp = /KAKAOTALK|Instagram|FBAV|FB_IAB|Line|naver|Snapchat/i.test(ua);
-
     if (inApp) {
-      // implicit grant: 서버 없이 액세스 토큰을 hash로 직접 수신
       const params = new URLSearchParams({
         client_id:     KAKAO_JS_KEY,
         redirect_uri:  KAKAO_REDIRECT,
@@ -325,30 +330,45 @@ export default function App() {
       return;
     }
 
-    // 일반 브라우저: 팝업 방식
-    K.Auth.login({
-      scope: 'profile_nickname,profile_image',
-      success: async (authObj) => {
-        try {
+    // 일반 브라우저: Kakao.Auth.login() 팝업 방식
+    try {
+      K.Auth.login({
+        scope: 'profile_nickname,profile_image',
+        success: (authObj) => {
           const token = authObj.access_token;
           localStorage.setItem('kakao_token', token);
           K.Auth.setAccessToken(token);
-          const userInfo = await new Promise((res, rej) =>
+          new Promise((res, rej) =>
             K.API.request({ url: '/v2/user/me', success: res, fail: rej })
-          );
-          const uid         = `kakao_${userInfo.id}`;
-          const displayName = userInfo.kakao_account?.profile?.nickname || '카카오유저';
-          const photoURL    = userInfo.kakao_account?.profile?.thumbnail_image_url || null;
-          await loadUserData(uid, { nickname: displayName });
-          setUser({ uid, displayName, photoURL, isKakao: true });
-        } catch (e) {
-          console.error('Kakao login error:', e);
-        }
-      },
-      fail: (err) => {
-        console.error('Kakao login failed:', err);
-      },
-    });
+          ).then(async (userInfo) => {
+            const uid         = `kakao_${userInfo.id}`;
+            const displayName = userInfo.kakao_account?.profile?.nickname || '카카오유저';
+            const photoURL    = userInfo.kakao_account?.profile?.thumbnail_image_url || null;
+            try {
+              await loadUserData(uid, { nickname: displayName });
+              setUser({ uid, displayName, photoURL, isKakao: true });
+            } catch (e) {
+              console.error('Kakao Firestore 저장 실패:', e);
+              setLoginError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+              localStorage.removeItem('kakao_token');
+            }
+          }).catch((e) => {
+            console.error('Kakao API 오류:', e);
+            setLoginError('카카오 정보를 가져오지 못했습니다. 다시 시도해주세요.');
+            localStorage.removeItem('kakao_token');
+          });
+        },
+        fail: (err) => {
+          console.error('Kakao login failed:', err);
+          if (err?.error !== 'access_denied') {
+            setLoginError('카카오 로그인에 실패했습니다. 다시 시도해주세요.');
+          }
+        },
+      });
+    } catch (e) {
+      console.error('Kakao.Auth.login 오류:', e);
+      setLoginError('카카오 로그인을 시작할 수 없습니다. 새로고침 후 다시 시도해주세요.');
+    }
   };
 
   const handleSaveNickname = async () => {
@@ -460,6 +480,11 @@ export default function App() {
                 </svg>
                 카카오로 로그인
               </button>
+              {loginError && (
+                <div style={{ color: '#e53e3e', fontSize: '0.78rem', textAlign: 'center', marginBottom: 8, lineHeight: 1.5 }}>
+                  {loginError}
+                </div>
+              )}
               <div className="login-footer-links">
                 <a href="/privacy" className="login-policy-link">개인정보처리방침</a>
                 <span>·</span>
