@@ -1358,60 +1358,76 @@
 
 /* ── 모바일 480px (375px 기준 세부 최적화) ── */
 @media (max-width: 480px) {
-  .wrap { padding: 0 12px 60px; }
+  .wrap { padding: 0 10px 60px; }
 
-  /* 헤더: 이름 숨기기로 오버플로 방지 */
+  /* 헤더 */
+  .cw-header { padding: 8px 0 6px; gap: 4px; }
+  .logo { font-size: 1.4rem; }
   .header-username { display: none; }
   .help-btn { padding: 5px 8px; font-size: 0.7rem; }
 
-  /* 상태바 */
-  .status-bar { gap: 7px; }
-  .status-card { min-width: 78px; padding: 10px 10px; }
-  .status-val { font-size: 1.2rem; }
-  .status-label { font-size: 0.62rem; }
-  .status-sub { font-size: 0.58rem; }
-  .prob-mini { font-size: 0.62rem; }
+  /* 상태바: 더 압축 */
+  .status-bar { gap: 5px; margin-bottom: 10px; }
+  .status-card { min-width: 70px; padding: 7px 7px; }
+  .status-val { font-size: 1.05rem; }
+  .status-label { font-size: 0.56rem; }
+  .status-sub { font-size: 0.52rem; }
+  .prob-mini { font-size: 0.56rem; gap: 2px; margin-top: 2px; }
+  .prog-wrap { margin-top: 3px; }
 
-  /* 뽑기 카드 */
-  .draw-card-wrap { width: 200px; height: 300px; }
-  .draw-actions, .click-section { width: 200px; }
-  .draw-btn { padding: 10px; font-size: 0.78rem; }
+  /* 탭바 */
+  .page-tab { font-size: 0.74rem; padding: 7px 9px; }
 
-  /* 수집북 페이지네이션 */
+  /* ── 뽑기탭: 카드+버튼 한 화면 ── */
+  .draw-title { font-size: 0.9rem; }
+  .draw-section { gap: 8px; }
+  .draw-card-wrap { width: 148px; height: 222px; }
+  .draw-actions, .click-section { width: 148px; }
+  .draw-btn { padding: 9px 6px; font-size: 0.74rem; }
+  .draw-actions { gap: 6px; }
+  .click-label { font-size: 0.64rem; }
+  .click-count-text { font-size: 0.64rem; }
+
+  /* 수집북 3열 + 페이지네이션 */
+  .card-grid { grid-template-columns: repeat(3, 1fr); gap: 7px; }
   .pagination { gap: 8px; }
   .page-arrow { padding: 5px 10px; font-size: 0.75rem; }
+
+  /* ── 합성탭: 슬롯 3개+결과 세로 스택 ── */
+  .synth-top { padding: 14px 12px; gap: 10px; }
+  .synth-main-row { flex-direction: column; gap: 8px; }
+  .synth-arrow { transform: rotate(90deg); font-size: 1.1rem; margin: -4px 0; }
+  .synth-slot { width: 64px; height: 96px; }
+  .synth-slots { gap: 7px; }
+  .synth-result-wrap { width: 100px; height: 150px; }
+  .synth-result-hint { display: none; }
+  .synth-card-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+
+  /* 도감 3열 */
+  .dex-tab .card-grid { grid-template-columns: repeat(3, 1fr); }
 
   /* 게시판 글쓰기 폼 */
   .post-card-grid { max-height: 130px; }
   .board-form { padding: 12px; gap: 10px; }
   .board-submit-btn { padding: 7px 18px; }
-
-  /* 게시판 상세 모달 */
   .post-modal-wrap { padding: 18px; max-width: 88vw; }
   .post-detail-card-wrap { width: 130px; }
 
-  /* 거래소: 등록 폼 */
+  /* 거래소 */
   .trade-form { padding: 12px; }
   .trade-price-row { flex-direction: column; gap: 10px; }
 
   /* 레이드 */
-  .raid-boss-img-wrap { height: 300px; }
+  .raid-boss-img-wrap { height: 260px; }
   .raid-picker-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .raid-parts-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .raid-join-btn { padding: 15px 36px; font-size: 0.95rem; }
+  .raid-join-btn { padding: 14px 32px; font-size: 0.9rem; }
   .raid-my-row { gap: 10px; }
   .raid-dmg-float { font-size: 1.5rem; }
 
-  /* 합성 슬롯 */
-  .synth-slot { width: 80px; height: 120px; }
-  .synth-result-wrap { width: 160px; height: 240px; }
-
-  /* 도감 그리드 */
-  .dex-tab .card-grid { grid-template-columns: repeat(3, 1fr); }
-
-  /* 모달 공통 */
+  /* 모달 */
   .modal { padding: 20px 16px; }
-  .zoom-card { width: 180px; height: 270px; }
+  .zoom-card { width: 170px; height: 255px; }
 }
 
 /* ═══════════════════════════════════════
