@@ -8,9 +8,6 @@ export default function Header({ onNotice, onHelp, onShare, user, nickname, onLo
         <button className="help-btn" onClick={onHelp}>게임 설명</button>
         {user ? (
           <>
-            {user.photoURL && (
-              <img className="header-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" />
-            )}
             <span className="header-username">{nickname || user.displayName}</span>
             <button className="header-logout-btn" onClick={onLogout}>로그아웃</button>
           </>

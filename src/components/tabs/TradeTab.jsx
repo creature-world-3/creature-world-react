@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   collection, addDoc, deleteDoc, updateDoc, doc,
   onSnapshot, serverTimestamp, query, orderBy, getDoc,
+  runTransaction, increment,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
@@ -22,6 +23,7 @@ export default function TradeTab({ gs, setGs, user }) {
   const [price, setPrice]             = useState('');
   const [submitting, setSubmitting]   = useState(false);
   const [toast, setToast]             = useState(null);
+  const [zoomTrade, setZoomTrade]     = useState(null);
   const toastRef = useRef(null);
 
   const showToast = (msg) => {
@@ -71,7 +73,7 @@ export default function TradeTab({ gs, setGs, user }) {
     try {
       await addDoc(collection(db, 'trades'), {
         uid:            user.uid,
-        sellerName:     user.displayName,
+        sellerName:     gs.nickname || user.displayName,
         sellerPhotoURL: user.photoURL || null,
         cardUid:        selectedCard.uid,
         cardId:         selectedCard.id,
@@ -99,26 +101,39 @@ export default function TradeTab({ gs, setGs, user }) {
     setSubmitting(false);
   };
 
-  // ── 구매 ──
+  // ── 구매 (트랜잭션) ──
   const handleBuy = async (trade) => {
     if (!user || submitting) return;
     if ((gs?.tickets ?? 0) < trade.price) { showToast('뽑기권이 부족해요!'); return; }
     setSubmitting(true);
+    const newCardUid = genCardUid();
     try {
-      const snap = await getDoc(doc(db, 'trades', trade.id));
-      if (!snap.exists() || snap.data().status !== 'active') {
-        showToast('이미 판매된 카드예요!'); setSubmitting(false); return;
-      }
-      await updateDoc(doc(db, 'trades', trade.id), { status: 'sold', soldAt: serverTimestamp() });
+      const tradeRef  = doc(db, 'trades', trade.id);
+      const buyerRef  = doc(db, 'users', user.uid);
+      const sellerRef = doc(db, 'users', trade.uid);
+      await runTransaction(db, async (t) => {
+        const [tradeSnap, buyerSnap] = await Promise.all([t.get(tradeRef), t.get(buyerRef)]);
+        if (!tradeSnap.exists() || tradeSnap.data().status !== 'active') throw new Error('already_sold');
+        const buyerTickets = buyerSnap.data()?.tickets ?? 0;
+        if (buyerTickets < trade.price) throw new Error('insufficient');
+        const prevCards = buyerSnap.data()?.ownedCards ?? [];
+        t.update(tradeRef,  { status: 'sold', soldAt: serverTimestamp(), claimed: true });
+        t.update(buyerRef,  {
+          tickets:    buyerTickets - trade.price,
+          ownedCards: [...prevCards, { uid: newCardUid, id: trade.cardId, condition: trade.cardCondition }],
+        });
+        t.update(sellerRef, { tickets: increment(trade.price) });
+      });
       setGs(prev => ({
         ...prev,
         tickets:    prev.tickets - trade.price,
-        ownedCards: [...prev.ownedCards, { uid: genCardUid(), id: trade.cardId, condition: trade.cardCondition }],
+        ownedCards: [...prev.ownedCards, { uid: newCardUid, id: trade.cardId, condition: trade.cardCondition }],
       }));
       showToast(`${trade.cardName} (${GRADE_LABEL[trade.cardGrade]}) 구매 완료! 🎉`);
     } catch (e) {
-      console.error(e);
-      showToast('구매 중 오류가 발생했어요');
+      if (e.message === 'already_sold') showToast('이미 판매된 카드예요!');
+      else if (e.message === 'insufficient') showToast('뽑기권이 부족해요!');
+      else { console.error(e); showToast('구매 중 오류가 발생했어요'); }
     }
     setSubmitting(false);
   };
@@ -305,7 +320,11 @@ export default function TradeTab({ gs, setGs, user }) {
           </div>
         ) : filtered.map(trade => (
           <div key={trade.id} className="trade-item">
-            <div className={`trade-card-img grade-${trade.cardGrade}`}>
+            <div
+              className={`trade-card-img grade-${trade.cardGrade}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => setZoomTrade(trade)}
+            >
               <img src={`/${trade.cardImg}`} alt={trade.cardName} />
             </div>
             <div className="trade-item-info">
@@ -336,6 +355,27 @@ export default function TradeTab({ gs, setGs, user }) {
         ))}
       </div>
 
+      {/* ── 카드 확대 모달 ── */}
+      {zoomTrade && (
+        <div className="card-zoom-overlay card-detail-overlay" onClick={() => setZoomTrade(null)}>
+          <div className="card-zoom-inner" onClick={e => e.stopPropagation()}>
+            <div className={`zoom-card grade-${zoomTrade.cardGrade}`} style={{ width: 200, height: 300 }}>
+              <img src={`/${zoomTrade.cardImg}`} alt={zoomTrade.cardName} style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%' }} />
+              <div className="card-header" style={{ position:'absolute', top:0, left:0, right:0, padding:'8px 10px', background:'linear-gradient(to bottom,rgba(0,0,0,0.65),transparent)', display:'flex', alignItems:'center', justifyContent:'space-between', borderRadius:'18px 18px 0 0' }}>
+                <span style={{ fontFamily:'Nunito,sans-serif', fontWeight:900, fontSize:14, color:'white', textShadow:'0 1px 4px rgba(0,0,0,0.8)' }}>{zoomTrade.cardName}</span>
+                <span className="grade-badge" style={{ fontSize:11, fontWeight:900, padding:'2px 8px', borderRadius:99 }}>{GRADE_LABEL[zoomTrade.cardGrade]}</span>
+              </div>
+              <div style={{ position:'absolute', bottom:10, right:10, width:26, height:26, borderRadius:'50%', background:'#444', color:'white', fontFamily:'Nunito,sans-serif', fontWeight:900, fontSize:12, display:'flex', alignItems:'center', justifyContent:'center', border:'2px solid rgba(255,255,255,0.5)', zIndex:9 }}>
+                {zoomTrade.cardCondition}
+              </div>
+            </div>
+            <div style={{ color:'white', fontSize:'0.8rem', marginTop:8, textAlign:'center', opacity:0.7 }}>
+              컨디션 {zoomTrade.cardCondition} · {GRADE_LABEL[zoomTrade.cardGrade]}
+            </div>
+            <button className="zoom-close" onClick={() => setZoomTrade(null)}>닫기 ✕</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

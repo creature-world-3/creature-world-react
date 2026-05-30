@@ -102,6 +102,10 @@ export default function App() {
   const [authReady, setAuthReady]   = useState(false);
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [nicknameInput, setNicknameInput]         = useState('');
+  const [showWelcomeNotice, setShowWelcomeNotice] = useState(false);
+  const [musicOn, setMusicOn]   = useState(() => localStorage.getItem('music_on') === 'true');
+  const homeAudioRef = useRef(null);
+  const raidAudioRef = useRef(null);
   const toastTimer  = useRef(null);
   const saveTimer   = useRef(null);
   const isFirstLoad = useRef(true);
@@ -111,6 +115,42 @@ export default function App() {
     document.body.classList.toggle('raid-theme', activeTab === 'raid');
     return () => document.body.classList.remove('raid-theme');
   }, [activeTab]);
+
+  // ── 첫 접속 공지 (하루 1회) ──
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date().toDateString();
+    if (localStorage.getItem('welcome_notice_date') !== today) {
+      setShowWelcomeNotice(true);
+      localStorage.setItem('welcome_notice_date', today);
+    }
+  }, [user]);
+
+  // ── 배경음악 초기화 ──
+  useEffect(() => {
+    const home = new Audio('/홈화면_노래.mp3');
+    const raid = new Audio('/레이드_노래.mp3');
+    home.loop = true; home.volume = 0.4;
+    raid.loop = true; raid.volume = 0.4;
+    homeAudioRef.current = home;
+    raidAudioRef.current = raid;
+    return () => { home.pause(); raid.pause(); };
+  }, []);
+
+  // ── 탭/뮤직 전환 ──
+  useEffect(() => {
+    const home = homeAudioRef.current;
+    const raid = raidAudioRef.current;
+    if (!home || !raid) return;
+    if (!musicOn) { home.pause(); raid.pause(); return; }
+    if (activeTab === 'raid') {
+      home.pause();
+      raid.play().catch(() => {});
+    } else {
+      raid.pause();
+      home.play().catch(() => {});
+    }
+  }, [activeTab, musicOn]);
 
   // ── 공통: Firestore 유저 데이터 로드/생성 ──
   const loadUserData = async (uid, profileData = null) => {
@@ -324,6 +364,14 @@ export default function App() {
     setActiveTab(newTab);
   };
 
+  const handleRefreshTickets = async () => {
+    if (!user) return;
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (snap.exists()) setGs(prev => ({ ...prev, tickets: snap.data()?.tickets ?? prev.tickets }));
+    } catch (e) { console.error(e); }
+  };
+
   const handleShare = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url)
@@ -418,7 +466,10 @@ export default function App() {
           <div className="status-bar">
             <div className="status-card">
               <div className="status-label">보유 뽑기권</div>
-              <div className="status-val">{gs.tickets}</div>
+              <div className="status-val">
+                {gs.tickets}
+                <button className="ticket-refresh-btn" onClick={handleRefreshTickets} title="새로고침">↻</button>
+              </div>
               <div className="status-sub">장</div>
             </div>
             <div className="status-card">
@@ -456,6 +507,11 @@ export default function App() {
         </div>
 
         {toast && <div className="cw-toast">{toast}</div>}
+        <button
+          className="music-toggle-btn"
+          onClick={() => setMusicOn(prev => { const n = !prev; localStorage.setItem('music_on', n); return n; })}
+          title={musicOn ? '음악 끄기' : '음악 켜기'}
+        >{musicOn ? '🎵' : '🔇'}</button>
 
         {showNotice && (
           <div className="modal-overlay show" onClick={() => setShowNotice(false)}>
@@ -523,6 +579,20 @@ export default function App() {
               >
                 설정하기
               </button>
+            </div>
+          </div>
+        )}
+        {showWelcomeNotice && (
+          <div className="modal-overlay show" onClick={() => setShowWelcomeNotice(false)}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-title">🔔 공지사항</div>
+              <div style={{ fontSize: '0.88rem', color: '#444', lineHeight: 1.8 }}>
+                현재 <strong>테스트 서버 운영 중</strong>입니다.<br />
+                서버 안정화 및 기능 개선 작업이 진행 중이며 일부 오류가 있을 수 있습니다.<br /><br />
+                1인 개발로 수정 속도가 느릴 수 있으니 양해 부탁드립니다.<br />
+                모바일 최적화도 지속적으로 개선 중입니다.
+              </div>
+              <button className="modal-close" onClick={() => setShowWelcomeNotice(false)}>확인</button>
             </div>
           </div>
         )}

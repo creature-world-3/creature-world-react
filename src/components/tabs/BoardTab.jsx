@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   collection, addDoc, deleteDoc, doc,
-  onSnapshot, serverTimestamp, query, orderBy,
+  onSnapshot, serverTimestamp, query, orderBy, getDoc,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
@@ -45,6 +45,7 @@ export default function BoardTab({ gs, user }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [submitting, setSubmitting]     = useState(false);
   const [detailPost, setDetailPost]     = useState(null);
+  const [nicknames, setNicknames]       = useState({});
 
   // 보유 카드 (중복 제거) + 각 카드 타입의 최고 컨디션 포함
   const ownedCards = CARDS.filter(
@@ -62,6 +63,27 @@ export default function BoardTab({ gs, user }) {
       setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
   }, []);
+
+  // 게시글 작성자 uid → Firestore nickname 캐시
+  useEffect(() => {
+    if (!posts.length) return;
+    const missing = [...new Set(posts.map(p => p.uid).filter(Boolean))]
+      .filter(uid => nicknames[uid] === undefined);
+    if (!missing.length) return;
+    Promise.all(
+      missing.map(uid =>
+        getDoc(doc(db, 'users', uid))
+          .then(snap => [uid, snap.data()?.nickname ?? null])
+          .catch(() => [uid, null])
+      )
+    ).then(pairs => {
+      setNicknames(prev => {
+        const next = { ...prev };
+        pairs.forEach(([uid, name]) => { next[uid] = name; });
+        return next;
+      });
+    });
+  }, [posts.map(p => p.uid).join(',')]);
 
   const handleSubmit = async () => {
     if (!text.trim() || !user || submitting) return;
@@ -186,7 +208,7 @@ export default function BoardTab({ gs, user }) {
                     {GRADE_LABEL[post.cardGrade]}
                   </span>
                 )}
-                <div className="comm-post-nickname">{post.author || post.nickname}</div>
+                <div className="comm-post-nickname">{nicknames[post.uid] || post.author || post.nickname}</div>
                 <div className="comm-post-text">{post.text}</div>
                 <div className="comm-post-time">{timeAgo(post.createdAt)}</div>
               </div>
@@ -226,7 +248,7 @@ export default function BoardTab({ gs, user }) {
               </div>
             )}
             <div style={{ fontWeight: 900, fontSize: '1rem', marginBottom: 8 }}>
-              {detailPost.author || detailPost.nickname}
+              {(detailPost.uid ? nicknames[detailPost.uid] : null) || detailPost.author || detailPost.nickname}
             </div>
             <div style={{ fontSize: '0.88rem', color: '#444', lineHeight: 1.6, marginBottom: 10, wordBreak: 'break-all' }}>
               {detailPost.text}

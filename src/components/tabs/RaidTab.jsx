@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   doc, setDoc, updateDoc, getDoc,
   onSnapshot, serverTimestamp,
-  increment, Timestamp, runTransaction,
+  increment, Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
@@ -73,7 +73,8 @@ export default function RaidTab({ gs, setGs, user }) {
   const [hpFlash, setHpFlash]         = useState(false);
   const [dmgFloats, setDmgFloats]     = useState([]);
   const toastRef = useRef(null);
-  const tickRef  = useRef(null);
+  const tickRef     = useRef(null);
+  const raidDataRef = useRef(null);
 
   const showToast = (msg) => {
     clearTimeout(toastRef.current);
@@ -100,6 +101,9 @@ export default function RaidTab({ gs, setGs, user }) {
     );
     return () => unsub();
   }, []);
+
+  // raid 최신값을 ref로 유지 (interval closure 용)
+  useEffect(() => { raidDataRef.current = raid; }, [raid]);
 
   // ── 남은 시간 ──
   useEffect(() => {
@@ -147,20 +151,15 @@ export default function RaidTab({ gs, setGs, user }) {
       setTimeout(() => setDmgFloats(prev => prev.filter(f => f.id !== floatId)), 1300);
 
       try {
-        const raidRef = doc(db, 'raids', RAID_ID);
-        await runTransaction(db, async (t) => {
-          const snap = await t.get(raidRef);
-          if (!snap.exists() || snap.data().status !== 'active') return;
-          const hp     = snap.data().hp;
-          if (hp <= 0) return;
-          const actual = Math.min(dmg, hp);
-          const newHp  = hp - actual;
-          // 단일 문서 업데이트: hp + participants.{uid}.damage
-          t.update(raidRef, {
-            hp:    newHp,
-            [`participants.${user.uid}.damage`]: increment(actual),
-            ...(newHp <= 0 ? { status: 'defeated' } : {}),
-          });
+        const cur      = raidDataRef.current;
+        if (!cur || cur.status !== 'active') return;
+        const localHp  = Math.max(0, cur.hp ?? 0);
+        if (localHp <= 0) return;
+        const actual   = Math.min(dmg, localHp);
+        await updateDoc(doc(db, 'raids', RAID_ID), {
+          hp: increment(-actual),
+          [`participants.${user.uid}.damage`]: increment(actual),
+          ...(localHp - actual <= 0 ? { status: 'defeated' } : {}),
         });
       } catch (e) { console.error('tick error:', e); }
     }, TICK_MS);
