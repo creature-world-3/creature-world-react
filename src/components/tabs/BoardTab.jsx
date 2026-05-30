@@ -69,7 +69,7 @@ export default function BoardTab({ gs, user }) {
     try {
       await addDoc(collection(db, 'posts'), {
         uid:       user.uid,
-        author:    user.displayName,
+        author:    gs.nickname || user.displayName,
         photoURL:  user.photoURL || null,
         text:      text.trim(),
         createdAt: serverTimestamp(),
