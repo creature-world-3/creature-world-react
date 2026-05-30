@@ -12,7 +12,7 @@ const BOSS_HP        = 50_000_000;
 const MAX_PARTS      = 10;
 const DURATION_MS    = 14 * 24 * 60 * 60 * 1000;
 const TICK_MS        = 3_000;
-const MIN_REWARD_DMG = 10_000;
+const MIN_REWARD_DMG = 3_000_000;
 
 const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND', raid:'RAID' };
 const GRADE_COLOR = { n:'#888', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b', raid:'#ffd700' };
@@ -515,7 +515,7 @@ export default function RaidTab({ gs, setGs, user }) {
             )}
             <div className="raid-reward-info-body">
               <div className="raid-reward-info-title">클리어 보상 안내</div>
-              <div className="raid-reward-info-row">✅ <span>10,000 데미지 이상 기여 시 수령 가능</span></div>
+              <div className="raid-reward-info-row">✅ <span>300만 데미지 이상 기여 시 수령 가능</span></div>
               <div className="raid-reward-info-row">🎴 <span>RAID 카드 미보유 → 30% 확률로 카드 획득</span></div>
               <div className="raid-reward-info-row">🎟️ <span>그 외 → 뽑기권 200~400장 랜덤 지급</span></div>
               <div className="raid-reward-info-row">♾️ <span>레이드 도전 횟수는 무제한</span></div>
@@ -698,7 +698,7 @@ export default function RaidTab({ gs, setGs, user }) {
           <div className="raid-picker-hint" style={isChanging ? { color: '#fbbf24' } : {}}>
             {isChanging
               ? '⚔️ 교체 시 누적 데미지는 유지됩니다'
-              : '⚠️ 선택한 카드는 보스 처치 전까지 잠금 · 10,000 데미지 이상 시 보상'
+              : '⚠️ 선택한 카드는 보스 처치 전까지 잠금 · 300만 데미지 이상 시 보상'
             }
           </div>
           {availCards.length === 0 ? (
@@ -794,7 +794,7 @@ export default function RaidTab({ gs, setGs, user }) {
             })}
           </div>
         )}
-        <div className="raid-reward-hint">✓ = 10,000 데미지 달성 시 보상 수령 가능</div>
+        <div className="raid-reward-hint">✓ = 300만 데미지 달성 시 보상 수령 가능</div>
       </div>
     </div>
   );

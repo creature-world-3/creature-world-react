@@ -83,7 +83,7 @@ const NOTICES = [
 
 const HELP_ITEMS = [
   { icon: '🎟️', title: '매일 뽑기권',    desc: '매일 처음 접속하면 뽑기권 5장을 드려요!' },
-  { icon: '⏰', title: '1시간 접속 보너스', desc: '오늘 1시간 이상 접속하면 추가로 1장을 드려요.' },
+  { icon: '⏰', title: '1시간 접속 보너스', desc: '오늘 1시간 이상 접속하면 추가로 30장을 드려요.' },
   { icon: '🐾', title: '클릭 뽑기',      desc: '100번 클릭할 때마다 뽑기권 1장! 하루 최대 10장까지!' },
   { icon: '✅', title: '출석체크',       desc: '하루 1회 출석체크로 5~15장을 받아요. 7일 개근 시 보너스 100장!' },
   { icon: '⚗️', title: '카드 합성',      desc: '같은 등급 카드 3장을 합성하면 새 카드가 나와요. 10% 확률로 상위 등급!' },
@@ -96,8 +96,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('gacha');
   const [slideDir, setSlideDir]   = useState(null);
   const prevTabRef = useRef('gacha');
-  const [showNotice, setShowNotice] = useState(false);
-  const [showHelp, setShowHelp]     = useState(false);
+  const [showNotice, setShowNotice]       = useState(false);
+  const [showHelp, setShowHelp]           = useState(false);
+  const [showBonusInfo, setShowBonusInfo] = useState(false);
   const [toast, setToast]           = useState(null);
   const [user, setUser]             = useState(null);
   const [authReady, setAuthReady]   = useState(false);
@@ -370,9 +371,9 @@ export default function App() {
         const newMins = (prev.sessionMinutes || 0) + 1;
         if (newMins >= 60 && !prev.sessionBonus) {
           clearTimeout(toastTimer.current);
-          setToast('1시간 접속 달성! 뽑기권 +1장! 🎉');
+          setToast('1시간 접속 달성! 뽑기권 +30장! 🎉');
           toastTimer.current = setTimeout(() => setToast(null), 2500);
-          return { ...prev, sessionMinutes: newMins, sessionBonus: true, tickets: prev.tickets + 1 };
+          return { ...prev, sessionMinutes: newMins, sessionBonus: true, tickets: prev.tickets + 30 };
         }
         return { ...prev, sessionMinutes: newMins };
       });
@@ -498,13 +499,16 @@ export default function App() {
             </div>
             <div className="status-card">
               <div className="status-label">수집 카드</div>
-              <div className="status-val">{uniqueOwned}</div>
+              <div className="status-val">
+                {uniqueOwned}
+                <button className="bonus-info-btn" onClick={() => setShowBonusInfo(true)} title="레이드 보너스 안내">ⓘ</button>
+              </div>
               <div className="status-sub">/ 30 종류</div>
             </div>
             <div className="status-card">
               <div className="status-label">접속 시간</div>
               <div className="status-val">{sessionMins}</div>
-              <div className="status-sub">분 (1시간 달성시 +1장)</div>
+              <div className="status-sub">분 (1시간 달성시 +30장)</div>
               <div className="prog-wrap">
                 <div className="prog-track">
                   <div className="prog-fill" style={{ width: `${sessionPct}%` }} />
@@ -603,6 +607,33 @@ export default function App() {
               >
                 설정하기
               </button>
+            </div>
+          </div>
+        )}
+        {showBonusInfo && (
+          <div className="modal-overlay show" onClick={() => setShowBonusInfo(false)}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-title">🃏 레이드 보너스 데미지</div>
+              <div style={{ fontSize: '0.85rem', color: '#444', lineHeight: 1.9 }}>
+                보유 카드 수에 따라 레이드 보너스 데미지가 적용됩니다.
+              </div>
+              <div className="bonus-info-table">
+                {[
+                  ['N',    '0.5', '#888'],
+                  ['R',    '1',   '#4a9eff'],
+                  ['SR',   '2',   '#c084fc'],
+                  ['UR',   '3',   '#fbbf24'],
+                  ['LG',   '5',   '#ff6b6b'],
+                  ['RAID', '10',  '#ffd700'],
+                ].map(([grade, val, color]) => (
+                  <div key={grade} className="bonus-info-row">
+                    <span className="bonus-info-grade" style={{ color }}>{grade}</span>
+                    <span className="bonus-info-desc">카드 1장당</span>
+                    <span className="bonus-info-val">+{val} 데미지/틱</span>
+                  </div>
+                ))}
+              </div>
+              <button className="modal-close" onClick={() => setShowBonusInfo(false)}>확인</button>
             </div>
           </div>
         )}

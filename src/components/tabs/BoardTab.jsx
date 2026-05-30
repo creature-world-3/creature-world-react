@@ -193,6 +193,9 @@ export default function BoardTab({ gs, user }) {
                   <img src={`/${post.cardImg}`} alt={post.cardName} />
                   {cs === 'gold' && <div className="cond-gold-overlay" />}
                   {cs === 'holo' && <div className="cond-holo-overlay" />}
+                  {post.cardCondition != null && (
+                    <div className="comm-post-cond">{post.cardCondition}</div>
+                  )}
                 </div>
               ) : (
                 <div className="comm-post-card comm-post-card-empty">
@@ -233,7 +236,7 @@ export default function BoardTab({ gs, user }) {
               )}
             </div>
             {detailPost.cardGrade && (
-              <div style={{ textAlign: 'center', marginBottom: 8 }}>
+              <div style={{ textAlign: 'center', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <span
                   className="comm-post-grade"
                   style={{
@@ -245,6 +248,11 @@ export default function BoardTab({ gs, user }) {
                 >
                   {GRADE_LABEL[detailPost.cardGrade]}
                 </span>
+                {detailPost.cardCondition != null && (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 700 }}>
+                    컨디션 {detailPost.cardCondition}
+                  </span>
+                )}
               </div>
             )}
             <div style={{ fontWeight: 900, fontSize: '1rem', marginBottom: 8 }}>
