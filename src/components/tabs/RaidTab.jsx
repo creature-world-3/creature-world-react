@@ -353,14 +353,21 @@ export default function RaidTab({ gs, setGs, user }) {
 
   // ── 보상 시작: 결과를 미리 결정하고 카드 뒷면 표시 ──
   const handleStartReward = () => {
-    const raidCardId = bossConfig?.raidCardId;
+    // Firestore rewardCard 필드(이름_언더스코어) → 카드 id 매핑
+    const rewardCardName = raid?.rewardCard; // e.g. '저주받은_인형의_왕'
+    const raidCardDef = rewardCardName
+      ? CARDS.find(c => c.grade === 'raid' && c.name.replace(/\s+/g, '_') === rewardCardName)
+      : CARDS.find(c => c.id === bossConfig?.raidCardId);
+    const raidCardId = raidCardDef?.id;
     const alreadyHas = raidCardId && (gs?.ownedCards || []).some(c => c.id === raidCardId);
 
     let result;
-    if (alreadyHas || Math.random() >= 0.3) {
+    if (alreadyHas) {
       result = { type: 'tickets', amount: randInt(200, 400) };
-    } else {
+    } else if (Math.random() < 0.3) {
       result = { type: 'card', cardId: raidCardId };
+    } else {
+      result = { type: 'tickets', amount: randInt(200, 400) };
     }
     setRewardResult(result);
     setRewardPhase('card-back');
@@ -440,7 +447,11 @@ export default function RaidTab({ gs, setGs, user }) {
   const availCards  = CARDS.filter(c =>
     !c.raid && (gs?.ownedCards || []).some(o => o.id === c.id && o.uid !== lockedUid),
   ).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
-  const raidCardDef = bossConfig ? CARDS.find(c => c.id === bossConfig.raidCardId) : null;
+  const raidCardDef = (() => {
+    const rcName = raid?.rewardCard;
+    if (rcName) return CARDS.find(c => c.grade === 'raid' && c.name.replace(/\s+/g, '_') === rcName) || null;
+    return bossConfig ? CARDS.find(c => c.id === bossConfig.raidCardId) : null;
+  })();
 
   return (
     <div className="raid-wrap">
@@ -517,7 +528,7 @@ export default function RaidTab({ gs, setGs, user }) {
               <div className="raid-reward-info-title">클리어 보상 안내</div>
               <div className="raid-reward-info-row">✅ <span>300만 데미지 이상 기여 시 수령 가능</span></div>
               <div className="raid-reward-info-row">🎴 <span>RAID 카드 미보유 → 30% 확률로 카드 획득</span></div>
-              <div className="raid-reward-info-row">🎟️ <span>그 외 → 뽑기권 200~400장 랜덤 지급</span></div>
+              <div className="raid-reward-info-row">🎟️ <span>해당 보스 RAID 카드 보유 시 → 뽑기권 200~400장 랜덤 지급</span></div>
               <div className="raid-reward-info-row">♾️ <span>레이드 도전 횟수는 무제한</span></div>
               <div className="raid-reward-info-row">🔒 <span>보상은 보스 1마리당 1회만 수령 가능</span></div>
             </div>

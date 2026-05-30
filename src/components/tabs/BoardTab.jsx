@@ -6,13 +6,13 @@ import {
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
 
-const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND' };
-const GRADE_BG    = { n: 'rgba(80,80,80,0.9)', r: '#1a3a6a', sr: '#2d1b4e', ur: '#3a2800', lg: 'linear-gradient(90deg,#ff6b6b,#4d96ff,#c77dff)' };
-const GRADE_COLOR = { n: '#ccc', r: '#7eb8ff', sr: '#d4a8ff', ur: '#ffd97a', lg: '#fff' };
+const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
+const GRADE_BG    = { n: 'rgba(80,80,80,0.9)', r: '#1a3a6a', sr: '#2d1b4e', ur: '#3a2800', lg: 'linear-gradient(90deg,#ff6b6b,#4d96ff,#c77dff)', raid: 'linear-gradient(90deg,#b8860b,#ffd700,#b8860b)' };
+const GRADE_COLOR = { n: '#ccc', r: '#7eb8ff', sr: '#d4a8ff', ur: '#ffd97a', lg: '#fff', raid: '#1a0820' };
 const MAX_TEXT = 50;
 
 function condStyle(grade, cond) {
-  if (grade === 'lg') return 'gold';
+  if (grade === 'lg' || grade === 'raid') return 'gold';
   if (grade === 'ur') return 'holo';
   if (cond >= 9) return 'gold';
   if (cond >= 6) return 'holo';
