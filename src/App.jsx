@@ -17,6 +17,9 @@ import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import './App.css';
 
+const KAKAO_JS_KEY      = '86daeae42ced20dec5fb375bf0b15aec';
+const KAKAO_REDIRECT_URI = 'https://creature-world-react.vercel.app';
+
 export const BASE_STATE = {
   tickets: 5, ownedCards: [],
   attendDate: null, attendStreak: 0,
@@ -105,35 +108,103 @@ export default function App() {
     return () => document.body.classList.remove('raid-theme');
   }, [activeTab]);
 
-  // ── 인증 상태 감지 + Firestore 로드 ──
+  // ── 공통: Firestore 유저 데이터 로드/생성 ──
+  const loadUserData = async (uid) => {
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (snap.exists()) {
+      const loaded = applyDailyReset({ ...BASE_STATE, ...snap.data() });
+      setGs(loaded);
+      if (!loaded.nickname) setShowNicknameModal(true);
+    } else {
+      const newState = { ...BASE_STATE };
+      await setDoc(doc(db, 'users', uid), newState);
+      setGs(newState);
+      setShowNicknameModal(true);
+    }
+    isFirstLoad.current = true;
+  };
+
+  // ── 인증 초기화: Kakao 우선, 없으면 Firebase ──
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
+    let unsubFirebase = null;
+
+    const initKakao = () => {
+      const K = window.Kakao;
+      if (K && !K.isInitialized()) K.init(KAKAO_JS_KEY);
+    };
+
+    const loginWithKakaoToken = async (token) => {
+      const K = window.Kakao;
+      K.Auth.setAccessToken(token);
+      const userInfo = await new Promise((res, rej) =>
+        K.API.request({ url: '/v2/user/me', success: res, fail: rej })
+      );
+      const uid         = `kakao_${userInfo.id}`;
+      const displayName = userInfo.kakao_account?.profile?.nickname || `카카오유저`;
+      const photoURL    = userInfo.kakao_account?.profile?.thumbnail_image_url || null;
+      await loadUserData(uid);
+      setUser({ uid, displayName, photoURL, isKakao: true });
+      setAuthReady(true);
+    };
+
+    const init = async () => {
+      initKakao();
+
+      // 1) Kakao 리다이렉트 코드 처리
+      const params = new URLSearchParams(window.location.search);
+      const code   = params.get('code');
+      if (code && window.Kakao) {
+        window.history.replaceState({}, '', '/');
         try {
-          const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (snap.exists()) {
-            const loaded = applyDailyReset({ ...BASE_STATE, ...snap.data() });
-            setGs(loaded);
-            if (!loaded.nickname) setShowNicknameModal(true);
-          } else {
-            const newState = { ...BASE_STATE };
-            await setDoc(doc(db, 'users', firebaseUser.uid), newState);
-            setGs(newState);
-            setShowNicknameModal(true);
+          const resp = await fetch('/api/kakao-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, redirect_uri: KAKAO_REDIRECT_URI }),
+          });
+          const data = await resp.json();
+          if (data.access_token) {
+            localStorage.setItem('kakao_token', data.access_token);
+            await loginWithKakaoToken(data.access_token);
+            return;
           }
         } catch (e) {
-          console.error('Firestore 로드 실패:', e);
-          setGs({ ...BASE_STATE });
+          console.error('Kakao code exchange error:', e);
         }
-      } else {
-        setGs({ ...BASE_STATE });
-        setShowNicknameModal(false);
       }
-      setUser(firebaseUser);
-      setAuthReady(true);
-      isFirstLoad.current = true;
-    });
-    return unsubscribe;
+
+      // 2) 저장된 Kakao 토큰 복원
+      const storedToken = localStorage.getItem('kakao_token');
+      if (storedToken && window.Kakao) {
+        try {
+          await loginWithKakaoToken(storedToken);
+          return;
+        } catch (e) {
+          localStorage.removeItem('kakao_token');
+        }
+      }
+
+      // 3) Firebase Google 인증
+      unsubFirebase = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          try {
+            await loadUserData(firebaseUser.uid);
+          } catch (e) {
+            console.error('Firestore 로드 실패:', e);
+            setGs({ ...BASE_STATE });
+          }
+          setUser(firebaseUser);
+        } else {
+          setGs({ ...BASE_STATE });
+          setShowNicknameModal(false);
+          setUser(null);
+        }
+        setAuthReady(true);
+        isFirstLoad.current = true;
+      });
+    };
+
+    init();
+    return () => { unsubFirebase?.(); };
   }, []);
 
   // ── Firestore 저장 (gs 변경 시, 1초 디바운스) ──
@@ -157,7 +228,20 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
+    if (user?.isKakao) {
+      localStorage.removeItem('kakao_token');
+      if (window.Kakao) window.Kakao.Auth.setAccessToken(null);
+      setUser(null);
+      setGs({ ...BASE_STATE });
+      setShowNicknameModal(false);
+    } else {
+      await signOut(auth);
+    }
+  };
+
+  const handleKakaoLogin = () => {
+    if (!window.Kakao) return;
+    window.Kakao.Auth.authorize({ redirectUri: KAKAO_REDIRECT_URI });
   };
 
   const handleSaveNickname = async () => {
@@ -237,7 +321,7 @@ export default function App() {
             <div className="login-card">
               <img src="/fox_sleep.png" alt="fox" className="login-mascot" />
               <div className="login-logo">CREATURE WORLD</div>
-              <p className="login-desc">카드를 수집하고 도감을 완성해보세요!<br />Google 계정으로 간편하게 시작할 수 있어요.</p>
+              <p className="login-desc">카드를 수집하고 도감을 완성해보세요!</p>
               <button className="login-google-btn" onClick={handleLogin}>
                 <svg className="google-icon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                   <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
@@ -246,6 +330,12 @@ export default function App() {
                   <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
                 </svg>
                 Google로 로그인
+              </button>
+              <button className="login-kakao-btn" onClick={handleKakaoLogin}>
+                <svg className="kakao-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 3C6.477 3 2 6.477 2 11c0 2.824 1.607 5.306 4.063 6.875l-.956 3.563a.375.375 0 0 0 .553.421L9.79 19.5A11.18 11.18 0 0 0 12 19.75C17.523 19.75 22 16.274 22 11S17.523 3 12 3z" fill="#3B1D1E"/>
+                </svg>
+                카카오로 로그인
               </button>
               <div className="login-footer-links">
                 <a href="/privacy" className="login-policy-link">개인정보처리방침</a>
