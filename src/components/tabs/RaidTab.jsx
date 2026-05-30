@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   doc, setDoc, updateDoc, getDoc,
   onSnapshot, serverTimestamp,
@@ -131,6 +131,7 @@ export default function RaidTab({ gs, setGs, user }) {
   const [dmgFloats, setDmgFloats]         = useState([]);
   const [refreshing, setRefreshing]       = useState(false);
   const [showRewardInfo, setShowRewardInfo] = useState(false);
+  const [nicknames, setNicknames]         = useState({});
 
   // 보상 플로우: null → 'card-back' → 'shaking' → 'flipping' → 'revealed'
   const [rewardPhase, setRewardPhase]   = useState(null);
@@ -238,18 +239,36 @@ export default function RaidTab({ gs, setGs, user }) {
     return () => { clearInterval(tickRef.current); setTicking(false); };
   }, [!!myPart, myPart?.cardGrade, myPart?.cardCondition, raid?.status, user?.uid, selectedBossId]);
 
-  // ── 수동 새로고침 ──
-  const handleRefresh = useCallback(async () => {
-    if (!selectedBossId) return;
+  // ── 참여자 uid로 Firestore users 닉네임 일괄 조회 ──
+  useEffect(() => {
+    const uids = Object.keys(parts).filter(uid => !(uid in nicknames));
+    if (uids.length === 0) return;
+    Promise.all(uids.map(uid => getDoc(doc(db, 'users', uid)))).then(snaps => {
+      const fetched = {};
+      snaps.forEach(snap => {
+        if (snap.exists()) fetched[snap.id] = snap.data().nickname || null;
+      });
+      setNicknames(prev => ({ ...prev, ...fetched }));
+    }).catch(e => console.error('nickname fetch:', e));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Object.keys(parts).sort().join(',')]);
+
+  // ── 수동 새로고침: getDoc으로 Firestore에서 직접 읽기 ──
+  const handleRefresh = async () => {
+    if (!selectedBossId || refreshing) return;
     setRefreshing(true);
     try {
-      const snap = await getDoc(doc(db, 'raids', selectedBossId));
+      const raidRef = doc(db, 'raids', selectedBossId);
+      const snap    = await getDoc(raidRef);
       if (snap.exists()) {
-        setRaidDataMap(prev => ({ ...prev, [selectedBossId]: { id: snap.id, ...snap.data() } }));
+        const fresh = { id: snap.id, ...snap.data() };
+        setRaidDataMap(prev => ({ ...prev, [selectedBossId]: fresh }));
       }
-    } catch (e) { console.error('refresh:', e); }
-    finally { setRefreshing(false); }
-  }, [selectedBossId]);
+    } catch (e) {
+      console.error('refresh error:', e);
+    }
+    setRefreshing(false);
+  };
 
   // ── 참여 / 카드 교체 ──
   const handleJoin = async (card) => {
@@ -264,8 +283,8 @@ export default function RaidTab({ gs, setGs, user }) {
 
     const partData = {
       uid:           user.uid,
-      displayName:   user.displayName,
-      photoURL:      user.photoURL || null,
+      displayName:   gs?.nickname || user.displayName,
+      photoURL:      null,
       cardUid:       inst.uid,
       cardId:        card.id,
       cardImg:       card.img,
@@ -698,10 +717,9 @@ export default function RaidTab({ gs, setGs, user }) {
                   </div>
                   <div className="raid-part-meta">
                     <div className="raid-part-player-row">
-                      {p.photoURL && (
-                        <img src={p.photoURL} className="raid-part-avatar" referrerPolicy="no-referrer" alt="" />
-                      )}
-                      <span className="raid-part-name">{p.displayName}{isMe ? ' (나)' : ''}</span>
+                      <span className="raid-part-name">
+                        {nicknames[p.uid] || p.displayName}{isMe ? ' (나)' : ''}
+                      </span>
                     </div>
                     <div className="raid-part-grade-row">
                       <span className="raid-part-grade" style={{ color: GRADE_COLOR[p.cardGrade] }}>

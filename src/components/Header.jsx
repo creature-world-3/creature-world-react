@@ -8,7 +8,7 @@ export default function Header({ onNotice, onHelp, onShare, user, nickname, onLo
         <button className="help-btn" onClick={onHelp}>게임 설명</button>
         {user ? (
           <>
-            <span className="header-username">{nickname || user.displayName}</span>
+            <span className="header-username">{nickname || '유저'}</span>
             <button className="header-logout-btn" onClick={onLogout}>로그아웃</button>
           </>
         ) : (

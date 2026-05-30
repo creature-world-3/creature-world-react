@@ -41,10 +41,6 @@
 }
 .header-login-btn:hover { background: var(--sky); box-shadow: 0 2px 8px rgba(74,158,255,0.2); }
 .google-icon { width: 16px; height: 16px; flex-shrink: 0; }
-.header-avatar {
-  width: 26px; height: 26px; border-radius: 50%;
-  object-fit: cover; border: 1.5px solid #c0ddf5; flex-shrink: 0;
-}
 .header-username {
   font-size: 0.75rem; font-weight: 700; color: var(--blue-dark);
   max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
