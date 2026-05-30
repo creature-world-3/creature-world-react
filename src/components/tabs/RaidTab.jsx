@@ -8,7 +8,7 @@ import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
 
 // ── 상수 ──
-const BOSS_HP        = 3_000_000;
+const BOSS_HP        = 50_000_000;
 const MAX_PARTS      = 10;
 const DURATION_MS    = 14 * 24 * 60 * 60 * 1000;
 const TICK_MS        = 3_000;
@@ -18,6 +18,16 @@ const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND', raid:'RAID' }
 const GRADE_COLOR = { n:'#888', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b', raid:'#ffd700' };
 const GRADE_RANGE = { n:[1,10], r:[21,30], sr:[31,40], ur:[41,50], lg:[91,100], raid:[91,100] };
 const GRADE_ORDER = { n:0, r:1, sr:2, ur:3, lg:4, raid:5 };
+const BONUS_MULT  = { n: 0.5, r: 1, sr: 2, ur: 3, lg: 5, raid: 10 };
+
+function calcBonus(ownedCards) {
+  let bonus = 0;
+  for (const owned of ownedCards) {
+    const card = CARDS.find(x => x.id === owned.id);
+    if (card) bonus += BONUS_MULT[card.grade] || 0;
+  }
+  return Math.floor(bonus);
+}
 
 // ── 보스 설정 (보스 추가 시 여기에 항목 추가) ──
 const BOSS_CONFIGS = [
@@ -34,17 +44,17 @@ const BOSS_CONFIGS = [
 ];
 
 // ── 유틸 ──
-function calcDmg(grade, cond) {
+function calcDmg(grade, cond, bonus = 0) {
   const [min, max] = GRADE_RANGE[grade] || [1, 10];
-  return Math.floor(Math.random() * (max - min + 1)) + min + (cond || 1);
+  return Math.floor(Math.random() * (max - min + 1)) + min + (cond || 1) + bonus;
 }
 function avgDmg(grade, cond) {
   const [min, max] = GRADE_RANGE[grade] || [1, 10];
   return Math.floor((min + max) / 2) + (cond || 1);
 }
-function dmgRange(grade, cond) {
+function dmgRange(grade, cond, bonus = 0) {
   const [min, max] = GRADE_RANGE[grade] || [1, 10];
-  return `${min + (cond || 1)}~${max + (cond || 1)}`;
+  return `${min + (cond || 1) + bonus}~${max + (cond || 1) + bonus}`;
 }
 function fmtTimeLeft(ts) {
   if (!ts) return '';
@@ -92,7 +102,7 @@ function BossList({ bosses, raidDataMap, onSelect }) {
             <div className="raid-boss-list-info">
               <div className="raid-boss-list-name">{boss.name}</div>
               <div className={`raid-status-badge raid-status-${status}`}>
-                {status === 'active' ? '⚔️ 진행 중' : status === 'defeated' ? '💀 처치 완료' : '⌛ 종료됨'}
+                {status === 'active' ? '⚔️ 진행 중' : status === 'waiting' ? '⏳ 대기 중' : status === 'defeated' ? '💀 처치 완료' : '⌛ 종료됨'}
               </div>
               {raid && (
                 <>
@@ -210,7 +220,7 @@ export default function RaidTab({ gs, setGs, user }) {
 
     setTicking(true);
     tickRef.current = setInterval(async () => {
-      const dmg     = calcDmg(myPart.cardGrade, myPart.cardCondition);
+      const dmg     = calcDmg(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus || 0);
       const floatId = Date.now() + Math.random();
       setShaking(true);
       setHpFlash(true);
@@ -237,7 +247,7 @@ export default function RaidTab({ gs, setGs, user }) {
     }, TICK_MS);
 
     return () => { clearInterval(tickRef.current); setTicking(false); };
-  }, [!!myPart, myPart?.cardGrade, myPart?.cardCondition, raid?.status, user?.uid, selectedBossId]);
+  }, [!!myPart, myPart?.cardGrade, myPart?.cardCondition, myPart?.cardBonus, raid?.status, user?.uid, selectedBossId]);
 
   // ── 참여자 uid로 Firestore users 닉네임 일괄 조회 ──
   useEffect(() => {
@@ -281,6 +291,7 @@ export default function RaidTab({ gs, setGs, user }) {
     const inst = (gs?.ownedCards || []).find(c => c.id === card.id && c.uid !== lockedUid);
     if (!inst) { showToast('카드를 찾을 수 없어요'); return; }
 
+    const cardBonus = calcBonus(gs?.ownedCards || []);
     const partData = {
       uid:           user.uid,
       displayName:   gs?.nickname || user.displayName,
@@ -291,6 +302,7 @@ export default function RaidTab({ gs, setGs, user }) {
       cardName:      card.name,
       cardGrade:     card.grade,
       cardCondition: inst.condition,
+      cardBonus,
       damage:        isChanging ? (myPart?.damage || 0) : 0,
       joinedAt:      isChanging ? (myPart?.joinedAt || serverTimestamp()) : serverTimestamp(),
       rewardClaimed: myPart?.rewardClaimed || false,
@@ -516,7 +528,7 @@ export default function RaidTab({ gs, setGs, user }) {
         <div className="raid-boss-info">
           <div className="raid-boss-name">{bossConfig?.name}</div>
           <div className={`raid-status-badge raid-status-${raid.status}`}>
-            {raid.status === 'active' ? '⚔️ 진행 중' : raid.status === 'defeated' ? '💀 처치 완료' : '⌛ 종료됨'}
+            {raid.status === 'active' ? '⚔️ 진행 중' : raid.status === 'waiting' ? '⏳ 대기 중' : raid.status === 'defeated' ? '💀 처치 완료' : '⌛ 종료됨'}
           </div>
           {timeLeft && raid.status === 'active' && (
             <div className="raid-time-left">🕐 {timeLeft}</div>
@@ -571,8 +583,11 @@ export default function RaidTab({ gs, setGs, user }) {
                 내 데미지 <strong>{myDmg.toLocaleString()}</strong>
               </div>
               <div className="raid-my-tick">
-                {dmgRange(myPart.cardGrade, myPart.cardCondition)}dmg / 3초
+                {dmgRange(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus || 0)}dmg / 3초
               </div>
+              {(myPart.cardBonus || 0) > 0 && (
+                <div className="raid-my-bonus">🃏 카드 보너스 +{myPart.cardBonus}dmg/틱</div>
+              )}
               {myDmg >= MIN_REWARD_DMG
                 ? <div className="raid-reward-qualify">✓ 보상 수령 가능!</div>
                 : <div className="raid-reward-progress">
@@ -605,7 +620,9 @@ export default function RaidTab({ gs, setGs, user }) {
         <div className="raid-join-area">
           {raid.status !== 'active' ? (
             <div className="raid-over-msg">
-              {raid.status === 'defeated' ? '보스가 이미 처치되었습니다!' : '레이드 기간이 종료되었습니다.'}
+              {raid.status === 'defeated' ? '보스가 이미 처치되었습니다!'
+               : raid.status === 'waiting' ? '레이드 시작 대기 중입니다.'
+               : '레이드 기간이 종료되었습니다.'}
             </div>
           ) : partCount >= maxParts ? (
             <div className="raid-over-msg">참여 인원이 가득 찼어요! ({partCount}/{maxParts})</div>
@@ -618,6 +635,12 @@ export default function RaidTab({ gs, setGs, user }) {
                 ⚔️ 레이드 참여하기
               </button>
               <div className="raid-join-sub">카드 1장을 선택해 보스에게 도전하세요</div>
+              {(() => {
+                const myBonus = calcBonus(gs?.ownedCards || []);
+                return myBonus > 0 ? (
+                  <div className="raid-bonus-info">🃏 내 카드 보너스 +{myBonus}dmg/틱</div>
+                ) : null;
+              })()}
             </>
           )}
         </div>
@@ -725,7 +748,7 @@ export default function RaidTab({ gs, setGs, user }) {
                       <span className="raid-part-grade" style={{ color: GRADE_COLOR[p.cardGrade] }}>
                         {GRADE_LABEL[p.cardGrade]}
                       </span>
-                      <span className="raid-part-dps">{dmgRange(p.cardGrade, p.cardCondition)}dmg/틱</span>
+                      <span className="raid-part-dps">{dmgRange(p.cardGrade, p.cardCondition, p.cardBonus || 0)}dmg/틱</span>
                     </div>
                     <div className="raid-part-dmg-row">
                       <span className="raid-part-dmg">{(p.damage || 0).toLocaleString()}</span>

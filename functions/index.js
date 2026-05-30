@@ -1,26 +1,20 @@
 /**
- * Cloud Functions for Creature World - Raid Auto-Damage
+ * Cloud Functions for Creature World - Raid Auto-Damage & Weekly Reset
  *
- * 주의: Cloud Scheduler 최소 주기는 1분입니다.
- * 3초 단위 틱을 시뮬레이션하기 위해 1분당 20틱(3초×20=60초)을 일괄 처리합니다.
- *
- * 동작:
- *   - 매 1분마다 raids/ 컬렉션의 active 보스를 조회
- *   - 참여자별 카드 등급+컨디션으로 20틱 데미지 계산 (평균값 사용)
- *   - 보스 HP 차감 및 participants.{uid}.damage 누적
- *   - HP <= 0 이면 status = 'defeated' 처리
+ * raidAutoTick: 매 1분마다 active 보스에 참여자별 20틱 데미지 적용
+ * weeklyBossReset: 매주 월요일 00:00 KST에 보스 초기화
  */
 
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { initializeApp } = require('firebase-admin/app');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
 
 initializeApp();
 
-// ── 상수 ──
-const BOSS_IDS     = ['current_boss'];
-const TICK_MS      = 3_000;
-const RUN_MS       = 60_000;
+const BOSS_IDS      = ['current_boss'];
+const BOSS_HP       = 50_000_000;
+const TICK_MS       = 3_000;
+const RUN_MS        = 60_000;
 const TICKS_PER_RUN = Math.floor(RUN_MS / TICK_MS); // 20틱
 
 const GRADE_RANGE = {
@@ -37,6 +31,7 @@ function avgDmg(grade, cond) {
   return Math.floor((min + max) / 2) + (cond || 1);
 }
 
+// ── 매 1분마다 자동 데미지 틱 ──
 exports.raidAutoTick = onSchedule(
   {
     schedule:  'every 1 minutes',
@@ -59,16 +54,14 @@ exports.raidAutoTick = onSchedule(
         const parts = raid.participants || {};
         if (Object.keys(parts).length === 0) return;
 
-        const maxHp    = raid.maxHp || 3_000_000;
         const currentHp = Math.max(0, raid.hp || 0);
         if (currentHp <= 0) return;
 
-        // 참여자별 20틱 데미지 계산
         const updates = {};
         let totalBatchDmg = 0;
 
         for (const [uid, part] of Object.entries(parts)) {
-          const dmgPerTick = avgDmg(part.cardGrade, part.cardCondition);
+          const dmgPerTick = avgDmg(part.cardGrade, part.cardCondition) + (part.cardBonus || 0);
           const batchDmg   = dmgPerTick * TICKS_PER_RUN;
           updates[`participants.${uid}.damage`] = FieldValue.increment(batchDmg);
           totalBatchDmg += batchDmg;
@@ -82,6 +75,34 @@ exports.raidAutoTick = onSchedule(
         }
 
         tx.update(raidRef, updates);
+      });
+    }
+
+    return null;
+  },
+);
+
+// ── 매주 월요일 00:00 KST 보스 초기화 ──
+exports.weeklyBossReset = onSchedule(
+  {
+    schedule: '0 0 * * 1',
+    timeZone: 'Asia/Seoul',
+    region:   'asia-northeast3',
+  },
+  async () => {
+    const db  = getFirestore();
+    const now = new Date();
+    const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    for (const bossId of BOSS_IDS) {
+      await db.collection('raids').doc(bossId).set({
+        hp:            BOSS_HP,
+        maxHp:         BOSS_HP,
+        status:        'active',
+        participants:  {},
+        claimedRewards: [],
+        startDate:     Timestamp.fromDate(now),
+        endDate:       Timestamp.fromDate(end),
       });
     }
 

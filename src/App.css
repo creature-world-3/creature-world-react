@@ -415,6 +415,23 @@
 .dex-character-group { margin-bottom:24px; }
 .dex-char-name { font-size:0.8rem; font-weight:900; color:var(--muted); letter-spacing:1px; margin-bottom:10px; }
 
+/* 도감 등급 필터 탭 */
+.dex-grade-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.dex-grade-tab {
+  padding: 4px 12px; border-radius: 99px; border: 1.5px solid #dde4ef;
+  background: white; color: var(--muted); font-size: 0.75rem; font-weight: 700;
+  cursor: pointer; transition: all 0.18s; font-family: 'Nunito', sans-serif;
+}
+.dex-grade-tab:hover { border-color: var(--blue); color: var(--blue); }
+.dex-grade-tab.active { background: var(--blue); border-color: var(--blue); color: white; }
+.dex-grade-tab.dex-grade-tab-lg:hover,
+.dex-grade-tab.dex-grade-tab-lg.active { background: #ff6b6b; border-color: #ff6b6b; color: white; }
+.dex-grade-tab.dex-grade-tab-raid:hover,
+.dex-grade-tab.dex-grade-tab-raid.active { background: #b8860b; border-color: #ffd700; color: #fff8e0; }
+.dex-grade-grid { margin-top: 4px; }
+
 /* dex locked card: grayscale image + lock overlay */
 .col-card.dex-locked { cursor: default; }
 .col-card.dex-locked:hover { transform: none; }
@@ -1696,6 +1713,8 @@ body.raid-theme::before {
 .raid-my-stat { font-size: 0.82rem; color: rgba(255,200,220,0.7); }
 .raid-my-stat strong { color: #ff8eb0; font-family:'Nunito',sans-serif; font-size:1rem; font-weight:900; }
 .raid-my-tick { font-size: 0.7rem; color: rgba(255,180,200,0.5); }
+.raid-my-bonus { font-size: 0.7rem; color: #ffd700; font-weight: 700; }
+.raid-bonus-info { font-size: 0.72rem; color: rgba(255,215,0,0.75); text-align: center; margin-top: 6px; font-weight: 600; }
 .raid-reward-qualify { font-size: 0.72rem; color: #4ade80; font-weight: 700; }
 .raid-reward-progress { font-size: 0.7rem; color: rgba(255,180,200,0.5); }
 .raid-lock-notice {
