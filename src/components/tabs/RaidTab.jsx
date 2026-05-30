@@ -68,6 +68,16 @@ function fmtTimeLeft(ts) {
   if (hrs  > 0) return `${hrs}시간 ${mins}분 남음`;
   return `${mins}분 남음`;
 }
+function fmtCountdown(ts) {
+  if (!ts) return '';
+  const d  = ts.toDate ? ts.toDate() : new Date(ts);
+  const ms = d - new Date();
+  if (ms <= 0) return '곧 시작!';
+  const hrs  = Math.floor(ms / 3_600_000);
+  const mins = Math.floor((ms % 3_600_000) / 60_000);
+  const secs = Math.floor((ms % 60_000) / 1_000);
+  return `${hrs}시간 ${String(mins).padStart(2,'0')}분 ${String(secs).padStart(2,'0')}초`;
+}
 function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
 let _rUid = 0;
@@ -142,6 +152,7 @@ export default function RaidTab({ gs, setGs, user }) {
   const [refreshing, setRefreshing]       = useState(false);
   const [showRewardInfo, setShowRewardInfo] = useState(false);
   const [nicknames, setNicknames]         = useState({});
+  const [startCountdown, setStartCountdown] = useState('');
 
   // 보상 플로우: null → 'card-back' → 'shaking' → 'flipping' → 'revealed'
   const [rewardPhase, setRewardPhase]   = useState(null);
@@ -184,7 +195,7 @@ export default function RaidTab({ gs, setGs, user }) {
 
   useEffect(() => { raidDataRef.current = raid; }, [raid]);
 
-  // ── 남은 시간 카운트다운 ──
+  // ── 남은 시간 카운트다운 (종료까지) ──
   useEffect(() => {
     if (raid?.endDate) setTimeLeft(fmtTimeLeft(raid.endDate));
     const id = setInterval(() => {
@@ -192,6 +203,18 @@ export default function RaidTab({ gs, setGs, user }) {
     }, 30_000);
     return () => clearInterval(id);
   }, [raid?.endDate]);
+
+  // ── 대기 카운트다운 (시작까지, 1초 간격) ──
+  useEffect(() => {
+    if (raid?.status !== 'waiting' || !raid?.startDate) {
+      setStartCountdown('');
+      return;
+    }
+    const update = () => setStartCountdown(fmtCountdown(raid.startDate));
+    update();
+    const id = setInterval(update, 1_000);
+    return () => clearInterval(id);
+  }, [raid?.status, raid?.startDate]);
 
   // ── 만료 자동 처리 + 만료 시 카드 잠금 해제 ──
   useEffect(() => {
@@ -533,6 +556,9 @@ export default function RaidTab({ gs, setGs, user }) {
           {timeLeft && raid.status === 'active' && (
             <div className="raid-time-left">🕐 {timeLeft}</div>
           )}
+          {raid.status === 'waiting' && startCountdown && (
+            <div className="raid-time-left raid-countdown-inline">⏳ 레이드 시작까지 {startCountdown}</div>
+          )}
           <div className="raid-hp-row">
             <span className="raid-hp-label-text">HP</span>
             <span className="raid-hp-num">{hp.toLocaleString()} / {maxHp.toLocaleString()}</span>
@@ -621,8 +647,14 @@ export default function RaidTab({ gs, setGs, user }) {
           {raid.status !== 'active' ? (
             <div className="raid-over-msg">
               {raid.status === 'defeated' ? '보스가 이미 처치되었습니다!'
-               : raid.status === 'waiting' ? '레이드 시작 대기 중입니다.'
-               : '레이드 기간이 종료되었습니다.'}
+               : raid.status === 'waiting' ? (
+                <>
+                  레이드 시작 대기 중입니다.
+                  {startCountdown && (
+                    <div className="raid-countdown-msg">⏳ 레이드 시작까지<br />{startCountdown}</div>
+                  )}
+                </>
+               ) : '레이드 기간이 종료되었습니다.'}
             </div>
           ) : partCount >= maxParts ? (
             <div className="raid-over-msg">참여 인원이 가득 찼어요! ({partCount}/{maxParts})</div>

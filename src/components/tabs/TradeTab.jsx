@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   collection, addDoc, deleteDoc, updateDoc, doc,
   onSnapshot, serverTimestamp, query, orderBy, getDoc,
-  runTransaction, increment,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
@@ -108,32 +108,67 @@ export default function TradeTab({ gs, setGs, user }) {
     setSubmitting(true);
     const newCardUid = genCardUid();
     try {
-      const tradeRef  = doc(db, 'trades', trade.id);
-      const buyerRef  = doc(db, 'users', user.uid);
-      const sellerRef = doc(db, 'users', trade.uid);
-      await runTransaction(db, async (t) => {
-        const [tradeSnap, buyerSnap] = await Promise.all([t.get(tradeRef), t.get(buyerRef)]);
-        if (!tradeSnap.exists() || tradeSnap.data().status !== 'active') throw new Error('already_sold');
-        const buyerTickets = buyerSnap.data()?.tickets ?? 0;
-        if (buyerTickets < trade.price) throw new Error('insufficient');
-        const prevCards = buyerSnap.data()?.ownedCards ?? [];
-        t.update(tradeRef,  { status: 'sold', soldAt: serverTimestamp(), claimed: true });
-        t.update(buyerRef,  {
+      const tradeRef = doc(db, 'trades', trade.id);
+      const buyerRef = doc(db, 'users', user.uid);
+
+      await runTransaction(db, async (tx) => {
+        const [tradeSnap, buyerSnap] = await Promise.all([
+          tx.get(tradeRef),
+          tx.get(buyerRef),
+        ]);
+
+        if (!tradeSnap.exists()) {
+          console.error('[buy] trade 문서 없음:', trade.id);
+          throw new Error('already_sold');
+        }
+        const tradeData = tradeSnap.data();
+        if (tradeData.status !== 'active') {
+          console.error('[buy] trade 이미 판매됨, status:', tradeData.status);
+          throw new Error('already_sold');
+        }
+
+        const buyerData    = buyerSnap.exists() ? (buyerSnap.data() || {}) : {};
+        const buyerTickets = typeof buyerData.tickets === 'number' ? buyerData.tickets : 0;
+        if (buyerTickets < trade.price) {
+          console.error('[buy] 뽑기권 부족:', buyerTickets, '<', trade.price);
+          throw new Error('insufficient');
+        }
+
+        const prevCards = Array.isArray(buyerData.ownedCards) ? buyerData.ownedCards : [];
+        const newCard   = { uid: newCardUid, id: trade.cardId, condition: trade.cardCondition };
+
+        // 거래 상태: 판매됨, 판매자 미수령(claimed: false)
+        tx.update(tradeRef, { status: 'sold', soldAt: serverTimestamp(), claimed: false });
+        // 구매자: 뽑기권 차감 + 카드 지급
+        tx.update(buyerRef, {
           tickets:    buyerTickets - trade.price,
-          ownedCards: [...prevCards, { uid: newCardUid, id: trade.cardId, condition: trade.cardCondition }],
+          ownedCards: [...prevCards, newCard],
         });
-        t.update(sellerRef, { tickets: increment(trade.price) });
       });
+
       setGs(prev => ({
         ...prev,
         tickets:    prev.tickets - trade.price,
         ownedCards: [...prev.ownedCards, { uid: newCardUid, id: trade.cardId, condition: trade.cardCondition }],
       }));
       showToast(`${trade.cardName} (${GRADE_LABEL[trade.cardGrade]}) 구매 완료! 🎉`);
+
     } catch (e) {
-      if (e.message === 'already_sold') showToast('이미 판매된 카드예요!');
-      else if (e.message === 'insufficient') showToast('뽑기권이 부족해요!');
-      else { console.error(e); showToast('구매 중 오류가 발생했어요'); }
+      if (e.message === 'already_sold') {
+        showToast('이미 판매된 카드예요!');
+      } else if (e.message === 'insufficient') {
+        showToast('뽑기권이 부족해요!');
+      } else {
+        console.error('[buy] 구매 오류:', {
+          code:    e.code,
+          message: e.message,
+          tradeId: trade.id,
+          buyer:   user.uid,
+          seller:  trade.uid,
+          error:   e,
+        });
+        showToast('구매 중 오류가 발생했어요');
+      }
     }
     setSubmitting(false);
   };
@@ -152,15 +187,22 @@ export default function TradeTab({ gs, setGs, user }) {
     }
   };
 
-  // ── 보상 수령 ──
+  // ── 보상 수령: 판매자 본인 트랜잭션으로 뽑기권 지급 + 거래 삭제 ──
   const handleClaimRewards = async () => {
-    if (!pendingRewards.length) return;
+    if (!pendingRewards.length || !user) return;
     try {
-      await Promise.all(pendingRewards.map(t => updateDoc(doc(db, 'trades', t.id), { claimed: true })));
+      const userRef = doc(db, 'users', user.uid);
+      await runTransaction(db, async (tx) => {
+        const userSnap = await tx.get(userRef);
+        const currentTickets = userSnap.exists() ? (userSnap.data()?.tickets ?? 0) : 0;
+        tx.update(userRef, { tickets: currentTickets + pendingTotal });
+        pendingRewards.forEach(t => tx.delete(doc(db, 'trades', t.id)));
+      });
       setGs(prev => ({ ...prev, tickets: prev.tickets + pendingTotal }));
       showToast(`보상 수령 완료! +${pendingTotal}장 🎟️`);
     } catch (e) {
-      console.error(e);
+      console.error('[claim] 보상 수령 오류:', e.code, e.message, e);
+      showToast('보상 수령 중 오류가 발생했어요');
     }
   };
 
