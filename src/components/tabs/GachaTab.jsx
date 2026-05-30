@@ -256,7 +256,14 @@ export default function GachaTab({ gs, setGs }) {
                 );
               })}
             </div>
-            <button className="zoom-close" onClick={() => setDraw10Results(null)}>닫기 ✕</button>
+            <div className="draw10-btn-row">
+              <button
+                className="draw10-btn-again"
+                onClick={() => doDraw10()}
+                disabled={gs.tickets < 10}
+              >✨ 한번 더 뽑기 ({gs.tickets}장)</button>
+              <button className="draw10-btn-close" onClick={() => setDraw10Results(null)}>닫기 ✕</button>
+            </div>
           </div>
         </div>
       )}

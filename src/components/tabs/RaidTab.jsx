@@ -178,28 +178,25 @@ export default function RaidTab({ gs, setGs, user }) {
     if (!inst) { showToast('카드를 찾을 수 없어요'); return; }
 
     try {
-      // participants.{uid} 필드를 setDoc merge로 추가
-      await setDoc(
+      // dot-notation으로 해당 uid 필드만 업데이트 → 다른 참여자 데이터 보존
+      await updateDoc(
         doc(db, 'raids', RAID_ID),
         {
-          participants: {
-            [user.uid]: {
-              uid:           user.uid,
-              displayName:   user.displayName,
-              photoURL:      user.photoURL || null,
-              cardUid:       inst.uid,
-              cardId:        card.id,
-              cardImg:       card.img,
-              cardName:      card.name,
-              cardGrade:     card.grade,
-              cardCondition: inst.condition,
-              damage:        0,
-              joinedAt:      serverTimestamp(),
-              rewardClaimed: false,
-            },
+          [`participants.${user.uid}`]: {
+            uid:           user.uid,
+            displayName:   user.displayName,
+            photoURL:      user.photoURL || null,
+            cardUid:       inst.uid,
+            cardId:        card.id,
+            cardImg:       card.img,
+            cardName:      card.name,
+            cardGrade:     card.grade,
+            cardCondition: inst.condition,
+            damage:        0,
+            joinedAt:      serverTimestamp(),
+            rewardClaimed: false,
           },
         },
-        { merge: true },  // 기존 participants의 다른 유저 데이터 보존
       );
       setGs(prev => ({
         ...prev,

@@ -103,7 +103,8 @@ export default function App() {
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [nicknameInput, setNicknameInput]         = useState('');
   const [showWelcomeNotice, setShowWelcomeNotice] = useState(false);
-  const [musicOn, setMusicOn]   = useState(() => localStorage.getItem('music_on') === 'true');
+  const [musicOn, setMusicOn]   = useState(() => localStorage.getItem('music_on') !== 'false');
+  const [interacted, setInteracted] = useState(false);
   const homeAudioRef = useRef(null);
   const raidAudioRef = useRef(null);
   const toastTimer  = useRef(null);
@@ -126,7 +127,7 @@ export default function App() {
     }
   }, [user]);
 
-  // ── 배경음악 초기화 ──
+  // ── 배경음악 초기화 + 첫 인터랙션 자동재생 ──
   useEffect(() => {
     const home = new Audio('/홈화면_노래.mp3');
     const raid = new Audio('/레이드_노래.mp3');
@@ -134,14 +135,23 @@ export default function App() {
     raid.loop = true; raid.volume = 0.4;
     homeAudioRef.current = home;
     raidAudioRef.current = raid;
-    return () => { home.pause(); raid.pause(); };
+
+    const onFirstInteraction = () => setInteracted(true);
+    document.addEventListener('click', onFirstInteraction, { once: true });
+    document.addEventListener('touchstart', onFirstInteraction, { once: true, passive: true });
+
+    return () => {
+      home.pause(); raid.pause();
+      document.removeEventListener('click', onFirstInteraction);
+      document.removeEventListener('touchstart', onFirstInteraction);
+    };
   }, []);
 
-  // ── 탭/뮤직 전환 ──
+  // ── 탭/뮤직 전환 (첫 인터랙션 후 자동재생) ──
   useEffect(() => {
     const home = homeAudioRef.current;
     const raid = raidAudioRef.current;
-    if (!home || !raid) return;
+    if (!home || !raid || !interacted) return;
     if (!musicOn) { home.pause(); raid.pause(); return; }
     if (activeTab === 'raid') {
       home.pause();
@@ -150,7 +160,7 @@ export default function App() {
       raid.pause();
       home.play().catch(() => {});
     }
-  }, [activeTab, musicOn]);
+  }, [activeTab, musicOn, interacted]);
 
   // ── 공통: Firestore 유저 데이터 로드/생성 ──
   const loadUserData = async (uid, profileData = null) => {

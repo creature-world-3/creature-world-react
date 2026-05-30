@@ -845,8 +845,25 @@
 }
 .draw10-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; width:100%; }
 @media (max-width:600px) {
-  .draw10-grid { grid-template-columns:repeat(2,1fr); gap:10px; }
-  .draw10-title { font-size:1.1rem; }
+  .draw10-wrap { max-width:98vw; padding:6px; gap:10px; }
+  .draw10-grid { grid-template-columns:repeat(5,1fr); gap:5px; }
+  .draw10-title { font-size:1rem; }
+}
+.draw10-btn-row { display:flex; gap:10px; width:100%; }
+.draw10-btn-again {
+  flex:1; padding:11px 8px;
+  background:linear-gradient(135deg,#4a9eff,#1a6fd4);
+  color:white; border:none; border-radius:12px;
+  font-family:'Nunito',sans-serif; font-weight:800; font-size:0.88rem;
+  cursor:pointer; transition:opacity 0.15s;
+}
+.draw10-btn-again:disabled { opacity:0.45; cursor:not-allowed; }
+.draw10-btn-close {
+  padding:11px 16px;
+  background:rgba(255,255,255,0.12); color:white;
+  border:1.5px solid rgba(255,255,255,0.3); border-radius:12px;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:0.88rem;
+  cursor:pointer; white-space:nowrap;
 }
 .draw10-card {
   aspect-ratio:2/3; border-radius:12px; overflow:hidden; position:relative;

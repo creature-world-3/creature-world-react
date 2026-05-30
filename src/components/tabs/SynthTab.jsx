@@ -86,9 +86,9 @@ export default function SynthTab({ gs, setGs }) {
     setTimeout(() => setFlipped(true), 300);
   };
 
-  // ── 카드 교환: 같은 카드 10장 → 뽑기권 1장 ──
+  // ── 카드 교환: 같은 카드 10장 → 뽑기권 1장 (낮은 컨디션부터 자동 선택) ──
   const doExchange = (card) => {
-    const myCards = (gs.ownedCards || []).filter(c => c.id === card.id);
+    const myCards = ownedCards.filter(c => c.id === card.id);
     if (myCards.length < EXCHANGE_COST) return;
     const toRemove = [...myCards]
       .sort((a, b) => a.condition - b.condition)
