@@ -17,6 +17,8 @@ import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import './App.css';
 
+const TAB_ORDER = ['gacha', 'synth', 'shop', 'dex', 'board', 'trade', 'raid'];
+
 const KAKAO_JS_KEY      = '86daeae42ced20dec5fb375bf0b15aec';
 const KAKAO_REDIRECT_URI = 'https://creature-world-react.vercel.app';
 
@@ -91,6 +93,8 @@ const HELP_ITEMS = [
 export default function App() {
   const [gs, setGs]               = useState({ ...BASE_STATE });
   const [activeTab, setActiveTab] = useState('gacha');
+  const [slideDir, setSlideDir]   = useState(null);
+  const prevTabRef = useRef('gacha');
   const [showNotice, setShowNotice] = useState(false);
   const [showHelp, setShowHelp]     = useState(false);
   const [toast, setToast]           = useState(null);
@@ -274,6 +278,14 @@ export default function App() {
     return () => clearInterval(interval);
   }, [user]);
 
+  const handleTabChange = (newTab) => {
+    const oldIdx = TAB_ORDER.indexOf(prevTabRef.current);
+    const newIdx = TAB_ORDER.indexOf(newTab);
+    setSlideDir(newIdx >= oldIdx ? 'right' : 'left');
+    prevTabRef.current = newTab;
+    setActiveTab(newTab);
+  };
+
   const handleShare = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url)
@@ -396,8 +408,12 @@ export default function App() {
             </div>
           </div>
 
-          <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
-          {TABS[activeTab]}
+          <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
+          <div className="tab-slide-wrapper">
+            <div key={activeTab} className={slideDir ? `tab-slide-${slideDir}` : undefined}>
+              {TABS[activeTab]}
+            </div>
+          </div>
           <Footer />
         </div>
 

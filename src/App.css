@@ -87,6 +87,21 @@
 /* ── GACHA LAYOUT ── */
 .tab-content { display: flex; gap: 20px; align-items: flex-start; }
 .draw-section { flex: 0 0 300px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.draw-col-left { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+.draw-col-right { display: flex; flex-direction: column; gap: 14px; width: 100%; align-items: center; }
+
+/* ── TAB SLIDE ANIMATION ── */
+.tab-slide-wrapper { overflow: hidden; }
+@keyframes tabSlideInRight {
+  from { transform: translateX(100%); opacity: 0.7; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes tabSlideInLeft {
+  from { transform: translateX(-100%); opacity: 0.7; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.tab-slide-right { animation: tabSlideInRight 0.28s cubic-bezier(.25,.46,.45,.94); }
+.tab-slide-left  { animation: tabSlideInLeft  0.28s cubic-bezier(.25,.46,.45,.94); }
 .draw-title { font-size: 0.78rem; font-weight: 700; color: var(--muted); letter-spacing: 1px; }
 
 /* ── DRAW CARD ── */
@@ -1394,13 +1409,15 @@
   /* 탭바 */
   .page-tab { font-size: 0.74rem; padding: 7px 9px; }
 
-  /* ── 뽑기탭: 카드+버튼 한 화면 ── */
+  /* ── 뽑기탭: 카드(왼) + 클릭/출석(오른) 2열 ── */
   .draw-title { font-size: 0.9rem; }
-  .draw-section { gap: 8px; }
+  .draw-section { flex-direction: row; align-items: flex-start; gap: 8px; }
+  .draw-col-left { flex: 0 0 auto; width: auto; gap: 6px; }
+  .draw-col-right { flex: 1; min-width: 0; width: auto; gap: 6px; align-items: stretch; }
+  .draw-col-right .click-section { width: 100%; box-sizing: border-box; }
   .draw-card-wrap { width: 148px; height: 222px; }
-  .draw-actions, .click-section { width: 148px; }
+  .draw-actions { width: 148px; gap: 6px; }
   .draw-btn { padding: 9px 6px; font-size: 0.74rem; }
-  .draw-actions { gap: 6px; }
   .click-label { font-size: 0.64rem; }
   .click-count-text { font-size: 0.64rem; }
 

@@ -274,6 +274,7 @@ export default function GachaTab({ gs, setGs }) {
       <div className="tab-content">
         {/* ── 왼쪽 패널 ── */}
         <div className="draw-section">
+          <div className="draw-col-left">
           <div className="draw-title">카드 뽑기</div>
 
           <div
@@ -323,7 +324,9 @@ export default function GachaTab({ gs, setGs }) {
               ✨ 10뽑 (10장)
             </button>
           </div>
+          </div>
 
+          <div className="draw-col-right">
           <div className="click-section">
             <div className="click-label">클릭 뽑기 (100번마다 +1장 · 하루 최대 10회)</div>
             <button className="click-btn" onClick={handleClick} disabled={gs.clickDone}>🐾</button>
@@ -354,6 +357,7 @@ export default function GachaTab({ gs, setGs }) {
                 ? `🔥 ${gs.attendStreak}일 연속 출석 중`
                 : '7일 개근하면 보너스 100장!'}
             </div>
+          </div>
           </div>
         </div>
 
