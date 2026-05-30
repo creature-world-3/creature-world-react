@@ -1410,9 +1410,9 @@
   .page-tab { font-size: 0.74rem; padding: 7px 9px; }
 
   /* ── 뽑기탭: 카드(왼) + 클릭/출석(오른) 2열 ── */
-  .draw-title { font-size: 0.9rem; }
+  .draw-title { display: none; }
   .draw-section { flex-direction: row; align-items: flex-start; gap: 8px; }
-  .draw-col-left { flex: 0 0 auto; width: auto; gap: 6px; }
+  .draw-col-left { flex: 0 0 auto; width: auto; gap: 4px; }
   .draw-col-right { flex: 1; min-width: 0; width: auto; gap: 6px; align-items: stretch; }
   .draw-col-right .click-section { width: 100%; box-sizing: border-box; }
   .draw-card-wrap { width: 148px; height: 222px; }
