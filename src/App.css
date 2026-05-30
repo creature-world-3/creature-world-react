@@ -182,6 +182,15 @@
 .grade-lg .card-sep { background:linear-gradient(90deg,transparent,#ff6b6b,#ffd93d,#4d96ff,transparent); }
 @keyframes rainbowText { 0%{background-position:0%} 100%{background-position:200%} }
 
+/* ── RAID 등급 ── */
+.grade-raid .grade-badge {
+  background:linear-gradient(90deg,#b8860b,#ffd700,#b8860b,#ffd700);
+  background-size:300%; color:#1a0820; text-shadow:0 1px 2px rgba(255,215,0,0.4);
+  animation:raidGoldText 2s linear infinite;
+}
+.grade-raid .card-sep { background:linear-gradient(90deg,transparent,#ffd700,#b8860b,#ffd700,transparent); }
+@keyframes raidGoldText { 0%{background-position:0%} 100%{background-position:300%} }
+
 /* aurora overlay on drawn card */
 .draw-front .card-aurora {
   position:absolute; inset:0; border-radius:18px;
@@ -317,9 +326,11 @@
 .col-card.grade-r  { border-color:#4a9eff; }
 .col-card.grade-sr { border-color:#c084fc; }
 .col-card.grade-ur { border-color:#fbbf24; animation:colURBorder 2s ease-in-out infinite; }
-.col-card.grade-lg { border-color:#ff6b6b; animation:colLGBorder 2s linear infinite; }
-@keyframes colURBorder { 0%,100%{box-shadow:0 0 6px 1px rgba(251,191,36,0.4)} 50%{box-shadow:0 0 14px 3px rgba(251,191,36,0.8)} }
-@keyframes colLGBorder { 0%{box-shadow:0 0 8px 2px rgba(255,107,107,0.6)} 33%{box-shadow:0 0 8px 2px rgba(255,217,61,0.6)} 66%{box-shadow:0 0 8px 2px rgba(77,150,255,0.6)} 100%{box-shadow:0 0 8px 2px rgba(255,107,107,0.6)} }
+.col-card.grade-lg   { border-color:#ff6b6b; animation:colLGBorder 2s linear infinite; }
+.col-card.grade-raid { border-color:#ffd700; animation:colRAIDBorder 1.8s ease-in-out infinite; }
+@keyframes colURBorder   { 0%,100%{box-shadow:0 0 6px 1px rgba(251,191,36,0.4)} 50%{box-shadow:0 0 14px 3px rgba(251,191,36,0.8)} }
+@keyframes colLGBorder   { 0%{box-shadow:0 0 8px 2px rgba(255,107,107,0.6)} 33%{box-shadow:0 0 8px 2px rgba(255,217,61,0.6)} 66%{box-shadow:0 0 8px 2px rgba(77,150,255,0.6)} 100%{box-shadow:0 0 8px 2px rgba(255,107,107,0.6)} }
+@keyframes colRAIDBorder { 0%,100%{box-shadow:0 0 10px 2px rgba(255,215,0,0.5)} 50%{box-shadow:0 0 20px 4px rgba(255,215,0,0.9)} }
 
 /* card footer (owned) */
 .col-card-footer {
@@ -334,7 +345,8 @@
 .grade-r  .col-grade { background:#1a3a6a; color:#7eb8ff; }
 .grade-sr .col-grade { background:#2d1b4e; color:#d4a8ff; }
 .grade-ur .col-grade { background:#3a2800; color:#ffd97a; }
-.grade-lg .col-grade { background:linear-gradient(90deg,#ff6b6b,#4d96ff,#c77dff); color:#fff; }
+.grade-lg   .col-grade { background:linear-gradient(90deg,#ff6b6b,#4d96ff,#c77dff); color:#fff; }
+.grade-raid .col-grade { background:linear-gradient(90deg,#b8860b,#ffd700,#b8860b); color:#1a0820; font-weight:900; }
 
 /* dup badge */
 .dup {
@@ -1771,7 +1783,8 @@ body.raid-theme::before {
 .raid-picker-card.grade-r  { border-color: rgba(74,158,255,0.7); }
 .raid-picker-card.grade-sr { border-color: rgba(192,132,252,0.7); }
 .raid-picker-card.grade-ur { border-color: rgba(251,191,36,0.7); }
-.raid-picker-card.grade-lg { border-color: rgba(255,107,107,0.8); }
+.raid-picker-card.grade-lg   { border-color: rgba(255,107,107,0.8); }
+.raid-picker-card.grade-raid { border-color: rgba(255,215,0,0.9); }
 
 /* ── 참여자 카드 현황 ── */
 .raid-participants {

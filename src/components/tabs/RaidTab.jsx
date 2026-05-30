@@ -14,10 +14,10 @@ const DURATION_MS    = 14 * 24 * 60 * 60 * 1000;
 const TICK_MS        = 3_000;
 const MIN_REWARD_DMG = 10_000;
 
-const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND' };
-const GRADE_COLOR = { n:'#888', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b' };
-const GRADE_RANGE = { n:[1,10], r:[21,30], sr:[31,40], ur:[41,50], lg:[91,100] };
-const GRADE_ORDER = { n:0, r:1, sr:2, ur:3, lg:4 };
+const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND', raid:'RAID' };
+const GRADE_COLOR = { n:'#888', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b', raid:'#ffd700' };
+const GRADE_RANGE = { n:[1,10], r:[21,30], sr:[31,40], ur:[41,50], lg:[91,100], raid:[91,100] };
+const GRADE_ORDER = { n:0, r:1, sr:2, ur:3, lg:4, raid:5 };
 
 // ── 보스 설정 (보스 추가 시 여기에 항목 추가) ──
 const BOSS_CONFIGS = [

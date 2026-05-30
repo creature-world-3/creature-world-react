@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { CARDS, CHARACTERS } from '../../data/cards.js';
 
 const GRADE_WEIGHT = { n: 70, r: 22, sr: 6.9, ur: 1, lg: 0.1 };
-const GRADE_LABEL  = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND' };
+const GRADE_LABEL  = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const FLASH_LABEL  = { sr: '💜 SUPER RARE!', ur: '✨ ULTRA RARE!', lg: '🌈 L E G E N D !' };
-const GRADE_COLOR  = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b' };
+const GRADE_COLOR  = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
 const CARDS_PER_PAGE = 6;
 let _uid = 0;
 const genUid = () => `${++_uid}_${Date.now()}`;
@@ -17,7 +17,7 @@ function randomCondition() {
   return 1;
 }
 function condStyle(grade, cond) {
-  if (grade === 'lg') return 'gold';
+  if (grade === 'lg' || grade === 'raid') return 'gold';
   if (grade === 'ur') return 'holo';
   if (cond >= 9) return 'gold';
   if (cond >= 6) return 'holo';

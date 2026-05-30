@@ -5,7 +5,7 @@ const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'R
 const RAID_CARDS = CARDS.filter(c => c.raid);
 
 function condStyle(grade, cond) {
-  if (grade === 'lg') return 'gold';
+  if (grade === 'lg' || grade === 'raid') return 'gold';
   if (grade === 'ur') return 'holo';
   if (cond >= 9) return 'gold';
   if (cond >= 6) return 'holo';

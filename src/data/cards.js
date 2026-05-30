@@ -1,9 +1,10 @@
 export const GRADES = {
-  n:  { label: 'N',      className: 'grade-n',  dropRate: 0.55 },
-  r:  { label: 'R',      className: 'grade-r',  dropRate: 0.30 },
-  sr: { label: 'SR',     className: 'grade-sr', dropRate: 0.10 },
-  ur: { label: 'UR',     className: 'grade-ur', dropRate: 0.04 },
-  lg: { label: 'LEGEND', className: 'grade-lg', dropRate: 0.01 },
+  n:    { label: 'N',      className: 'grade-n',    dropRate: 0.55 },
+  r:    { label: 'R',      className: 'grade-r',    dropRate: 0.30 },
+  sr:   { label: 'SR',     className: 'grade-sr',   dropRate: 0.10 },
+  ur:   { label: 'UR',     className: 'grade-ur',   dropRate: 0.04 },
+  lg:   { label: 'LEGEND', className: 'grade-lg',   dropRate: 0.01 },
+  raid: { label: 'RAID',   className: 'grade-raid', dropRate: 0    },
 };
 
 export const CHARACTERS = [
@@ -54,7 +55,7 @@ export const CARDS = [
   { id: 'daitron_lg',  name: '다이트론', grade: 'lg',img: '레전드악마기사.png',    slogan: '끝이다.' },
 
   // ── RAID 한정 카드 (일반 뽑기/합성 제외) ──
-  { id: 'raid_cursed_doll', name: '저주받은 인형의 왕', grade: 'lg', img: 'boss_cursed_doll.png', slogan: '"공허의 심연에서 깨어났다"', raid: true },
+  { id: 'raid_cursed_doll', name: '저주받은 인형의 왕', grade: 'raid', img: 'boss_cursed_doll.png', slogan: '"공허의 심연에서 깨어났다"', raid: true },
 ];
 
 export const CARD_MAP = Object.fromEntries(CARDS.map(c => [c.id, c]));

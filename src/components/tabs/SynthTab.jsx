@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { CARDS } from '../../data/cards.js';
 
 const GRADES     = ['n', 'r', 'sr', 'ur', 'lg'];
-const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND' };
+const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const FLASH_LABEL = { sr: '💜 SUPER RARE!', ur: '✨ ULTRA RARE!', lg: '🌈 L E G E N D !' };
 const GRADE_BG   = { n: 'rgba(80,80,80,0.9)', r: '#1a6fd4', sr: '#7c3aed', ur: '#d97706', lg: '#ff6b6b' };
 const GRADE_COL  = { n: '#ccc', r: '#7eb8ff', sr: '#d4a8ff', ur: '#ffd97a', lg: '#fff' };
@@ -73,8 +73,8 @@ export default function SynthTab({ gs, setGs }) {
       showToast('🎉 등급 업그레이드 성공!');
     }
 
-    const pool = CARDS.filter(c => c.grade === resultGrade);
-    const card  = pool[Math.floor(Math.random() * pool.length)];
+    const pool = CARDS.filter(c => c.grade === resultGrade && !c.raid);
+    const card  = pool[Math.floor(Math.random() * pool.length)] ?? CARDS[0];
     const cond  = randomCondition();
     newOwned.push({ uid: genUid(), id: card.id, condition: cond });
 

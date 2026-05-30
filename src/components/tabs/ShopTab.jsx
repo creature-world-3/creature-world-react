@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { CARDS } from '../../data/cards.js';
 
-const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND' };
+const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const FLASH_LABEL = { sr: '💜 SUPER RARE!', ur: '✨ ULTRA RARE!', lg: '🌈 L E G E N D !' };
-const SR_PLUS = CARDS.filter(c => ['sr', 'ur', 'lg'].includes(c.grade));
+const SR_PLUS = CARDS.filter(c => ['sr', 'ur', 'lg'].includes(c.grade) && !c.raid);
 let _uid = 0;
 const genUid = () => `${++_uid}_${Date.now()}`;
 
