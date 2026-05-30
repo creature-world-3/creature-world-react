@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { CARDS, CHARACTERS } from '../../data/cards.js';
 
-const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND' };
+const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
+const RAID_CARDS = CARDS.filter(c => c.raid);
 
 function condStyle(grade, cond) {
   if (grade === 'lg') return 'gold';
@@ -32,7 +33,7 @@ export default function DexTab({ gs }) {
         <div key={char.id} className="dex-character-group">
           <div className="dex-char-name">{char.name}</div>
           <div className="card-grid">
-            {CARDS.filter(c => c.id.startsWith(char.id)).map(card => {
+            {CARDS.filter(c => c.id.startsWith(char.id) && !c.raid).map(card => {
               const owned   = ownedIds.has(card.id);
               const myCards = owned ? ownedCards.filter(c => c.id === card.id) : [];
               const best    = myCards.length ? myCards.reduce((a, b) => b.condition > a.condition ? b : a) : null;
@@ -60,6 +61,46 @@ export default function DexTab({ gs }) {
           </div>
         </div>
       ))}
+
+      {/* ── RAID 한정 카드 섹션 ── */}
+      <div className="dex-character-group dex-raid-group">
+        <div className="dex-char-name dex-raid-title">
+          ⚔️ RAID 한정
+          <span className="dex-raid-hint">레이드 보상으로만 획득 가능</span>
+        </div>
+        <div className="card-grid">
+          {RAID_CARDS.map(card => {
+            const myCards = ownedCards.filter(c => c.id === card.id);
+            const owned   = myCards.length > 0;
+            const best    = owned ? myCards.reduce((a, b) => b.condition > a.condition ? b : a) : null;
+            const cs      = best ? condStyle(card.grade, best.condition) : 'normal';
+            return (
+              <div
+                key={card.id}
+                className={`col-card grade-${card.grade}${owned ? '' : ' dex-locked'}`}
+                onClick={() => owned && best && setZoomCard({ card, best, count: myCards.length })}
+              >
+                <img src={`/${card.img}`} alt={card.name} loading="lazy" />
+                {owned && cs === 'gold' && <div className="cond-gold-overlay" />}
+                {owned && cs === 'holo' && <div className="cond-holo-overlay" />}
+                {owned && (
+                  <div className="col-card-footer">
+                    <div className="col-name">{card.name}</div>
+                    <span className="col-grade" style={{ color: '#ff6b6b' }}>RAID</span>
+                  </div>
+                )}
+                {!owned && (
+                  <div className="dex-raid-lock-overlay">
+                    <span className="dex-raid-lock-icon">⚔️</span>
+                    <span className="dex-raid-lock-text">RAID</span>
+                  </div>
+                )}
+                {owned && myCards.length > 1 && <div className="dup">×{myCards.length}</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
 
     {zoomCard && (

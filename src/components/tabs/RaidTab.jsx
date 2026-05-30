@@ -365,10 +365,20 @@ export default function RaidTab({ gs, setGs, user }) {
               }
             </div>
           </div>
-          {canReward && (
-            <button className="raid-reward-btn" onClick={handleClaimReward}>
-              🏆 레이드 보상 수령하기
-            </button>
+          {raid.status === 'defeated' && (
+            myPart?.rewardClaimed ? (
+              <button className="raid-reward-btn raid-reward-btn-done" disabled>
+                ✅ 보상 수령 완료
+              </button>
+            ) : myDmg >= MIN_REWARD_DMG ? (
+              <button className="raid-reward-btn" onClick={handleClaimReward}>
+                🏆 레이드 보상 수령하기
+              </button>
+            ) : (
+              <button className="raid-reward-btn raid-reward-btn-disabled" disabled>
+                🏆 보상 수령 불가 (데미지 부족)
+              </button>
+            )
           )}
           {raid.status === 'active' && (
             <div className="raid-lock-notice">⚠️ 참여 카드는 보스 처치까지 잠금됩니다</div>

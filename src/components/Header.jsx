@@ -1,4 +1,4 @@
-export default function Header({ onNotice, onHelp, onShare, user, onLogin, onLogout }) {
+export default function Header({ onNotice, onHelp, onShare, user, nickname, onLogin, onLogout }) {
   return (
     <header className="cw-header">
       <button className="share-btn" onClick={onShare}>친구 초대</button>
@@ -11,7 +11,7 @@ export default function Header({ onNotice, onHelp, onShare, user, onLogin, onLog
             {user.photoURL && (
               <img className="header-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" />
             )}
-            <span className="header-username">{user.displayName}</span>
+            <span className="header-username">{nickname || user.displayName}</span>
             <button className="header-logout-btn" onClick={onLogout}>로그아웃</button>
           </>
         ) : (

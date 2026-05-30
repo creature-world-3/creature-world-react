@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase/config.js';
 import Header from './components/Header.jsx';
 import TabBar from './components/TabBar.jsx';
@@ -24,6 +24,7 @@ export const BASE_STATE = {
   testEventDate: null,
   sessionMinutes: 0, sessionBonus: false, sessionDate: null,
   raidCard: null,
+  nickname: null,
 };
 
 function applyDailyReset(state) {
@@ -39,6 +40,12 @@ function applyDailyReset(state) {
 }
 
 const NOTICES = [
+  {
+    version: 'v1.3', date: '2025.05.30',
+    items: [
+      "⚔️ 첫 번째 레이드 보스 '저주받은 인형의 왕' 등장! 보스를 쓰러뜨리고 한정 RAID 카드를 획득하세요!",
+    ],
+  },
   {
     version: 'v1.2', date: '2025.05.28',
     items: [
@@ -86,6 +93,8 @@ export default function App() {
   const [toast, setToast]           = useState(null);
   const [user, setUser]             = useState(null);
   const [authReady, setAuthReady]   = useState(false);
+  const [showNicknameModal, setShowNicknameModal] = useState(false);
+  const [nicknameInput, setNicknameInput]         = useState('');
   const toastTimer  = useRef(null);
   const saveTimer   = useRef(null);
   const isFirstLoad = useRef(true);
@@ -103,11 +112,14 @@ export default function App() {
         try {
           const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (snap.exists()) {
-            setGs(applyDailyReset({ ...BASE_STATE, ...snap.data() }));
+            const loaded = applyDailyReset({ ...BASE_STATE, ...snap.data() });
+            setGs(loaded);
+            if (!loaded.nickname) setShowNicknameModal(true);
           } else {
             const newState = { ...BASE_STATE };
             await setDoc(doc(db, 'users', firebaseUser.uid), newState);
             setGs(newState);
+            setShowNicknameModal(true);
           }
         } catch (e) {
           console.error('Firestore 로드 실패:', e);
@@ -115,6 +127,7 @@ export default function App() {
         }
       } else {
         setGs({ ...BASE_STATE });
+        setShowNicknameModal(false);
       }
       setUser(firebaseUser);
       setAuthReady(true);
@@ -143,6 +156,18 @@ export default function App() {
 
   const handleLogout = async () => {
     await signOut(auth);
+  };
+
+  const handleSaveNickname = async () => {
+    const trimmed = nicknameInput.trim();
+    if (!trimmed || trimmed.length < 2 || trimmed.length > 10 || !user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { nickname: trimmed });
+      setGs(prev => ({ ...prev, nickname: trimmed }));
+      setShowNicknameModal(false);
+    } catch (e) {
+      console.error('닉네임 저장 실패:', e);
+    }
   };
 
   // ── 접속 시간 타이머 (1분마다, 로그인 상태에서만) ──
@@ -243,6 +268,7 @@ export default function App() {
             onHelp={() => setShowHelp(true)}
             onShare={handleShare}
             user={user}
+            nickname={gs.nickname}
             onLogin={handleLogin}
             onLogout={handleLogout}
           />
@@ -321,6 +347,36 @@ export default function App() {
                 </div>
               ))}
               <button className="modal-close" onClick={() => setShowHelp(false)}>시작하기</button>
+            </div>
+          </div>
+        )}
+
+        {showNicknameModal && (
+          <div className="modal-overlay show">
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-title">닉네임 설정</div>
+              <p className="nickname-modal-desc">
+                게임에서 사용할 닉네임을 설정해주세요.<br />
+                <strong>한 번 설정하면 변경할 수 없습니다.</strong>
+              </p>
+              <input
+                className="nickname-input"
+                type="text"
+                placeholder="닉네임 입력 (2~10자)"
+                value={nicknameInput}
+                onChange={e => setNicknameInput(e.target.value.slice(0, 10))}
+                onKeyDown={e => e.key === 'Enter' && handleSaveNickname()}
+                maxLength={10}
+                autoFocus
+              />
+              <div className="nickname-char-count">{nicknameInput.trim().length} / 10</div>
+              <button
+                className="modal-close"
+                onClick={handleSaveNickname}
+                disabled={nicknameInput.trim().length < 2}
+              >
+                설정하기
+              </button>
             </div>
           </div>
         )}

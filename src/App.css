@@ -1923,3 +1923,54 @@ body.raid-theme::before {
   .raid-parts-grid { grid-template-columns: repeat(3, 1fr); }
   .raid-boss-info { padding: 14px 16px; }
 }
+
+/* ── 레이드 보상 버튼 상태 ── */
+.raid-reward-btn-done {
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  animation: none !important; cursor: default !important; opacity: 0.85;
+}
+.raid-reward-btn-disabled {
+  background: linear-gradient(135deg, #6b7280, #4b5563) !important;
+  animation: none !important; cursor: default !important; opacity: 0.7;
+}
+
+/* ── 도감 RAID 섹션 ── */
+.dex-raid-group { border-top: 1px solid rgba(255,107,107,0.3); padding-top: 16px; }
+.dex-raid-title {
+  display: flex; align-items: center; gap: 8px;
+  color: #ff6b6b !important;
+}
+.dex-raid-hint {
+  font-size: 0.68rem; font-weight: 400; color: var(--muted);
+  background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.25);
+  border-radius: 99px; padding: 1px 8px; white-space: nowrap;
+}
+.dex-raid-lock-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  background: rgba(0,0,0,0.45); border-radius: inherit;
+}
+.dex-raid-lock-icon { font-size: 1.4rem; opacity: 0.6; }
+.dex-raid-lock-text {
+  font-size: 0.6rem; font-weight: 700; color: #ff6b6b;
+  letter-spacing: 1px; font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* ── 닉네임 모달 ── */
+.nickname-modal-desc {
+  font-size: 0.85rem; color: var(--muted); line-height: 1.6;
+  margin: 0 0 16px; text-align: center;
+}
+.nickname-input {
+  width: 100%; box-sizing: border-box;
+  padding: 10px 14px; border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.07); color: var(--text);
+  font-size: 1rem; font-family: 'Noto Sans KR', sans-serif;
+  outline: none; transition: border 0.2s;
+}
+.nickname-input:focus { border-color: #4a9eff; }
+.nickname-char-count {
+  text-align: right; font-size: 0.72rem; color: var(--muted);
+  margin: 4px 0 16px;
+}
