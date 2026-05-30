@@ -105,40 +105,49 @@ export default function App() {
     return () => document.body.classList.remove('raid-theme');
   }, [activeTab]);
 
-  // ── 리다이렉트 로그인 결과 처리 (카카오톡 인앱브라우저 등) ──
+  // ── 인증 초기화: 리다이렉트 결과 처리 완료 후 상태 감지 등록 ──
+  // getRedirectResult를 먼저 await해야 Safari에서 onAuthStateChanged가
+  // null을 먼저 반환하는 무한루프를 방지할 수 있음
   useEffect(() => {
-    getRedirectResult(auth).catch(e => console.error('redirect result error:', e));
-  }, []);
+    let unsubscribe = null;
 
-  // ── 인증 상태 감지 + Firestore 로드 ──
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (snap.exists()) {
-            const loaded = applyDailyReset({ ...BASE_STATE, ...snap.data() });
-            setGs(loaded);
-            if (!loaded.nickname) setShowNicknameModal(true);
-          } else {
-            const newState = { ...BASE_STATE };
-            await setDoc(doc(db, 'users', firebaseUser.uid), newState);
-            setGs(newState);
-            setShowNicknameModal(true);
-          }
-        } catch (e) {
-          console.error('Firestore 로드 실패:', e);
-          setGs({ ...BASE_STATE });
-        }
-      } else {
-        setGs({ ...BASE_STATE });
-        setShowNicknameModal(false);
+    const init = async () => {
+      try {
+        await getRedirectResult(auth);
+      } catch (e) {
+        console.error('redirect result error:', e);
       }
-      setUser(firebaseUser);
-      setAuthReady(true);
-      isFirstLoad.current = true;
-    });
-    return unsubscribe;
+
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          try {
+            const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
+            if (snap.exists()) {
+              const loaded = applyDailyReset({ ...BASE_STATE, ...snap.data() });
+              setGs(loaded);
+              if (!loaded.nickname) setShowNicknameModal(true);
+            } else {
+              const newState = { ...BASE_STATE };
+              await setDoc(doc(db, 'users', firebaseUser.uid), newState);
+              setGs(newState);
+              setShowNicknameModal(true);
+            }
+          } catch (e) {
+            console.error('Firestore 로드 실패:', e);
+            setGs({ ...BASE_STATE });
+          }
+        } else {
+          setGs({ ...BASE_STATE });
+          setShowNicknameModal(false);
+        }
+        setUser(firebaseUser);
+        setAuthReady(true);
+        isFirstLoad.current = true;
+      });
+    };
+
+    init();
+    return () => { unsubscribe?.(); };
   }, []);
 
   // ── Firestore 저장 (gs 변경 시, 1초 디바운스) ──
