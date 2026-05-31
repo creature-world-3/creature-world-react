@@ -51,6 +51,19 @@ const D10_AURORA = {
 const D10_GRADE_BG  = { n:'rgba(80,80,80,0.9)', r:'#1a3a6a', sr:'#2d1b4e', ur:'#3a2800', lg:'linear-gradient(90deg,#ff6b6b,#4d96ff,#c77dff)' };
 const D10_GRADE_COL = { n:'#ccc', r:'#7eb8ff', sr:'#d4a8ff', ur:'#ffd97a', lg:'#fff' };
 
+function StarRating({ value }) {
+  const full  = Math.floor(value / 2);
+  const half  = (value % 2) === 1 ? 1 : 0;
+  const empty = 5 - full - half;
+  return (
+    <div className="modal-stars">
+      {Array.from({ length: full  }).map((_, i) => <span key={`f${i}`} className="star-full">★</span>)}
+      {half === 1 && <span className="star-half">★</span>}
+      {Array.from({ length: empty }).map((_, i) => <span key={`e${i}`} className="star-empty">☆</span>)}
+    </div>
+  );
+}
+
 // ── 인스턴스 피커 바텀시트 (수집북 중복 카드 선택) ──
 function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
   return (
@@ -96,29 +109,51 @@ function CardDetailModal({ item, onClose }) {
   return (
     <div className="card-zoom-overlay card-detail-overlay" onClick={onClose}>
       <div className="card-zoom-inner" onClick={e => e.stopPropagation()}>
-        <div className={`zoom-card grade-${card.grade}`}>
-          <div className="card-header">
-            <span className="card-name">{card.name}</span>
-            <span className="grade-badge">{GRADE_LABEL[card.grade]}</span>
+        <div className="modal-card-main">
+          {/* 왼쪽: 카드 이미지 */}
+          <div className={`zoom-card grade-${card.grade}`}>
+            <div className="card-art">
+              <img src={`/${card.img}`} alt={card.name} />
+            </div>
+            <div className="card-footer-front">
+              <div className="card-sep" />
+              <div className="card-slogan">{card.slogan}</div>
+            </div>
+            <div className="card-aurora" />
+            <div className={`draw-cond-badge cond-badge-${cs}`}>{cond}</div>
           </div>
-          <div className="card-art">
-            <img src={`/${card.img}`} alt={card.name} />
+          {/* 오른쪽: 스탯 패널 */}
+          <div className="modal-stat-panel">
+            <div className="modal-stat-row">
+              <span className="modal-stat-label">데미지</span>
+              <span className="modal-stat-value modal-stat-dmg">
+                {dmgRange(card.grade, cond, enhLvl)}
+              </span>
+            </div>
+            {enhLvl > 0 && (
+              <div className="modal-stat-row">
+                <span className="modal-stat-label">강화</span>
+                <span className="modal-stat-value modal-stat-enhance">{enhLvl}단계</span>
+              </div>
+            )}
+            <div className="modal-stat-row">
+              <span className="modal-stat-label">컨디션</span>
+              <StarRating value={cond} />
+            </div>
+            {count > 1 && (
+              <div className="modal-stat-row">
+                <span className="modal-stat-label">보유</span>
+                <span className="modal-stat-value">{count}장</span>
+              </div>
+            )}
           </div>
-          <div className="card-footer-front">
-            <div className="card-sep" />
-            <div className="card-slogan">{card.slogan}</div>
-          </div>
-          <div className="card-aurora" />
-          <div className={`draw-cond-badge cond-badge-${cs}`}>{cond}</div>
         </div>
-        <div className="zoom-info">
-          {count > 1 && (
-            <span className="zoom-detail-count">{count}개 보유</span>
-          )}
-          {enhLvl > 0 && (
-            <div className="zoom-enhance-info">강화 : {enhLvl}단계</div>
-          )}
-          <div className="zoom-dmg-info">데미지 : {dmgRange(card.grade, cond, enhLvl)}/틱</div>
+        {/* 하단: 이름, 등급, 닫기 */}
+        <div className="modal-card-footer">
+          <span className="modal-card-name">{card.name}</span>
+          <span className="modal-card-grade" style={{ color: GRADE_COLOR[card.grade] }}>
+            {GRADE_LABEL[card.grade]}
+          </span>
           <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
         </div>
       </div>

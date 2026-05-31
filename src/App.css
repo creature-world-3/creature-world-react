@@ -501,8 +501,9 @@
 @keyframes fadeInOverlay { from{opacity:0} to{opacity:1} }
 .card-detail-overlay { z-index: 250; }
 .card-zoom-inner {
-  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
   animation: zoomCardIn 0.25s cubic-bezier(.34,1.56,.64,1);
+  max-width: calc(100vw - 32px);
 }
 @keyframes zoomCardIn { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
 
@@ -541,29 +542,46 @@
   background:repeating-linear-gradient(120deg,rgba(255,80,80,0.22) 0%,rgba(255,200,50,0.22) 15%,rgba(80,220,120,0.22) 30%,rgba(80,160,255,0.22) 45%,rgba(180,80,255,0.22) 60%,rgba(255,80,80,0.22) 75%);
   background-size:300% 300%; animation:auroraLG 2s linear infinite; opacity:1;
 }
-.zoom-info {
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
+/* ── 카드 상세 모달 새 레이아웃 ── */
+.modal-card-main {
+  display: flex; flex-direction: row; gap: 14px; align-items: flex-start;
 }
-.zoom-detail-info {
-  display: flex; align-items: center; gap: 10px;
-  color: white; font-size: 0.82rem; font-weight: 700;
+.modal-stat-panel {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 14px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  min-width: 108px; backdrop-filter: blur(6px);
 }
-.zoom-detail-grade { font-weight: 900; }
-.zoom-detail-cond  { color: rgba(255,255,255,0.8); }
+.modal-stat-row { display: flex; flex-direction: column; gap: 4px; }
+.modal-stat-label {
+  font-size: 0.64rem; color: rgba(255,255,255,0.5);
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+}
+.modal-stat-value { font-size: 0.88rem; font-weight: 700; color: white; }
+.modal-stat-dmg   { color: #fbbf24; font-size: 0.95rem; font-weight: 900; }
+.modal-stat-enhance { color: #fb923c; }
+.modal-stars { display: flex; gap: 1px; }
+.star-full  { color: #fbbf24; font-size: 0.95rem; }
+.star-half  { color: #fbbf24; font-size: 0.95rem; opacity: 0.42; }
+.star-empty { color: rgba(255,255,255,0.2); font-size: 0.95rem; }
+.modal-card-footer {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+}
+.modal-card-name {
+  font-family: 'Nunito', sans-serif; font-weight: 900;
+  font-size: 1.05rem; color: white;
+}
+.modal-card-grade {
+  font-size: 0.75rem; font-weight: 900;
+  padding: 2px 10px; border-radius: 99px;
+  background: rgba(255,255,255,0.1);
+}
+
+/* 하위 호환 */
+.zoom-info { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .zoom-detail-count { color: #fbbf24; }
-.zoom-enhance-info {
-  font-size: 0.82rem; font-weight: 700;
-  color: #fbbf24;
-  letter-spacing: 0.3px;
-}
-.zoom-dmg-info {
-  font-size: 0.82rem; font-weight: 700;
-  color: rgba(255,255,255,0.8);
-  letter-spacing: 0.3px;
-}
-.zoom-count {
-  font-family:'Nunito',sans-serif; font-weight:900; font-size:1.05rem; color:white;
-}
+.zoom-count { font-family:'Nunito',sans-serif; font-weight:900; font-size:1.05rem; color:white; }
 .zoom-close {
   background:rgba(255,255,255,0.15); border:1.5px solid rgba(255,255,255,0.35);
   color:white; padding:8px 22px; border-radius:99px; cursor:pointer;

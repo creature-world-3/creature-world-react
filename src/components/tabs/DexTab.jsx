@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CARDS, CHARACTERS } from '../../data/cards.js';
 
 const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
+const GRADE_COLOR = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
 const RAID_CARDS   = CARDS.filter(c => c.raid === true || c.grade === 'raid' || c.grade === 'RAID');
 const NORMAL_CARDS = CARDS.filter(c => !c.raid && c.grade !== 'raid' && c.grade !== 'RAID');
 
@@ -71,6 +72,19 @@ function CardItem({ card, ownedCards, onSingle, onMulti }) {
         </div>
       )}
       {owned && myCards.length > 1 && <div className="dup">×{myCards.length}</div>}
+    </div>
+  );
+}
+
+function StarRating({ value }) {
+  const full  = Math.floor(value / 2);
+  const half  = (value % 2) === 1 ? 1 : 0;
+  const empty = 5 - full - half;
+  return (
+    <div className="modal-stars">
+      {Array.from({ length: full  }).map((_, i) => <span key={`f${i}`} className="star-full">★</span>)}
+      {half === 1 && <span className="star-half">★</span>}
+      {Array.from({ length: empty }).map((_, i) => <span key={`e${i}`} className="star-empty">☆</span>)}
     </div>
   );
 }
@@ -220,33 +234,55 @@ export default function DexTab({ gs }) {
     {zoomCard && (
       <div className="card-zoom-overlay" onClick={() => setZoomCard(null)}>
         <div className="card-zoom-inner" onClick={e => e.stopPropagation()}>
-          <div className={`zoom-card grade-${zoomCard.card.grade}`}>
-            <div className="card-header">
-              <span className="card-name">{zoomCard.card.name}</span>
-              <span className="grade-badge">{GRADE_LABEL[zoomCard.card.grade]}</span>
+          <div className="modal-card-main">
+            {/* 왼쪽: 카드 이미지 */}
+            <div className={`zoom-card grade-${zoomCard.card.grade}`}>
+              <div className="card-art">
+                <img src={`/${zoomCard.card.img}`} alt={zoomCard.card.name} />
+              </div>
+              <div className="card-footer-front">
+                <div className="card-sep" />
+                <div className="card-slogan">{zoomCard.card.slogan}</div>
+              </div>
+              <div className="card-aurora" />
+              {zoomCs === 'gold' && <div className="cond-gold-overlay" />}
+              {zoomCs === 'holo' && <div className="cond-holo-overlay" />}
+              <div className={`draw-cond-badge cond-badge-${zoomCs}`}>
+                {zoomCard.best.condition}
+              </div>
             </div>
-            <div className="card-art">
-              <img src={`/${zoomCard.card.img}`} alt={zoomCard.card.name} />
-            </div>
-            <div className="card-footer-front">
-              <div className="card-sep" />
-              <div className="card-slogan">{zoomCard.card.slogan}</div>
-            </div>
-            <div className="card-aurora" />
-            {zoomCs === 'gold' && <div className="cond-gold-overlay" />}
-            {zoomCs === 'holo' && <div className="cond-holo-overlay" />}
-            <div className={`draw-cond-badge cond-badge-${zoomCs}`}>
-              {zoomCard.best.condition}
+            {/* 오른쪽: 스탯 패널 */}
+            <div className="modal-stat-panel">
+              <div className="modal-stat-row">
+                <span className="modal-stat-label">데미지</span>
+                <span className="modal-stat-value modal-stat-dmg">
+                  {dmgRange(zoomCard.card.grade, zoomCard.best.condition, zoomCard.best.enhanceLevel || 0)}
+                </span>
+              </div>
+              {(zoomCard.best.enhanceLevel || 0) > 0 && (
+                <div className="modal-stat-row">
+                  <span className="modal-stat-label">강화</span>
+                  <span className="modal-stat-value modal-stat-enhance">{zoomCard.best.enhanceLevel}단계</span>
+                </div>
+              )}
+              <div className="modal-stat-row">
+                <span className="modal-stat-label">컨디션</span>
+                <StarRating value={zoomCard.best.condition} />
+              </div>
+              {zoomCard.count > 1 && (
+                <div className="modal-stat-row">
+                  <span className="modal-stat-label">보유</span>
+                  <span className="modal-stat-value">{zoomCard.count}장</span>
+                </div>
+              )}
             </div>
           </div>
-          <div className="zoom-info">
-            {zoomCard.count > 1 && (
-              <span className="zoom-detail-count">{zoomCard.count}개 보유</span>
-            )}
-            {(zoomCard.best.enhanceLevel || 0) > 0 && (
-              <div className="zoom-enhance-info">강화 : {zoomCard.best.enhanceLevel}단계</div>
-            )}
-            <div className="zoom-dmg-info">데미지 : {dmgRange(zoomCard.card.grade, zoomCard.best.condition, zoomCard.best.enhanceLevel || 0)}/틱</div>
+          {/* 하단: 이름, 등급, 닫기 */}
+          <div className="modal-card-footer">
+            <span className="modal-card-name">{zoomCard.card.name}</span>
+            <span className="modal-card-grade" style={{ color: GRADE_COLOR[zoomCard.card.grade] }}>
+              {GRADE_LABEL[zoomCard.card.grade]}
+            </span>
             <button className="zoom-close" onClick={() => setZoomCard(null)}>닫기 ✕</button>
           </div>
         </div>
