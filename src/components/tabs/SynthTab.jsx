@@ -7,7 +7,9 @@ const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'R
 const FLASH_LABEL = { sr: 'SUPER RARE!', ur: 'ULTRA RARE!', lg: 'L E G E N D !' };
 const GRADE_BG    = { n: 'rgba(80,80,80,0.9)', r: '#1a6fd4', sr: '#7c3aed', ur: '#d97706', lg: '#ff6b6b', raid: '#b8860b' };
 const GRADE_COL   = { n: '#ccc', r: '#7eb8ff', sr: '#d4a8ff', ur: '#ffd97a', lg: '#fff', raid: '#fff' };
-const EXCHANGE_COST = 10;
+const EXCHANGE_COST    = 10;
+const EXCHANGE_TICKETS = { n: 1, r: 5, sr: 15, ur: 50, lg: 100 };
+const EXCHANGE_GRADES  = ['n', 'r', 'sr', 'ur', 'lg'];
 
 // 단계별 강화 비용: +1~+5 / +6~+10 / +11 이상
 const ENHANCE_COST = {
@@ -565,10 +567,12 @@ function EnhanceSubTab({ gs, setGs }) {
 
 // ── 교환 서브탭 ──
 function ExchangeSubTab({ gs, setGs }) {
+  const [filterGrade, setFilterGrade] = useState('n');
   const [selectedCard, setSelectedCard] = useState(null);
-  const [qty, setQty]   = useState(1);
-  const [toast, setToast] = useState(null);
-  const [confirmData, setConfirmData] = useState(null); // { toRemove, qty, totalCards, highCondCards }
+  const [qty, setQty]       = useState(1);
+  const [showRates, setShowRates] = useState(false);
+  const [toast, setToast]   = useState(null);
+  const [confirmData, setConfirmData] = useState(null);
   const toastTimer = useRef(null);
 
   const showToast = useCallback((msg) => {
@@ -583,10 +587,24 @@ function ExchangeSubTab({ gs, setGs }) {
   const countById = {};
   ownedCards.forEach(oc => { countById[oc.id] = (countById[oc.id] || 0) + 1; });
 
-  const exchangeable = CARDS.filter(c => (countById[c.id] || 0) >= EXCHANGE_COST);
+  // 현재 등급 필터의 보유 카드 목록 (1장 이상)
+  const gradeCards = CARDS.filter(c =>
+    c.grade === filterGrade && !c.raid && (countById[c.id] || 0) > 0,
+  );
 
+  // 등급 버튼에 표시할 교환 가능(≥10장) 종 수
+  const exchCountByGrade = {};
+  EXCHANGE_GRADES.forEach(g => {
+    exchCountByGrade[g] = CARDS.filter(c => !c.raid && c.grade === g && (countById[c.id] || 0) >= EXCHANGE_COST).length;
+  });
+
+  const ticketsPerExchange = EXCHANGE_TICKETS[selectedCard?.grade] || 1;
   const maxQty = selectedCard ? Math.floor((countById[selectedCard.id] || 0) / EXCHANGE_COST) : 0;
 
+  // 등급 변경 시 선택 초기화
+  useEffect(() => { setSelectedCard(null); setQty(1); }, [filterGrade]);
+
+  // 교환 후 수량 재조정
   useEffect(() => {
     if (!selectedCard) return;
     const newMax = Math.floor((countById[selectedCard.id] || 0) / EXCHANGE_COST);
@@ -595,18 +613,20 @@ function ExchangeSubTab({ gs, setGs }) {
   }, [gs?.ownedCards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectCard = (card) => {
+    if ((countById[card.id] || 0) < EXCHANGE_COST) return;
     setSelectedCard(card);
     setQty(1);
   };
 
   const executeExchange = (toRemove, exchangeQty, totalCards) => {
+    const earned = exchangeQty * ticketsPerExchange;
     setGs(prev => ({
       ...prev,
       ownedCards: prev.ownedCards.filter(c => !toRemove.has(c.uid)),
-      tickets:    prev.tickets + exchangeQty,
+      tickets:    prev.tickets + earned,
     }));
     setConfirmData(null);
-    showToast(`${selectedCard.name} ${totalCards}장 → 뽑기권 ${exchangeQty}장 교환 완료!`);
+    showToast(`${selectedCard.name} ${totalCards}장 → 뽑기권 ${earned}장 교환 완료!`);
   };
 
   const doExchange = () => {
@@ -632,7 +652,6 @@ function ExchangeSubTab({ gs, setGs }) {
       {confirmData && (
         <div className="exsub-confirm-overlay" onClick={() => setConfirmData(null)}>
           <div className="exsub-confirm-box" onClick={e => e.stopPropagation()}>
-            <div className="exsub-confirm-icon">⚠️</div>
             <div className="exsub-confirm-title">고컨디션 카드 포함</div>
             <div className="exsub-confirm-desc">
               교환할 카드 중 <strong>컨디션 8 이상</strong> 카드가{' '}
@@ -652,14 +671,41 @@ function ExchangeSubTab({ gs, setGs }) {
         </div>
       )}
 
-      {/* 헤더 배너 */}
-      <div className="exsub-banner">
-        <div className="exsub-banner-icon">🎫</div>
-        <div className="exsub-banner-text">
-          <div className="exsub-banner-title">카드 교환</div>
-          <div className="exsub-banner-desc">같은 카드 {EXCHANGE_COST}장 → 뽑기권 1장으로 교환</div>
+      {/* 교환 비율 안내 토글 */}
+      <button className="exsub-rate-toggle" onClick={() => setShowRates(r => !r)}>
+        교환 비율 안내&nbsp;&nbsp;{showRates ? '▲' : '▼'}
+      </button>
+      {showRates && (
+        <div className="exsub-rate-table">
+          {EXCHANGE_GRADES.map(g => (
+            <div key={g} className="exsub-rate-row">
+              <span className="exsub-rate-grade" style={{ background: GRADE_BG[g], color: GRADE_COL[g] }}>{GRADE_LABEL[g]}</span>
+              <span className="exsub-rate-formula">카드 {EXCHANGE_COST}장</span>
+              <span className="exsub-rate-arrow">→</span>
+              <span className="exsub-rate-tickets">뽑기권 {EXCHANGE_TICKETS[g]}장</span>
+            </div>
+          ))}
+          <div className="exsub-rate-note">RAID 카드는 교환 불가</div>
         </div>
-        <div className="exsub-banner-badge">{EXCHANGE_COST}장 → 1장</div>
+      )}
+
+      {/* 등급 필터 */}
+      <div className="exsub-grade-filter">
+        {EXCHANGE_GRADES.map(g => {
+          const cnt = exchCountByGrade[g];
+          const isActive = filterGrade === g;
+          return (
+            <button
+              key={g}
+              className={`exsub-grade-btn${isActive ? ' active' : ''}`}
+              style={isActive ? { background: GRADE_BG[g], color: GRADE_COL[g], borderColor: GRADE_BG[g] } : {}}
+              onClick={() => setFilterGrade(g)}
+            >
+              {GRADE_LABEL[g]}
+              {cnt > 0 && <span className="exsub-grade-badge">{cnt}</span>}
+            </button>
+          );
+        })}
       </div>
 
       {/* 선택된 카드 패널 */}
@@ -679,8 +725,6 @@ function ExchangeSubTab({ gs, setGs }) {
               보유 <strong>{countById[selectedCard.id] || 0}장</strong>
               <span className="exsub-panel-avail"> · 최대 {maxQty}회 교환 가능</span>
             </div>
-
-            {/* 수량 선택 */}
             <div className="exsub-qty-row">
               <button className="exsub-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1}>−</button>
               <div className="exsub-qty-display">
@@ -689,33 +733,34 @@ function ExchangeSubTab({ gs, setGs }) {
               </div>
               <button className="exsub-qty-btn" onClick={() => setQty(q => Math.min(maxQty, q + 1))} disabled={qty >= maxQty}>+</button>
             </div>
-
             <div className="exsub-qty-summary">
-              카드 <strong>{qty * EXCHANGE_COST}장</strong> → 뽑기권 <strong>{qty}장</strong>
+              카드 <strong>{qty * EXCHANGE_COST}장</strong> → 뽑기권 <strong>{qty * ticketsPerExchange}장</strong>
             </div>
-
             <button className="exsub-do-btn" onClick={doExchange}>교환하기</button>
           </div>
         </div>
       )}
 
       {/* 카드 목록 */}
-      {exchangeable.length === 0 ? (
-        <div className="exsub-empty">
-          <div className="exsub-empty-icon">📦</div>
-          <div className="exsub-empty-text">교환 가능한 카드가 없어요</div>
-          <div className="exsub-empty-sub">같은 카드를 {EXCHANGE_COST}장 이상 모으면 교환할 수 있어요</div>
+      <div className="exsub-list-wrap">
+        <div className="exsub-list-header">
+          <span>{GRADE_LABEL[filterGrade]} 등급 카드</span>
+          <span className="exsub-list-rate-hint">{EXCHANGE_COST}장 → 뽑기권 {EXCHANGE_TICKETS[filterGrade]}장</span>
         </div>
-      ) : (
-        <div className="exsub-list-wrap">
-          <div className="exsub-list-header">교환 가능한 카드 ({exchangeable.length}종)</div>
-          {exchangeable.map(card => {
+        {gradeCards.length === 0 ? (
+          <div className="col-empty">{GRADE_LABEL[filterGrade]} 등급 카드가 없어요</div>
+        ) : (
+          gradeCards.map(card => {
             const count  = countById[card.id] || 0;
-            const maxEx  = Math.floor(count / EXCHANGE_COST);
+            const canEx  = count >= EXCHANGE_COST;
             const isSel  = selectedCard?.id === card.id;
             const gradeColor = GRADE_BG[card.grade] === 'rgba(80,80,80,0.9)' ? '#888' : GRADE_BG[card.grade];
             return (
-              <div key={card.id} className={`exsub-item${isSel ? ' selected' : ''}`} onClick={() => handleSelectCard(card)}>
+              <div
+                key={card.id}
+                className={`exsub-item${isSel ? ' selected' : ''}${!canEx ? ' insufficient' : ''}`}
+                onClick={() => handleSelectCard(card)}
+              >
                 <div className={`exsub-item-img grade-${card.grade}`}>
                   <img src={`/${card.img}`} alt={card.name} />
                 </div>
@@ -724,14 +769,23 @@ function ExchangeSubTab({ gs, setGs }) {
                     {card.name}
                     <span className="exsub-item-grade" style={{ color: gradeColor }}>&nbsp;{GRADE_LABEL[card.grade]}</span>
                   </div>
-                  <div className="exsub-item-meta">보유 <strong>{count}장</strong> · 최대 {maxEx}회 교환 가능</div>
+                  <div className="exsub-item-meta">
+                    보유 <strong>{count}장</strong>
+                    {canEx
+                      ? <span className="exsub-item-ok"> · {Math.floor(count / EXCHANGE_COST)}회 교환 가능</span>
+                      : <span className="exsub-item-lack"> · {count} / {EXCHANGE_COST}장</span>
+                    }
+                  </div>
                 </div>
-                <div className="exsub-item-check">{isSel ? '✓' : '›'}</div>
+                {canEx
+                  ? <div className="exsub-item-check">{isSel ? '✓' : '›'}</div>
+                  : <div className="exsub-item-lock">부족</div>
+                }
               </div>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
     </>
   );
 }
