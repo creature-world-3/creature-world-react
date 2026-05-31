@@ -277,7 +277,10 @@ export default function App() {
 
   // ── Firestore 저장 (gs 변경 시, 1초 디바운스) ──
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      clearTimeout(saveTimer.current);
+      return;
+    }
     if (isFirstLoad.current) { isFirstLoad.current = false; return; }
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
