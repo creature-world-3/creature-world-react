@@ -52,6 +52,15 @@ function applyDailyReset(state) {
 
 const NOTICES = [
   {
+    version: 'v1.4', date: '2026.06.01',
+    items: [
+      '랭킹 탭 추가',
+      '교환 탭 추가',
+      '로그인 안정성 개선',
+      '강화 비용 UI 정리',
+    ],
+  },
+  {
     version: 'v1.3', date: '2025.05.30',
     items: [
       "첫 번째 레이드 보스 '저주받은 인형의 왕' 추가.",
