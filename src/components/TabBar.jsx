@@ -1,6 +1,6 @@
 const MAIN_TABS = [
   { id: 'gacha', label: '뽑기' },
-  { id: 'synth', label: '합성/강화' },
+  { id: 'synth', label: '합성/강화/교환' },
   { id: 'dex',   label: '도감' },
   { id: 'raid',  label: '레이드' },
 ];

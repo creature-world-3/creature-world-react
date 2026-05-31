@@ -387,7 +387,7 @@ function EnhanceSubTab({ gs, setGs }) {
 
       {/* ── 강화 메인 패널 ── */}
       {selectedInst && selectedCardDef ? (
-        <div className="enhance-main-panel">
+        <div className="enhance-main-panel" key={selectedCardDef.id}>
 
           {/* 카드 대형 표시 */}
           <div className={`enhance-card-large-wrap${enhancePhase === 'success' ? ' enhance-success-glow' : ''}`}>
@@ -630,7 +630,7 @@ function ExchangeSubTab({ gs, setGs }) {
 
       {/* 선택된 카드 패널 */}
       {selectedCard && (
-        <div className="exsub-panel">
+        <div className="exsub-panel" key={selectedCard.id}>
           <div className="exsub-panel-img-wrap">
             <div className={`exsub-panel-img grade-${selectedCard.grade}`}>
               <img src={`/${selectedCard.img}`} alt={selectedCard.name} />
