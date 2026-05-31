@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { CARDS } from '../../data/cards.js';
 
 const GRADES      = ['n', 'r', 'sr', 'ur', 'lg'];
@@ -147,26 +147,11 @@ function SynthSubTab({ gs, setGs }) {
     setTimeout(() => setFlipped(true), 300);
   };
 
-  const doExchange = (card) => {
-    const myCards = ownedCards.filter(c => c.id === card.id);
-    if (myCards.length < EXCHANGE_COST) return;
-    const toRemove = new Set(
-      [...myCards].sort((a, b) => a.condition - b.condition).slice(0, EXCHANGE_COST).map(c => c.uid),
-    );
-    setGs(prev => ({
-      ...prev,
-      ownedCards: prev.ownedCards.filter(c => !toRemove.has(c.uid)),
-      tickets:    prev.tickets + 1,
-    }));
-    showToast(`${card.name} ${EXCHANGE_COST}장 → 뽑기권 1장 교환 완료!`);
-  };
-
   const canSynth   = slots.every(s => s !== null);
   const gradeCards = CARDS.filter(c => c.grade === synthGrade && !c.raid && ownedCards.some(oc => oc.id === c.id));
   const noCards    = gradeCards.length === 0;
   const countById  = {};
   ownedCards.forEach(oc => { countById[oc.id] = (countById[oc.id] || 0) + 1; });
-  const exchangeable = CARDS.filter(c => (countById[c.id] || 0) >= EXCHANGE_COST);
 
   return (
     <>
@@ -230,33 +215,6 @@ function SynthSubTab({ gs, setGs }) {
         </div>
         <button className="synth-btn" onClick={doSynth} disabled={!canSynth}>합성하기</button>
       </div>
-
-      {exchangeable.length > 0 && (
-        <div className="synth-exchange-section">
-          <div className="col-header" style={{ marginBottom: 12 }}>
-            <div className="col-title">카드 교환</div>
-            <div className="col-count" style={{ background: '#fef3c7', color: '#d97706' }}>{EXCHANGE_COST}장 → 뽑기권 1장</div>
-          </div>
-          <div className="synth-exchange-list">
-            {exchangeable.map(card => {
-              const count = countById[card.id] || 0;
-              return (
-                <div key={card.id} className="synth-exchange-item">
-                  <div className={`synth-exchange-img grade-${card.grade}`}><img src={`/${card.img}`} alt={card.name} /></div>
-                  <div className="synth-exchange-info">
-                    <div className="synth-exchange-name">
-                      {card.name}
-                      <span className="synth-exchange-grade" style={{ color: GRADE_BG[card.grade] === 'rgba(80,80,80,0.9)' ? '#888' : GRADE_BG[card.grade] }}>&nbsp;{GRADE_LABEL[card.grade]}</span>
-                    </div>
-                    <div className="synth-exchange-meta">보유 <strong>{count}장</strong> · {Math.floor(count / EXCHANGE_COST)}회 교환 가능</div>
-                  </div>
-                  <button className="exchange-btn" onClick={() => doExchange(card)}>{EXCHANGE_COST}장 → 뽑기권 1장</button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       <div className="synth-cards-section">
         <div className="col-header" style={{ marginBottom: 14 }}>
@@ -605,14 +563,157 @@ function EnhanceSubTab({ gs, setGs }) {
   );
 }
 
+// ── 교환 서브탭 ──
+function ExchangeSubTab({ gs, setGs }) {
+  const [selectedCard, setSelectedCard] = useState(null);
+  const [qty, setQty]   = useState(1);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+
+  const showToast = useCallback((msg) => {
+    clearTimeout(toastTimer.current);
+    setToast(msg);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  }, []);
+
+  const lockedUid  = gs?.raidCard?.uid;
+  const ownedCards = (gs?.ownedCards || []).filter(c => c.uid !== lockedUid);
+
+  const countById = {};
+  ownedCards.forEach(oc => { countById[oc.id] = (countById[oc.id] || 0) + 1; });
+
+  const exchangeable = CARDS.filter(c => (countById[c.id] || 0) >= EXCHANGE_COST);
+
+  const maxQty = selectedCard ? Math.floor((countById[selectedCard.id] || 0) / EXCHANGE_COST) : 0;
+
+  useEffect(() => {
+    if (!selectedCard) return;
+    const newMax = Math.floor((countById[selectedCard.id] || 0) / EXCHANGE_COST);
+    if (newMax === 0) { setSelectedCard(null); setQty(1); }
+    else setQty(q => Math.min(q, newMax));
+  }, [gs?.ownedCards]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSelectCard = (card) => {
+    setSelectedCard(card);
+    setQty(1);
+  };
+
+  const doExchange = () => {
+    if (!selectedCard || qty < 1) return;
+    const totalCards = qty * EXCHANGE_COST;
+    const myCards = ownedCards.filter(c => c.id === selectedCard.id);
+    if (myCards.length < totalCards) return;
+    const toRemove = new Set(
+      [...myCards].sort((a, b) => a.condition - b.condition).slice(0, totalCards).map(c => c.uid),
+    );
+    setGs(prev => ({
+      ...prev,
+      ownedCards: prev.ownedCards.filter(c => !toRemove.has(c.uid)),
+      tickets:    prev.tickets + qty,
+    }));
+    showToast(`${selectedCard.name} ${totalCards}장 → 뽑기권 ${qty}장 교환 완료!`);
+  };
+
+  return (
+    <>
+      {toast && <div className="cw-toast">{toast}</div>}
+
+      {/* 헤더 배너 */}
+      <div className="exsub-banner">
+        <div className="exsub-banner-icon">🎫</div>
+        <div className="exsub-banner-text">
+          <div className="exsub-banner-title">카드 교환</div>
+          <div className="exsub-banner-desc">같은 카드 {EXCHANGE_COST}장 → 뽑기권 1장으로 교환</div>
+        </div>
+        <div className="exsub-banner-badge">{EXCHANGE_COST}장 → 1장</div>
+      </div>
+
+      {/* 선택된 카드 패널 */}
+      {selectedCard && (
+        <div className="exsub-panel">
+          <div className="exsub-panel-img-wrap">
+            <div className={`exsub-panel-img grade-${selectedCard.grade}`}>
+              <img src={`/${selectedCard.img}`} alt={selectedCard.name} />
+            </div>
+          </div>
+          <div className="exsub-panel-info">
+            <div className="exsub-panel-name">{selectedCard.name}</div>
+            <span className="exsub-panel-grade" style={{ background: GRADE_BG[selectedCard.grade], color: GRADE_COL[selectedCard.grade] }}>
+              {GRADE_LABEL[selectedCard.grade]}
+            </span>
+            <div className="exsub-panel-owned">
+              보유 <strong>{countById[selectedCard.id] || 0}장</strong>
+              <span className="exsub-panel-avail"> · 최대 {maxQty}회 교환 가능</span>
+            </div>
+
+            {/* 수량 선택 */}
+            <div className="exsub-qty-row">
+              <button className="exsub-qty-btn" onClick={() => setQty(q => Math.max(1, q - 1))} disabled={qty <= 1}>−</button>
+              <div className="exsub-qty-display">
+                <span className="exsub-qty-num">{qty}</span>
+                <span className="exsub-qty-unit">회</span>
+              </div>
+              <button className="exsub-qty-btn" onClick={() => setQty(q => Math.min(maxQty, q + 1))} disabled={qty >= maxQty}>+</button>
+            </div>
+
+            <div className="exsub-qty-summary">
+              카드 <strong>{qty * EXCHANGE_COST}장</strong> → 뽑기권 <strong>{qty}장</strong>
+            </div>
+
+            <button className="exsub-do-btn" onClick={doExchange}>교환하기</button>
+          </div>
+        </div>
+      )}
+
+      {/* 카드 목록 */}
+      {exchangeable.length === 0 ? (
+        <div className="exsub-empty">
+          <div className="exsub-empty-icon">📦</div>
+          <div className="exsub-empty-text">교환 가능한 카드가 없어요</div>
+          <div className="exsub-empty-sub">같은 카드를 {EXCHANGE_COST}장 이상 모으면 교환할 수 있어요</div>
+        </div>
+      ) : (
+        <div className="exsub-list-wrap">
+          <div className="exsub-list-header">교환 가능한 카드 ({exchangeable.length}종)</div>
+          {exchangeable.map(card => {
+            const count  = countById[card.id] || 0;
+            const maxEx  = Math.floor(count / EXCHANGE_COST);
+            const isSel  = selectedCard?.id === card.id;
+            const gradeColor = GRADE_BG[card.grade] === 'rgba(80,80,80,0.9)' ? '#888' : GRADE_BG[card.grade];
+            return (
+              <div key={card.id} className={`exsub-item${isSel ? ' selected' : ''}`} onClick={() => handleSelectCard(card)}>
+                <div className={`exsub-item-img grade-${card.grade}`}>
+                  <img src={`/${card.img}`} alt={card.name} />
+                </div>
+                <div className="exsub-item-info">
+                  <div className="exsub-item-name">
+                    {card.name}
+                    <span className="exsub-item-grade" style={{ color: gradeColor }}>&nbsp;{GRADE_LABEL[card.grade]}</span>
+                  </div>
+                  <div className="exsub-item-meta">보유 <strong>{count}장</strong> · 최대 {maxEx}회 교환 가능</div>
+                </div>
+                <div className="exsub-item-check">{isSel ? '✓' : '›'}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
 // ── 메인 탭 (서브탭 슬라이드) ──
+const TAB_ORDER = ['synth', 'enhance', 'exchange'];
+
 export default function SynthTab({ gs, setGs }) {
   const [subTab, setSubTab]     = useState('synth');
   const [slideClass, setSlideClass] = useState('');
 
   const switchSubTab = (newTab) => {
     if (newTab === subTab) return;
-    const dir = newTab === 'enhance' ? 'right' : 'left';
+    const oldIdx = TAB_ORDER.indexOf(subTab);
+    const newIdx = TAB_ORDER.indexOf(newTab);
+    const dir = newIdx > oldIdx ? 'right' : 'left';
     setSubTab(newTab);
     setSlideClass(` subtab-slide-${dir}`);
     setTimeout(() => setSlideClass(''), 300);
@@ -621,15 +722,15 @@ export default function SynthTab({ gs, setGs }) {
   return (
     <>
       <div className="subtab-bar">
-        <button className={`subtab-btn${subTab === 'synth' ? ' active' : ''}`} onClick={() => switchSubTab('synth')}>합성</button>
-        <button className={`subtab-btn${subTab === 'enhance' ? ' active' : ''}`} onClick={() => switchSubTab('enhance')}>강화</button>
+        <button className={`subtab-btn${subTab === 'synth'    ? ' active' : ''}`} onClick={() => switchSubTab('synth')}>합성</button>
+        <button className={`subtab-btn${subTab === 'enhance'  ? ' active' : ''}`} onClick={() => switchSubTab('enhance')}>강화</button>
+        <button className={`subtab-btn${subTab === 'exchange' ? ' active' : ''}`} onClick={() => switchSubTab('exchange')}>교환</button>
       </div>
 
       <div className={`subtab-content${slideClass}`}>
-        {subTab === 'synth'
-          ? <SynthSubTab gs={gs} setGs={setGs} />
-          : <EnhanceSubTab gs={gs} setGs={setGs} />
-        }
+        {subTab === 'synth'    && <SynthSubTab    gs={gs} setGs={setGs} />}
+        {subTab === 'enhance'  && <EnhanceSubTab  gs={gs} setGs={setGs} />}
+        {subTab === 'exchange' && <ExchangeSubTab gs={gs} setGs={setGs} />}
       </div>
     </>
   );
