@@ -162,16 +162,36 @@ export default function RankingTab() {
   const [loading,     setLoading]     = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [modalEntry,  setModalEntry]  = useState(null);
+  const [loadError,   setLoadError]   = useState(null);
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
+      console.log('[Ranking] users 컬렉션 조회 시작...');
       const snap = await getDocs(collection(db, 'users'));
+      console.log('[Ranking] 문서 수:', snap.size);
+
       const rows = [];
       snap.forEach(docSnap => {
         const data = docSnap.data();
-        const best = getBestCard(data.ownedCards);
-        if (!best) return;
+        // 첫 번째 문서의 전체 구조 확인
+        if (rows.length === 0) {
+          console.log('[Ranking] 첫 문서 ID:', docSnap.id);
+          console.log('[Ranking] 필드 목록:', Object.keys(data));
+          console.log('[Ranking] ownedCards 타입:', typeof data.ownedCards, Array.isArray(data.ownedCards) ? `(배열 ${data.ownedCards.length}개)` : '');
+          if (Array.isArray(data.ownedCards) && data.ownedCards.length > 0) {
+            console.log('[Ranking] ownedCards[0] 샘플:', JSON.stringify(data.ownedCards[0]));
+          }
+          console.log('[Ranking] nickname:', data.nickname);
+        }
+
+        const owned = data.ownedCards ?? data.cards ?? data.cardList ?? [];
+        const best  = getBestCard(owned);
+        if (!best) {
+          console.log('[Ranking] 스킵 (카드 없음):', docSnap.id, '| ownedCards 길이:', owned?.length ?? 0);
+          return;
+        }
         rows.push({
           uid:      docSnap.id,
           nickname: data.nickname || '유저',
@@ -180,11 +200,18 @@ export default function RankingTab() {
           score:    best.score,
         });
       });
+
+      console.log('[Ranking] 유효 유저 수:', rows.length);
       rows.sort((a, b) => b.score - a.score);
-      setEntries(rows.slice(0, 10));
+      const top10 = rows.slice(0, 10);
+      console.log('[Ranking] 상위 10개:', top10.map(r => `${r.nickname}(${r.score})`));
+      setEntries(top10);
       setLastUpdated(new Date().toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' }));
     } catch (e) {
-      console.error('ranking load error:', e);
+      console.error('[Ranking] 오류 코드:', e.code);
+      console.error('[Ranking] 오류 메시지:', e.message);
+      console.error('[Ranking] 전체 오류:', e);
+      setLoadError(`${e.code ?? '오류'}: ${e.message}`);
     }
     setLoading(false);
   };
@@ -199,7 +226,7 @@ export default function RankingTab() {
 
       <div className="ranking-wrap">
         <div className="ranking-header">
-          <div className="ranking-title">🏆 랭킹</div>
+          <div className="ranking-title">랭킹</div>
           <button className="ranking-refresh-btn" onClick={load} disabled={loading}>
             {loading ? '...' : '↻ 새로고침'}
           </button>
@@ -211,6 +238,12 @@ export default function RankingTab() {
 
         {loading ? (
           <div className="ranking-loading">불러오는 중...</div>
+        ) : loadError ? (
+          <div className="ranking-empty" style={{ color:'#f87171', fontSize:'0.78rem', lineHeight:1.7 }}>
+            데이터를 불러오지 못했습니다.<br />
+            <span style={{ opacity:0.7 }}>{loadError}</span><br />
+            <span style={{ opacity:0.5 }}>Firestore 보안 규칙을 확인해주세요.</span>
+          </div>
         ) : entries.length === 0 ? (
           <div className="ranking-empty">아직 랭킹 데이터가 없어요!</div>
         ) : (
