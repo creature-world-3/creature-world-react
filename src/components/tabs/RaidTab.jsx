@@ -99,9 +99,9 @@ const INITIAL_CHANNEL = (boss, channelNum) => ({
 // ══════════════════════════════════════════════
 // 1. 보스 목록 화면
 // ══════════════════════════════════════════════
-function BossListScreen({ gs, user, onSelectBoss }) {
-  // 보스별 채널 목록 상태
+function BossListScreen({ gs, user, onEnter }) {
   const [bossChannels, setBossChannels] = useState({});
+  const [entering, setEntering] = useState({}); // { [bossId]: true }
 
   useEffect(() => {
     const unsubs = BOSS_CONFIGS.map(boss => {
@@ -114,14 +114,53 @@ function BossListScreen({ gs, user, onSelectBoss }) {
     return () => unsubs.forEach(u => u());
   }, []);
 
-  // 보스 상태 집계
   const getBossStatus = (bossId) => {
-    const channels = bossChannels[bossId] || [];
-    if (!channels.length) return 'loading';
-    if (channels.some(c => c.status === 'active'))   return 'active';
-    if (channels.some(c => c.status === 'waiting'))  return 'waiting';
-    if (channels.some(c => c.status === 'defeated')) return 'defeated';
+    const chs = bossChannels[bossId] || [];
+    if (!chs.length) return 'loading';
+    if (chs.some(c => c.status === 'active'))   return 'active';
+    if (chs.some(c => c.status === 'waiting'))  return 'waiting';
+    if (chs.some(c => c.status === 'defeated')) return 'defeated';
     return 'expired';
+  };
+
+  const handleBossClick = async (boss) => {
+    if (entering[boss.id]) return;
+
+    // 이미 이 보스에 참여 중이면 그 채널로 바로 입장
+    const myBossId    = gs?.raidCard?.raidId;
+    const myChannelId = gs?.raidCard?.channelId;
+    if (myBossId === boss.id && myChannelId) {
+      onEnter(boss.id, myChannelId);
+      return;
+    }
+
+    setEntering(prev => ({ ...prev, [boss.id]: true }));
+    try {
+      const channels = bossChannels[boss.id] || [];
+
+      // 빈 채널 찾기 (active, 자리 있음)
+      const available = channels.find(c =>
+        c.status === 'active' && Object.keys(c.participants || {}).length < MAX_PARTS,
+      );
+      if (available) {
+        onEnter(boss.id, available.id);
+        return;
+      }
+
+      // 모두 가득 참 or 채널 없음 → 새 채널 자동 생성
+      const maxNum = channels.reduce((m, c) => Math.max(m, c.channelNum || 0), 0);
+      const nextNum = maxNum + 1;
+      const nextId  = `ch_${nextNum}`;
+      await setDoc(
+        doc(db, 'raids', boss.id, 'channels', nextId),
+        INITIAL_CHANNEL(boss, nextNum),
+      );
+      onEnter(boss.id, nextId);
+    } catch (e) {
+      console.error('enter boss error:', e);
+    } finally {
+      setEntering(prev => ({ ...prev, [boss.id]: false }));
+    }
   };
 
   const myBossId = gs?.raidCard?.raidId;
@@ -131,19 +170,23 @@ function BossListScreen({ gs, user, onSelectBoss }) {
       <div className="raid-boss-select-title">레이드 보스</div>
       <div className="raid-boss-card-row">
         {BOSS_CONFIGS.map(boss => {
-          const status = getBossStatus(boss.id);
-          const channels = bossChannels[boss.id] || [];
+          const status      = getBossStatus(boss.id);
+          const channels    = bossChannels[boss.id] || [];
           const activeCount = channels.filter(c => c.status === 'active').length;
-          const isMyBoss = myBossId === boss.id;
+          const isMyBoss    = myBossId === boss.id;
+          const isEntering  = !!entering[boss.id];
           return (
             <div
               key={boss.id}
-              className={`raid-boss-select-card${isMyBoss ? ' my-boss' : ''}`}
-              onClick={() => onSelectBoss(boss.id)}
+              className={`raid-boss-select-card${isMyBoss ? ' my-boss' : ''}${isEntering ? ' entering' : ''}`}
+              onClick={() => handleBossClick(boss)}
             >
               <div className="raid-boss-select-img-wrap">
                 <img src={boss.img} alt={boss.name} className="raid-boss-select-img" />
                 <div className="raid-boss-select-img-vignette" />
+                {isEntering && (
+                  <div className="raid-boss-entering-overlay">입장 중...</div>
+                )}
               </div>
               <div className="raid-boss-select-info">
                 <div className="raid-boss-select-name">{boss.name}</div>
@@ -157,11 +200,11 @@ function BossListScreen({ gs, user, onSelectBoss }) {
                 {activeCount > 0 && (
                   <div className="raid-boss-select-channels">{activeCount}개 채널 진행 중</div>
                 )}
-                {isMyBoss && (
-                  <div className="raid-boss-my-badge">내 레이드 참여 중</div>
-                )}
+                {isMyBoss && <div className="raid-boss-my-badge">내 레이드 참여 중</div>}
               </div>
-              <div className="raid-boss-select-enter">입장 →</div>
+              <div className="raid-boss-select-enter">
+                {isEntering ? '...' : isMyBoss ? '내 채널 →' : '입장 →'}
+              </div>
             </div>
           );
         })}
@@ -534,7 +577,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
   return (
     <>
       {toast && <div className="cw-toast">{toast}</div>}
-      <button className="raid-back-btn" onClick={onBack}>← 채널 목록</button>
+      <button className="raid-back-btn" onClick={onBack}>← 보스 목록</button>
       <div className="raid-channel-badge">채널 {raid.channelNum || channelId.replace('ch_','')}</div>
 
       {/* 보상 오버레이 */}
@@ -825,24 +868,14 @@ export default function RaidTab({ gs, setGs, user }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const goToBossList    = () => { setScreen('boss-list'); setBossId(null); setChannelId(null); };
-  const goToChannelList = (bid) => { setBossId(bid); setScreen('channel-list'); };
-  const goToBattle      = (bid, cid) => { setBossId(bid); setChannelId(cid); setScreen('battle'); };
+  const goToBossList = () => { setScreen('boss-list'); setBossId(null); setChannelId(null); };
+  const enterBattle  = (bid, cid) => { setBossId(bid); setChannelId(cid); setScreen('battle'); };
 
   return (
     <div className="raid-wrap">
       <div className="raid-atmosphere" />
       {screen === 'boss-list' && (
-        <BossListScreen gs={gs} user={user} onSelectBoss={goToChannelList} />
-      )}
-      {screen === 'channel-list' && bossId && (
-        <ChannelListScreen
-          bossId={bossId}
-          gs={gs}
-          user={user}
-          onBack={goToBossList}
-          onEnter={cid => goToBattle(bossId, cid)}
-        />
+        <BossListScreen gs={gs} user={user} onEnter={enterBattle} />
       )}
       {screen === 'battle' && bossId && channelId && (
         <BattleScreen
@@ -851,7 +884,7 @@ export default function RaidTab({ gs, setGs, user }) {
           gs={gs}
           setGs={setGs}
           user={user}
-          onBack={() => setScreen('channel-list')}
+          onBack={goToBossList}
         />
       )}
     </div>

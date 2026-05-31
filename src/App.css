@@ -2189,13 +2189,36 @@ body.raid-theme .music-toggle-btn {
 /* 활성 보스 카드 */
 .raid-boss-select-card {
   border-radius:16px; overflow:hidden; cursor:pointer; position:relative;
-  border:2px solid rgba(220,50,120,0.5);
+  border:2px solid rgba(200,30,30,0.6);
   background:rgba(10,5,20,0.85);
-  transition:transform 0.2s, border-color 0.2s;
-  box-shadow:0 4px 20px rgba(220,50,120,0.2);
+  transition:transform 0.2s;
+  animation:raidComingSoonPulse 2.5s ease-in-out infinite;
 }
-.raid-boss-select-card:hover { transform:translateY(-4px) scale(1.02); border-color:rgba(220,50,120,0.9); }
-.raid-boss-select-card.my-boss { border-color:#ffd700; box-shadow:0 0 16px rgba(255,215,0,0.5); }
+.raid-boss-select-card::after {
+  content:''; position:absolute; inset:0; border-radius:14px;
+  animation:raidComingSoonAurora 2.5s ease-in-out infinite;
+  pointer-events:none; z-index:0;
+}
+.raid-boss-select-card:hover { transform:translateY(-4px) scale(1.02); }
+.raid-boss-select-card.entering { opacity:0.75; cursor:wait; }
+.raid-boss-select-card.my-boss {
+  border-color:#ffd700;
+  animation:raidMyBossPulse 2.5s ease-in-out infinite;
+}
+.raid-boss-select-card.my-boss::after { animation:raidMyBossAurora 2.5s ease-in-out infinite; }
+@keyframes raidMyBossPulse {
+  0%,100% { box-shadow:0 0 12px 3px rgba(255,215,0,0.4); border-color:rgba(255,215,0,0.6); }
+  50%      { box-shadow:0 0 22px 7px rgba(255,215,0,0.75); border-color:rgba(255,215,0,1); }
+}
+@keyframes raidMyBossAurora {
+  0%,100% { box-shadow:inset 0 0 16px 4px rgba(255,200,0,0.2); }
+  50%     { box-shadow:inset 0 0 22px 7px rgba(255,215,0,0.4); }
+}
+.raid-boss-entering-overlay {
+  position:absolute; inset:0; background:rgba(0,0,0,0.5);
+  display:flex; align-items:center; justify-content:center;
+  color:white; font-size:0.85rem; font-weight:700; z-index:5;
+}
 .raid-boss-select-img-wrap { position:relative; aspect-ratio:3/2; overflow:hidden; }
 .raid-boss-select-img { width:100%; height:100%; object-fit:cover; object-position:center 20%; display:block; }
 .raid-boss-select-img-vignette {
