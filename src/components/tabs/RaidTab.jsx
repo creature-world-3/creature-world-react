@@ -31,7 +31,8 @@ const BOSS_CONFIGS = [
     durationMs: DURATION_MS,
     schedule:   '매주 월요일',
     desc:       '저주에 걸린 인형들의 왕. 14일간 도전 가능.',
-    fixedEndDate: new Date('2026-06-07T00:00:00Z'), // 2026-06-07T09:00:00+09:00
+    fixedEndDate: new Date('2026-06-07T14:59:00Z'), // 2026-06-07T23:59:00+09:00
+    period:       '월요일 09:00 ~ 일요일 23:59',
   },
 ];
 
@@ -209,6 +210,7 @@ function BossListScreen({ gs, user, onEnter }) {
               <div className="raid-boss-select-info">
                 <div className="raid-boss-select-name">{boss.name}</div>
                 <div className="raid-boss-select-schedule">{boss.schedule}</div>
+                {boss.period && <div className="raid-boss-period">{boss.period}</div>}
                 <div className={`raid-status-badge raid-status-${status}`}>
                   {status === 'active'   ? '진행 중'  :
                    status === 'waiting'  ? '대기 중'  :
@@ -597,6 +599,9 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
       {toast && <div className="cw-toast">{toast}</div>}
       <button className="raid-back-btn" onClick={onBack}>← 보스 목록</button>
       <div className="raid-channel-badge">채널 {raid.channelNum || channelId.replace('ch_','')}</div>
+      {bossConfig?.period && (
+        <div className="raid-period-banner">레이드 기간: {bossConfig.period}</div>
+      )}
 
       {/* 보상 오버레이 */}
       {rewardPhase && (

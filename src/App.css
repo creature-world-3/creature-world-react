@@ -2230,6 +2230,7 @@ body.raid-theme .music-toggle-btn {
 }
 .raid-boss-select-name { font-size:0.82rem; font-weight:800; color:white; line-height:1.3; }
 .raid-boss-select-schedule { font-size:0.65rem; color:rgba(255,255,255,0.55); }
+.raid-boss-period { font-size:0.6rem; color:rgba(255,255,255,0.4); margin-top:1px; }
 .raid-boss-select-channels { font-size:0.65rem; color:#fbbf24; font-weight:700; }
 .raid-boss-my-badge {
   font-size:0.6rem; font-weight:700; color:#ffd700;
@@ -2335,6 +2336,11 @@ body.raid-theme .music-toggle-btn {
   background:rgba(255,255,255,0.08); border-radius:99px;
   padding:3px 12px; margin-bottom:10px;
   border:1px solid rgba(255,255,255,0.15);
+}
+.raid-period-banner {
+  position:relative; z-index:2;
+  font-size:0.68rem; color:rgba(255,255,255,0.45);
+  margin-bottom:12px; letter-spacing:0.2px;
 }
 
 /* 기존 보스 목록 (하위 호환) */
