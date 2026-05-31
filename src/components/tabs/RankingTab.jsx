@@ -8,9 +8,9 @@ const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND', raid:'RAID' }
 const GRADE_COLOR = { n:'#888', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b', raid:'#ffd700' };
 
 const PODIUM_STYLE = {
-  1: { bg:'rgba(255,215,0,0.15)',    border:'rgba(255,215,0,0.6)',    color:'#ffd700', blockH:84, cardW:88,  cardH:118 },
-  2: { bg:'rgba(192,192,192,0.12)', border:'rgba(192,192,192,0.5)', color:'#c0c0c0', blockH:62, cardW:70,  cardH:94  },
-  3: { bg:'rgba(205,127,50,0.12)',  border:'rgba(205,127,50,0.5)',  color:'#cd7f32', blockH:50, cardW:64,  cardH:86  },
+  1: { bg:'rgba(255,215,0,0.18)',    border:'rgba(255,215,0,0.75)',   color:'#ffd700', blockH:100, cardW:114, cardH:152 },
+  2: { bg:'rgba(192,192,192,0.15)', border:'rgba(192,192,192,0.65)', color:'#c0c0c0', blockH:72,  cardW:90,  cardH:120 },
+  3: { bg:'rgba(205,127,50,0.15)',  border:'rgba(205,127,50,0.65)',  color:'#cd7f32', blockH:56,  cardW:78,  cardH:104 },
 };
 
 function calcScore(grade, cond, enh = 0) {
@@ -122,36 +122,43 @@ function PodiumSlot({ entry, rank, onCardClick }) {
 
   return (
     <div className={`podium-slot podium-rank-${rank}`}>
-      <div className="podium-player">
+      {/* 카드 이미지 */}
+      <div className="podium-card-area">
         {entry ? (
-          <>
-            <div
-              className={`podium-card grade-${entry.card.grade}`}
-              style={{
-                width: ps.cardW, height: ps.cardH,
-                borderColor: ps.border,
-                boxShadow: `0 0 22px ${ps.border}, 0 8px 20px rgba(0,0,0,0.4)`,
-              }}
-              onClick={() => onCardClick(entry)}
-            >
-              <img src={`/${entry.card.img}`} alt={entry.card.name} />
-              {enh > 0 && <div className="podium-enh-badge">+{enh}</div>}
-            </div>
-            <div className="podium-nickname">{entry.nickname}</div>
-            <div className="podium-dmg" style={{ color: ps.color }}>{range}</div>
-          </>
-        ) : (
           <div
-            className="podium-empty-card"
-            style={{ width: ps.cardW, height: ps.cardH }}
-          />
+            className={`podium-card grade-${entry.card.grade}`}
+            style={{
+              width: ps.cardW, height: ps.cardH,
+              borderColor: ps.border,
+              boxShadow: `0 0 24px ${ps.border}, 0 10px 24px rgba(0,0,0,0.5)`,
+            }}
+            onClick={() => onCardClick(entry)}
+          >
+            <img src={`/${entry.card.img}`} alt={entry.card.name} />
+            {enh > 0 && <div className="podium-enh-badge">+{enh}</div>}
+          </div>
+        ) : (
+          <div className="podium-empty-card" style={{ width: ps.cardW, height: ps.cardH }} />
         )}
       </div>
+
+      {/* 시상대 블록 */}
       <div
         className="podium-block"
         style={{ height: ps.blockH, background: ps.bg, borderColor: ps.border }}
       >
         <span className="podium-rank-num" style={{ color: ps.color }}>{rank}</span>
+      </div>
+
+      {/* 닉네임 / 카드명 / 데미지 */}
+      <div className="podium-info">
+        {entry ? (
+          <>
+            <div className="podium-nickname">{entry.nickname}</div>
+            <div className="podium-card-name">{entry.card.name}</div>
+            <div className="podium-dmg" style={{ color: ps.color }}>{range}</div>
+          </>
+        ) : null}
       </div>
     </div>
   );
