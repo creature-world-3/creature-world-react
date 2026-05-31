@@ -3052,3 +3052,86 @@ body.raid-theme .music-toggle-btn {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.2; }
 }
+
+/* ══════════════════════════════════════
+   RANKING TAB
+══════════════════════════════════════ */
+.ranking-wrap {
+  padding: 20px 16px 40px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.ranking-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ranking-title {
+  font-family: 'Nunito', sans-serif; font-weight: 900;
+  font-size: 1.3rem; color: white;
+}
+.ranking-sub {
+  font-size: 0.72rem; color: rgba(255,255,255,0.5);
+  margin-top: -10px;
+}
+.ranking-updated { color: rgba(255,255,255,0.35); }
+.ranking-refresh-btn {
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+  color: white; padding: 5px 14px; border-radius: 99px;
+  font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  transition: background 0.15s;
+}
+.ranking-refresh-btn:hover { background: rgba(255,255,255,0.22); }
+.ranking-refresh-btn:disabled { opacity: 0.5; cursor: default; }
+.ranking-loading, .ranking-empty {
+  text-align: center; color: rgba(255,255,255,0.45);
+  font-size: 0.88rem; padding: 40px 0;
+}
+.ranking-list {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ranking-item {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.07); border-radius: 14px;
+  padding: 12px 14px; border: 1px solid rgba(255,255,255,0.1);
+  transition: background 0.15s;
+}
+.ranking-item.ranking-top-1 { background: rgba(255,215,0,0.12); border-color: rgba(255,215,0,0.35); }
+.ranking-item.ranking-top-2 { background: rgba(192,192,192,0.12); border-color: rgba(192,192,192,0.3); }
+.ranking-item.ranking-top-3 { background: rgba(205,127,50,0.12); border-color: rgba(205,127,50,0.3); }
+.ranking-rank {
+  font-size: 1.3rem; min-width: 36px; text-align: center;
+  font-weight: 900; color: rgba(255,255,255,0.6);
+}
+.ranking-top-1 .ranking-rank,
+.ranking-top-2 .ranking-rank,
+.ranking-top-3 .ranking-rank { font-size: 1.5rem; }
+.ranking-card-img {
+  width: 48px; height: 64px; border-radius: 8px; overflow: hidden;
+  position: relative; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.ranking-card-img img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+.ranking-enhance-badge {
+  position: absolute; bottom: 2px; right: 2px;
+  background: linear-gradient(135deg,#ff6b6b,#fbbf24);
+  color: white; font-size: 0.6rem; font-weight: 900;
+  padding: 1px 5px; border-radius: 99px;
+}
+.ranking-info {
+  flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0;
+}
+.ranking-nickname {
+  font-weight: 900; font-size: 0.92rem; color: white;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ranking-card-name {
+  font-size: 0.78rem; color: rgba(255,255,255,0.7);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ranking-grade { font-weight: 900; }
+.ranking-dmg-range {
+  font-size: 0.72rem; color: rgba(255,255,255,0.45);
+  font-family: 'Nunito', sans-serif;
+}
+.ranking-score {
+  font-family: 'Nunito', sans-serif; font-weight: 900;
+  font-size: 1.1rem; color: #fbbf24; min-width: 40px; text-align: right;
+}

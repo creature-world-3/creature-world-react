@@ -531,10 +531,7 @@ function EnhanceSubTab({ gs, setGs }) {
           <div className="enhance-cost-row">
             <div className="enhance-cost-item">
               <span className="enhance-cost-label">비용</span>
-              <span className="enhance-cost-val">
-                {cost}장
-                <span className="enhance-cost-tier">{costTier}</span>
-              </span>
+              <span className="enhance-cost-val">{cost}장</span>
             </div>
             <div className="enhance-cost-divider" />
             <div className="enhance-cost-item">

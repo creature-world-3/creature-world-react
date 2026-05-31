@@ -10,6 +10,7 @@ const MORE_TABS = [
   { id: 'board',   label: '게시판' },
   { id: 'trade',   label: '거래소' },
   { id: 'mailbox', label: '우편함' },
+  { id: 'ranking', label: '랭킹' },
 ];
 
 const MORE_IDS = new Set(MORE_TABS.map(t => t.id));

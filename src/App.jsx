@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import {
-  onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider,
+  onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider, getRedirectResult,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase/config.js';
@@ -16,11 +16,12 @@ import BoardTab from './components/tabs/BoardTab.jsx';
 import TradeTab from './components/tabs/TradeTab.jsx';
 import RaidTab from './components/tabs/RaidTab.jsx';
 import MailboxTab from './components/tabs/MailboxTab.jsx';
+import RankingTab from './components/tabs/RankingTab.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import './App.css';
 
-const TAB_ORDER = ['gacha', 'synth', 'dex', 'raid', 'shop', 'board', 'trade', 'mailbox'];
+const TAB_ORDER = ['gacha', 'synth', 'dex', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking'];
 
 const KAKAO_JS_KEY   = '86daeae42ced20dec5fb375bf0b15aec';
 const KAKAO_REDIRECT = 'https://creature-world-react.vercel.app';
@@ -229,6 +230,9 @@ export default function App() {
     const init = async () => {
       initKakao();
 
+      // 이전 redirect 방식 캐시 정리 (auth/missing-initial-state 방지)
+      getRedirectResult(auth).catch(() => {});
+
       // 1) 인앱브라우저 implicit grant 리다이렉트 후 hash 토큰 처리
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const hashToken  = hashParams.get('access_token');
@@ -302,6 +306,10 @@ export default function App() {
       }
       if (e.code === 'auth/popup-blocked') {
         setLoginError('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
+        return;
+      }
+      if (e.code === 'auth/missing-initial-state') {
+        setLoginError('로그인 상태가 초기화되었습니다. 페이지를 새로고침 후 다시 시도해주세요.');
         return;
       }
       console.error('login error:', e);
@@ -475,6 +483,7 @@ export default function App() {
     trade:   <TradeTab gs={gs} setGs={setGs} user={user} />,
     raid:    <RaidTab gs={gs} setGs={setGs} user={user} />,
     mailbox: <MailboxTab gs={gs} setGs={setGs} user={user} />,
+    ranking: <RankingTab />,
   };
 
   // ── 로딩 화면 ──
