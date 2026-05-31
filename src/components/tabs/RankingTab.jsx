@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
 
@@ -177,7 +177,7 @@ export default function RankingTab() {
     try {
       console.log('[Ranking] ▶ users 컬렉션 조회 시작...');
       console.log('[Ranking] CARDS 총 개수:', CARDS.length);
-      const snap = await getDocs(collection(db, 'users'));
+      const snap = await getDocs(query(collection(db, 'users'), limit(200)));
       console.log('[Ranking] ✅ 문서 수:', snap.size);
 
       if (snap.size === 0) {
@@ -252,10 +252,11 @@ export default function RankingTab() {
             {loading ? '...' : '↻ 새로고침'}
           </button>
         </div>
-        <div className="ranking-sub">
-          최고 데미지 카드 기준
-          {lastUpdated && <span className="ranking-updated"> · {lastUpdated} 기준</span>}
-        </div>
+        {lastUpdated && (
+          <div className="ranking-sub">
+            <span className="ranking-updated">{lastUpdated} 기준</span>
+          </div>
+        )}
 
         {loading ? (
           <div className="ranking-loading">불러오는 중...</div>

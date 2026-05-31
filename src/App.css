@@ -3056,7 +3056,12 @@ body.raid-theme .music-toggle-btn {
 /* ══════════════════════════════════════
    RANKING TAB
 ══════════════════════════════════════ */
+/* ranking 전체 섹션: 앱이 밝은 배경이므로 어두운 카드 스타일로 감쌈 */
 .ranking-wrap {
+  background: linear-gradient(160deg, #141e32 0%, #0e1826 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
   padding: 20px 14px 48px;
   display: flex; flex-direction: column; gap: 20px;
 }
@@ -3065,19 +3070,19 @@ body.raid-theme .music-toggle-btn {
 }
 .ranking-title {
   font-family: 'Nunito', sans-serif; font-weight: 900;
-  font-size: 1.35rem; color: white;
+  font-size: 1.35rem; color: #ffffff;
 }
 .ranking-sub {
-  font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-top: -14px;
+  font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: -14px;
 }
-.ranking-updated { color: rgba(255,255,255,0.35); }
+.ranking-updated { color: rgba(255,255,255,0.4); }
 .ranking-refresh-btn {
-  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
-  color: white; padding: 6px 16px; border-radius: 99px;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.85); padding: 6px 16px; border-radius: 99px;
   font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: background 0.15s;
 }
-.ranking-refresh-btn:hover { background: rgba(255,255,255,0.22); }
-.ranking-refresh-btn:disabled { opacity: 0.5; cursor: default; }
+.ranking-refresh-btn:hover { background: rgba(255,255,255,0.18); }
+.ranking-refresh-btn:disabled { opacity: 0.4; cursor: default; }
 .ranking-loading, .ranking-empty {
   text-align: center; color: rgba(255,255,255,0.5);
   font-size: 0.9rem; padding: 48px 0;
@@ -3115,7 +3120,7 @@ body.raid-theme .music-toggle-btn {
 .podium-empty-card {
   border-radius: 11px;
   background: rgba(255,255,255,0.05);
-  border: 2px dashed rgba(255,255,255,0.13);
+  border: 2px dashed rgba(255,255,255,0.12);
 }
 .podium-block {
   width: 100%; border-radius: 10px 10px 0 0;
@@ -3131,12 +3136,12 @@ body.raid-theme .music-toggle-btn {
   gap: 3px; padding: 9px 4px 0; text-align: center;
 }
 .podium-nickname {
-  font-weight: 900; font-size: 0.82rem; color: white;
+  font-weight: 900; font-size: 0.84rem; color: #ffffff;
   width: 100%; text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .podium-card-name {
-  font-size: 0.7rem; color: rgba(255,255,255,0.7); font-weight: 700;
+  font-size: 0.7rem; color: rgba(255,255,255,0.72); font-weight: 700;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   width: 100%; text-align: center;
 }
@@ -3149,8 +3154,8 @@ body.raid-theme .music-toggle-btn {
 .ranking-list {
   display: flex; flex-direction: column;
   border-radius: 14px; overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
 }
 .ranking-item {
   display: flex; align-items: center; gap: 13px;
@@ -3159,10 +3164,10 @@ body.raid-theme .music-toggle-btn {
   cursor: pointer; transition: background 0.15s;
 }
 .ranking-item:last-child { border-bottom: none; }
-.ranking-item:hover { background: rgba(255,255,255,0.09); }
+.ranking-item:hover { background: rgba(255,255,255,0.07); }
 .ranking-rank {
   font-size: 0.92rem; min-width: 30px; text-align: center;
-  font-weight: 900; color: rgba(255,255,255,0.65);
+  font-weight: 900; color: rgba(255,255,255,0.6);
   font-family: 'Nunito', sans-serif;
 }
 .ranking-card-img {
@@ -3179,16 +3184,16 @@ body.raid-theme .music-toggle-btn {
 }
 .ranking-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .ranking-nickname {
-  font-weight: 900; font-size: 0.92rem; color: white;
+  font-weight: 900; font-size: 0.92rem; color: #ffffff;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ranking-card-name {
-  font-size: 0.76rem; color: rgba(255,255,255,0.78);
+  font-size: 0.76rem; color: rgba(255,255,255,0.75);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ranking-grade { font-weight: 900; }
 .ranking-dmg-range {
-  font-size: 0.7rem; color: rgba(255,255,255,0.55);
+  font-size: 0.7rem; color: rgba(255,255,255,0.52);
   font-family: 'Nunito', sans-serif;
 }
 .ranking-score {
