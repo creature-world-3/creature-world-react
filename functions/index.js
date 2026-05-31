@@ -88,10 +88,10 @@ exports.raidAutoTick = onSchedule(
   },
 );
 
-// ── 매주 월요일 00:00 KST 보스 초기화 ──
+// ── 매주 월요일 09:00 KST 보스 초기화 ──
 exports.weeklyBossReset = onSchedule(
   {
-    schedule: '0 0 * * 1',
+    schedule: '0 9 * * 1',
     timeZone: 'Asia/Seoul',
     region:   'asia-northeast3',
   },

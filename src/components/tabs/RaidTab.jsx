@@ -36,6 +36,29 @@ const BOSS_CONFIGS = [
   },
 ];
 
+// ── 레이드 오픈 시간 체크 (KST 기준) ──
+// 오픈: 월요일 09:00 ~ 일요일 23:59 KST
+// 닫힘: 월요일 00:00 ~ 08:59 KST
+function isRaidOpen() {
+  const kst  = new Date(Date.now() + 9 * 60 * 60 * 1000); // UTC → KST
+  const day  = kst.getUTCDay();   // 0=일, 1=월, ..., 6=토
+  const hour = kst.getUTCHours();
+  // 월요일 00:00~08:59만 닫힘
+  return !(day === 1 && hour < 9);
+}
+function nextOpenKST() {
+  // 다음 월요일 09:00 KST까지 남은 시간 문자열
+  const kst      = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const msTilMon = ((1 - kst.getUTCDay() + 7) % 7) * 86_400_000;
+  const open     = new Date(kst);
+  open.setUTCDate(open.getUTCDate() + ((1 - kst.getUTCDay() + 7) % 7));
+  open.setUTCHours(9, 0, 0, 0);
+  const ms   = open - kst;
+  const hrs  = Math.floor(ms / 3_600_000);
+  const mins = Math.floor((ms % 3_600_000) / 60_000);
+  return `${hrs}시간 ${mins}분 후 오픈`;
+}
+
 // ── 유틸 ──
 function calcBonus(ownedCards) {
   let b = 0;
@@ -127,6 +150,7 @@ function BossListScreen({ gs, user, onEnter }) {
   }, []);
 
   const getBossStatus = (bossId) => {
+    if (!isRaidOpen()) return 'waiting'; // 시간 외엔 무조건 대기 중
     const chs = bossChannels[bossId] || [];
     if (!chs.length) return 'loading';
     if (chs.some(c => c.status === 'active'))   return 'active';
@@ -137,6 +161,12 @@ function BossListScreen({ gs, user, onEnter }) {
 
   const handleBossClick = async (boss) => {
     if (entering[boss.id]) return;
+
+    // KST 시간 기반 접속 가능 여부 체크 (월요일 00:00~08:59 차단)
+    if (!isRaidOpen()) {
+      showToast(`월요일 오전 9시부터 입장 가능합니다 (${nextOpenKST()})`);
+      return;
+    }
 
     const status = getBossStatus(boss.id);
     if (status === 'waiting') {
