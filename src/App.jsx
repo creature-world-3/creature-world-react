@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import {
-  onAuthStateChanged, signInWithPopup, signInWithRedirect,
-  getRedirectResult, signOut, GoogleAuthProvider,
+  onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase/config.js';
@@ -251,23 +250,7 @@ export default function App() {
         }
       }
 
-      // 3) Google signInWithRedirect 결과 처리 (모바일 리다이렉트 후 복귀 시)
-      try {
-        const redirectResult = await getRedirectResult(auth);
-        if (redirectResult?.user) {
-          // 리다이렉트 로그인 성공 - onAuthStateChanged가 자동으로 처리함
-          localStorage.removeItem('google_redirect_pending');
-        } else if (localStorage.getItem('google_redirect_pending') === '1') {
-          // 리다이렉트를 시작했지만 결과 없음 (사용자가 취소)
-          localStorage.removeItem('google_redirect_pending');
-        }
-      } catch (e) {
-        console.error('getRedirectResult error:', e);
-        localStorage.removeItem('google_redirect_pending');
-        setLoginError('Google 로그인 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
-      }
-
-      // 4) Firebase Google 인증
+      // 3) Firebase Google 인증
       unsubFirebase = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           try {
@@ -304,41 +287,18 @@ export default function App() {
   const handleLogin = async () => {
     setLoginError('');
     const provider = new GoogleAuthProvider();
-    // 모바일 감지: 팝업이 차단/오동작하므로 리다이렉트 사용
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-      || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    if (isMobile) {
-      try {
-        localStorage.setItem('google_redirect_pending', '1');
-        await signInWithRedirect(auth, provider);
-      } catch (e) {
-        localStorage.removeItem('google_redirect_pending');
-        console.error('redirect login error:', e);
-        setLoginError('Google 로그인을 시작할 수 없습니다. 다시 시도해주세요.');
-      }
-      return;
-    }
-    // 데스크탑: 팝업 시도 → 실패 시 리다이렉트 폴백
     try {
       await signInWithPopup(auth, provider);
     } catch (e) {
-      const fallbackCodes = [
-        'auth/popup-blocked',
-        'auth/operation-not-supported-in-this-environment',
-      ];
-      if (fallbackCodes.includes(e.code)) {
-        try {
-          localStorage.setItem('google_redirect_pending', '1');
-          await signInWithRedirect(auth, provider);
-        } catch (re) {
-          localStorage.removeItem('google_redirect_pending');
-          console.error('redirect fallback error:', re);
-          setLoginError('Google 로그인을 시작할 수 없습니다. 다시 시도해주세요.');
-        }
-      } else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
-        console.error('login error:', e);
-        setLoginError('Google 로그인에 실패했습니다. 다시 시도해주세요.');
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+        return;
       }
+      if (e.code === 'auth/popup-blocked') {
+        setLoginError('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
+        return;
+      }
+      console.error('login error:', e);
+      setLoginError('Google 로그인에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -578,7 +538,7 @@ export default function App() {
                 {uniqueOwned}
                 <button className="bonus-info-btn" onClick={() => setShowBonusInfo(true)} title="레이드 보너스 안내">ⓘ</button>
               </div>
-              <div className="status-sub">/ 30 종류</div>
+              <div className="status-sub">/ 31 종류</div>
             </div>
             <div className="status-card">
               <div className="status-label">접속 시간</div>
