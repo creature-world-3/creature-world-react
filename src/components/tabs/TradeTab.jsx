@@ -20,6 +20,7 @@ export default function TradeTab({ gs, setGs, user }) {
   const [formGradeFilter, setFormGradeFilter] = useState('all');
   const [showForm, setShowForm]               = useState(false);
   const [selectedCard, setSelectedCard]       = useState(null);
+  const [tradePicker, setTradePicker]         = useState(null); // { cardDef, instances }
   const [price, setPrice]             = useState('');
   const [submitting, setSubmitting]   = useState(false);
   const [toast, setToast]             = useState(null);
@@ -46,13 +47,30 @@ export default function TradeTab({ gs, setGs, user }) {
   const pendingRewards = trades.filter(t => t.uid === user?.uid && t.status === 'sold' && !t.claimed);
   const pendingTotal   = pendingRewards.reduce((s, t) => s + t.price, 0);
 
-  // 보유 카드 옵션 (개별 인스턴스 — uid 기준, 레이드 잠금 카드 제외)
-  const lockedUid = gs?.raidCard?.uid;
-  const ownedOptions = (gs?.ownedCards || [])
-    .filter(oc => oc.uid !== lockedUid)
+  // 보유 카드 인스턴스 (레이드 잠금 제외)
+  const lockedUid  = gs?.raidCard?.uid;
+  const availInsts = (gs?.ownedCards || []).filter(oc => oc.uid !== lockedUid);
+
+  // 고유 카드 타입 (등록 폼용)
+  const uniqueCardTypes = CARDS.filter(
+    c => availInsts.some(oc => oc.id === c.id)
+  ).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
+
+  const handleTradeCardTypeClick = (cardDef) => {
+    const instances = availInsts.filter(oc => oc.id === cardDef.id);
+    if (instances.length === 1) {
+      setSelectedCard({ uid: instances[0].uid, condition: instances[0].condition, enhanceLevel: instances[0].enhanceLevel, ...cardDef });
+      setTradePicker(null);
+    } else {
+      setTradePicker({ cardDef, instances });
+    }
+  };
+
+  // 이전 코드 호환용 (구매/취소 등에서 사용)
+  const ownedOptions = availInsts
     .map(oc => {
       const card = CARDS.find(c => c.id === oc.id);
-      return card ? { uid: oc.uid, condition: oc.condition, ...card } : null;
+      return card ? { uid: oc.uid, condition: oc.condition, enhanceLevel: oc.enhanceLevel, ...card } : null;
     }).filter(Boolean);
 
   // 전체 목록 필터 (active, 내 카드 제외)
@@ -245,30 +263,67 @@ export default function TradeTab({ gs, setGs, user }) {
                     key={val}
                     className={`col-filter-pill${formGradeFilter === val ? ' active' : ''}`}
                     style={val !== 'all' ? { color: formGradeFilter === val ? 'white' : GRADE_COLOR[val] } : {}}
-                    onClick={() => { setFormGradeFilter(val); setSelectedCard(null); }}
+                    onClick={() => { setFormGradeFilter(val); setSelectedCard(null); setTradePicker(null); }}
                   >{label}</button>
                 ))}
               </div>
+
+              {/* 카드 타입 목록 */}
               <div className="trade-card-list">
-                {(formGradeFilter === 'all' ? ownedOptions : ownedOptions.filter(c => c.grade === formGradeFilter))
-                  .map(card => (
-                  <div key={card.uid} className="trade-card-thumb-wrap">
-                    <div
-                      className={`trade-card-thumb grade-${card.grade}${selectedCard?.uid === card.uid ? ' selected' : ''}`}
-                      onClick={() => setSelectedCard(selectedCard?.uid === card.uid ? null : card)}
-                    >
-                      <img src={`/${card.img}`} alt={card.name} />
-                      <div className="trade-card-cond">{card.condition}</div>
-                    </div>
-                    <div className="trade-card-tooltip">
-                      {card.name} · {GRADE_LABEL[card.grade]}
-                    </div>
-                  </div>
-                ))}
-                {(formGradeFilter !== 'all' && ownedOptions.filter(c => c.grade === formGradeFilter).length === 0) && (
+                {(formGradeFilter === 'all' ? uniqueCardTypes : uniqueCardTypes.filter(c => c.grade === formGradeFilter))
+                  .map(cardDef => {
+                    const instances = availInsts.filter(oc => oc.id === cardDef.id);
+                    const isSelected = selectedCard?.id === cardDef.id;
+                    return (
+                      <div key={cardDef.id} className="trade-card-thumb-wrap">
+                        <div
+                          className={`trade-card-thumb grade-${cardDef.grade}${isSelected ? ' selected' : ''}`}
+                          onClick={() => isSelected ? (setSelectedCard(null), setTradePicker(null)) : handleTradeCardTypeClick(cardDef)}
+                        >
+                          <img src={`/${cardDef.img}`} alt={cardDef.name} />
+                          {instances.length > 1 && <div className="trade-card-cond">×{instances.length}</div>}
+                        </div>
+                        <div className="trade-card-tooltip">{cardDef.name} · {GRADE_LABEL[cardDef.grade]}</div>
+                      </div>
+                    );
+                  })}
+                {formGradeFilter !== 'all' && uniqueCardTypes.filter(c => c.grade === formGradeFilter).length === 0 && (
                   <p className="trade-form-empty">해당 등급 카드가 없어요</p>
                 )}
               </div>
+
+              {/* 인스턴스 피커 */}
+              {tradePicker && (
+                <div className="trade-inst-panel">
+                  <div className="trade-inst-label">
+                    {tradePicker.cardDef.name} {tradePicker.instances.length}장 — 등록할 카드를 선택하세요
+                  </div>
+                  <div className="inst-list">
+                    {tradePicker.instances.map((inst, i) => {
+                      const lvl  = inst.enhanceLevel || 0;
+                      const cond = inst.condition || 1;
+                      const cc   = cond >= 9 ? '#d97706' : cond >= 6 ? '#7c3aed' : '#888';
+                      return (
+                        <div
+                          key={inst.uid}
+                          className={`inst-item${selectedCard?.uid === inst.uid ? ' selected' : ''}`}
+                          style={{ animationDelay: `${i * 50}ms` }}
+                          onClick={() => {
+                            setSelectedCard({ uid: inst.uid, condition: inst.condition, enhanceLevel: inst.enhanceLevel, ...tradePicker.cardDef });
+                            setTradePicker(null);
+                          }}
+                        >
+                          <div className="inst-item-img">
+                            <img src={`/${tradePicker.cardDef.img}`} alt={tradePicker.cardDef.name} />
+                            {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
+                          </div>
+                          <div className="inst-item-meta" style={{ color: cc }}>컨디션 {cond}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {selectedCard && (
                 <div className="trade-price-row">
@@ -281,7 +336,12 @@ export default function TradeTab({ gs, setGs, user }) {
                       <span className="trade-grade-badge" style={{ color: GRADE_COLOR[selectedCard.grade] }}>
                         {GRADE_LABEL[selectedCard.grade]}
                       </span>
-                      <div className="trade-selected-cond">컨디션 {selectedCard.condition}</div>
+                      <div className="trade-selected-cond">
+                        컨디션 {selectedCard.condition}
+                        {(selectedCard.enhanceLevel || 0) > 0 && (
+                          <span className="trade-enhance-tag">+{selectedCard.enhanceLevel}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="trade-price-input-wrap">

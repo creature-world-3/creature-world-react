@@ -42,20 +42,26 @@ export default function BoardTab({ gs, user }) {
   const [posts, setPosts]               = useState([]);
   const [showForm, setShowForm]         = useState(false);
   const [text, setText]                 = useState('');
-  const [selectedCard, setSelectedCard] = useState(null);
+  const [selectedCard, setSelectedCard] = useState(null); // { cardDef, inst }
+  const [boardPicker, setBoardPicker]   = useState(null); // { cardDef, instances }
   const [submitting, setSubmitting]     = useState(false);
   const [detailPost, setDetailPost]     = useState(null);
   const [nicknames, setNicknames]       = useState({});
 
-  // 보유 카드 (중복 제거) + 각 카드 타입의 최고 컨디션 포함
-  const ownedCards = CARDS.filter(
+  // 보유 카드 타입 목록 (중복 제거)
+  const ownedCardTypes = CARDS.filter(
     c => (gs?.ownedCards || []).some(o => o.id === c.id)
-  ).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i)
-  .map(c => {
-    const instances = (gs?.ownedCards || []).filter(o => o.id === c.id);
-    const best = instances.reduce((a, b) => b.condition > a.condition ? b : a, instances[0]);
-    return { ...c, bestCondition: best?.condition ?? null };
-  });
+  ).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
+
+  const handleBoardCardClick = (cardDef) => {
+    const instances = (gs?.ownedCards || []).filter(o => o.id === cardDef.id);
+    if (instances.length === 1) {
+      setSelectedCard({ cardDef, inst: instances[0] });
+      setBoardPicker(null);
+    } else {
+      setBoardPicker({ cardDef, instances });
+    }
+  };
 
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
@@ -96,11 +102,11 @@ export default function BoardTab({ gs, user }) {
         text:      text.trim(),
         createdAt: serverTimestamp(),
         ...(selectedCard ? {
-          cardId:        selectedCard.id,
-          cardImg:       selectedCard.img,
-          cardName:      selectedCard.name,
-          cardGrade:     selectedCard.grade,
-          cardCondition: selectedCard.bestCondition,
+          cardId:        selectedCard.cardDef.id,
+          cardImg:       selectedCard.cardDef.img,
+          cardName:      selectedCard.cardDef.name,
+          cardGrade:     selectedCard.cardDef.grade,
+          cardCondition: selectedCard.inst.condition,
         } : {}),
       });
       setText('');
@@ -139,20 +145,56 @@ export default function BoardTab({ gs, user }) {
       {/* ── 글쓰기 폼 ── */}
       {showForm && (
         <div className="board-form">
-          {ownedCards.length > 0 && (
+          {ownedCardTypes.length > 0 && (
             <div className="board-card-select">
               <div className="board-card-select-label">자랑할 카드 선택 (선택 안 해도 됨)</div>
               <div className="post-card-grid">
-                {ownedCards.map(card => (
-                  <div
-                    key={card.id}
-                    className={`post-card-item grade-${card.grade}${selectedCard?.id === card.id ? ' selected' : ''}`}
-                    onClick={() => setSelectedCard(selectedCard?.id === card.id ? null : card)}
-                    title={card.name}
-                  >
-                    <img src={`/${card.img}`} alt={card.name} />
-                  </div>
-                ))}
+                {ownedCardTypes.map(cardDef => {
+                  const isSelected = selectedCard?.cardDef?.id === cardDef.id;
+                  const count = (gs?.ownedCards || []).filter(o => o.id === cardDef.id).length;
+                  return (
+                    <div key={cardDef.id} className="post-card-item-wrap">
+                      <div
+                        className={`post-card-item grade-${cardDef.grade}${isSelected ? ' selected' : ''}`}
+                        onClick={() => isSelected ? setSelectedCard(null) : handleBoardCardClick(cardDef)}
+                        title={cardDef.name}
+                      >
+                        <img src={`/${cardDef.img}`} alt={cardDef.name} />
+                        {count > 1 && <div className="post-card-count">×{count}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 인스턴스 피커 */}
+          {boardPicker && (
+            <div className="board-inst-panel">
+              <div className="board-inst-label">
+                {boardPicker.cardDef.name} {boardPicker.instances.length}장 중 어떤 카드를 자랑할까요?
+              </div>
+              <div className="inst-list">
+                {boardPicker.instances.map((inst, i) => {
+                  const lvl  = inst.enhanceLevel || 0;
+                  const cond = inst.condition || 1;
+                  const cc   = cond >= 9 ? '#d97706' : cond >= 6 ? '#7c3aed' : '#888';
+                  return (
+                    <div
+                      key={inst.uid}
+                      className={`inst-item${selectedCard?.inst?.uid === inst.uid ? ' selected' : ''}`}
+                      style={{ animationDelay: `${i * 50}ms` }}
+                      onClick={() => { setSelectedCard({ cardDef: boardPicker.cardDef, inst }); setBoardPicker(null); }}
+                    >
+                      <div className="inst-item-img">
+                        <img src={`/${boardPicker.cardDef.img}`} alt={boardPicker.cardDef.name} />
+                        {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
+                      </div>
+                      <div className="inst-item-meta" style={{ color: cc }}>컨디션 {cond}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -30,17 +30,55 @@ function calcDmgRange(grade, cond, enhanceLevel = 0) {
   return [Math.floor((min + (cond || 1)) * mult), Math.floor((max + (cond || 1)) * mult)];
 }
 
+// ── 공통 인스턴스 피커 바텀시트 ──
+function InstanceSheet({ cardDef, instances, title, onSelect, onClose }) {
+  return (
+    <div className="card-zoom-overlay" onClick={onClose}>
+      <div className="inst-sheet" onClick={e => e.stopPropagation()}>
+        <div className="inst-sheet-title">
+          {title || cardDef.name}
+          <span className="inst-sheet-count">{instances.length}장 보유</span>
+        </div>
+        <div className="inst-list">
+          {instances.map((inst, i) => {
+            const lvl  = inst.enhanceLevel || 0;
+            const cond = inst.condition || 1;
+            const cc   = cond >= 9 ? '#d97706' : cond >= 6 ? '#7c3aed' : '#888';
+            return (
+              <div
+                key={inst.uid}
+                className="inst-item"
+                style={{ animationDelay: `${i * 50}ms` }}
+                onClick={() => onSelect(inst)}
+              >
+                <div className="inst-item-img">
+                  <img src={`/${cardDef.img}`} alt={cardDef.name} />
+                  {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
+                </div>
+                <div className="inst-item-meta" style={{ color: cc }}>컨디션 {cond}</div>
+              </div>
+            );
+          })}
+        </div>
+        <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
+      </div>
+    </div>
+  );
+}
+
 // ── 합성 서브탭 ──
+// 슬롯 아이템: { cardDef, inst } | null
 function SynthSubTab({ gs, setGs }) {
   const [synthGrade, setSynthGrade] = useState('n');
-  const [slots, setSlots]   = useState([null, null, null]);
+  const [slots, setSlots]   = useState([null, null, null]); // { cardDef, inst }
+  const [synthPicker, setSynthPicker] = useState(null); // { cardDef, instances }
   const [result, setResult] = useState(null);
   const [flipped, setFlipped] = useState(false);
   const [flash, setFlash]   = useState(null);
   const [toast, setToast]   = useState(null);
   const toastTimer = useRef(null);
 
-  useEffect(() => { setSlots([null, null, null]); setFlipped(false); }, [synthGrade]);
+  useEffect(() => { setSlots([null, null, null]); setFlipped(false); setSynthPicker(null); }, [synthGrade]);
   useEffect(() => {
     if (!flash) return;
     const t = setTimeout(() => setFlash(null), 1000);
@@ -56,21 +94,32 @@ function SynthSubTab({ gs, setGs }) {
   const lockedUid  = gs?.raidCard?.uid;
   const ownedCards = (gs?.ownedCards || []).filter(c => c.uid !== lockedUid);
 
-  const addToSlot = (card) => {
+  const addInstToSlot = (cardDef, inst) => {
     const emptyIdx = slots.findIndex(s => s === null);
     if (emptyIdx === -1) { showToast('슬롯이 가득 찼어요!'); return; }
-    const next = [...slots]; next[emptyIdx] = card; setSlots(next);
+    const next = [...slots]; next[emptyIdx] = { cardDef, inst }; setSlots(next);
   };
   const removeSlot = (i) => { const n = [...slots]; n[i] = null; setSlots(n); };
 
+  const handleCardTypeClick = (cardDef) => {
+    const usedUids  = new Set(slots.filter(Boolean).filter(s => s.cardDef.id === cardDef.id).map(s => s.inst.uid));
+    const available = ownedCards.filter(c => c.id === cardDef.id && !usedUids.has(c.uid));
+    if (available.length === 0) return;
+    if (available.length === 1) {
+      addInstToSlot(cardDef, available[0]);
+    } else {
+      setSynthPicker({ cardDef, instances: available });
+    }
+  };
+
   const doSynth = () => {
     if (slots.some(s => s === null)) return;
-    const grade    = slots[0].grade;
+    const grade    = slots[0].cardDef.grade;
     const gradeIdx = GRADES.indexOf(grade);
     const newOwned = [...(gs.ownedCards || [])];
-    for (const card of slots) {
-      const copies = newOwned.filter(c => c.id === card.id).sort((a, b) => a.condition - b.condition);
-      if (copies.length > 0) newOwned.splice(newOwned.findIndex(c => c.uid === copies[0].uid), 1);
+    for (const slot of slots) {
+      const idx = newOwned.findIndex(c => c.uid === slot.inst.uid);
+      if (idx !== -1) newOwned.splice(idx, 1);
     }
     let resultGrade = grade;
     if (gradeIdx < GRADES.length - 1 && Math.random() < 0.1) {
@@ -104,7 +153,7 @@ function SynthSubTab({ gs, setGs }) {
 
   const canSynth   = slots.every(s => s !== null);
   const gradeCards = CARDS.filter(c => c.grade === synthGrade && !c.raid && ownedCards.some(oc => oc.id === c.id));
-  const noCards    = ownedCards.length === 0 || gradeCards.length === 0;
+  const noCards    = gradeCards.length === 0;
   const countById  = {};
   ownedCards.forEach(oc => { countById[oc.id] = (countById[oc.id] || 0) + 1; });
   const exchangeable = CARDS.filter(c => (countById[c.id] || 0) >= EXCHANGE_COST);
@@ -114,6 +163,17 @@ function SynthSubTab({ gs, setGs }) {
       {flash && <div className={`grade-flash grade-flash-${flash}`}><div className="grade-flash-text">{FLASH_LABEL[flash]}</div></div>}
       {toast && <div className="cw-toast">{toast}</div>}
 
+      {/* 인스턴스 피커 */}
+      {synthPicker && (
+        <InstanceSheet
+          cardDef={synthPicker.cardDef}
+          instances={synthPicker.instances}
+          title={`${synthPicker.cardDef.name} — 재료로 쓸 카드를 선택하세요`}
+          onSelect={inst => { addInstToSlot(synthPicker.cardDef, inst); setSynthPicker(null); }}
+          onClose={() => setSynthPicker(null)}
+        />
+      )}
+
       <div className="synth-top">
         <div className="synth-title">카드 합성</div>
         <div className="synth-desc">같은 등급 카드 3장으로 합성! 10% 확률로 상위 등급 카드 획득!</div>
@@ -121,12 +181,13 @@ function SynthSubTab({ gs, setGs }) {
           <div className="synth-slots-wrap">
             <div className="synth-slots-label">재료 카드 (3장)</div>
             <div className="synth-slots">
-              {slots.map((card, i) => (
-                <div key={i} className={`synth-slot${card ? ' filled grade-highlight' : ''}`} onClick={() => card && removeSlot(i)}>
-                  {card ? (
+              {slots.map((slot, i) => (
+                <div key={i} className={`synth-slot${slot ? ' filled grade-highlight' : ''}`} onClick={() => slot && removeSlot(i)}>
+                  {slot ? (
                     <>
-                      <img src={`/${card.img}`} alt={card.name} />
-                      <span className="slot-grade" style={{ background: GRADE_BG[card.grade], color: GRADE_COL[card.grade] }}>{GRADE_LABEL[card.grade]}</span>
+                      <img src={`/${slot.cardDef.img}`} alt={slot.cardDef.name} />
+                      <span className="slot-grade" style={{ background: GRADE_BG[slot.cardDef.grade], color: GRADE_COL[slot.cardDef.grade] }}>{GRADE_LABEL[slot.cardDef.grade]}</span>
+                      {(slot.inst.enhanceLevel || 0) > 0 && <div className="enhance-badge-card">+{slot.inst.enhanceLevel}</div>}
                       <button className="slot-remove" onClick={e => { e.stopPropagation(); removeSlot(i); }}>×</button>
                     </>
                   ) : <div className="slot-empty-text">카드<br />선택</div>}
@@ -203,10 +264,10 @@ function SynthSubTab({ gs, setGs }) {
           <div className="synth-card-grid">
             {gradeCards.map(card => {
               const total = ownedCards.filter(c => c.id === card.id).length;
-              const used  = slots.filter(s => s?.id === card.id).length;
+              const used  = slots.filter(s => s?.cardDef?.id === card.id).length;
               const avail = total - used;
               return (
-                <div key={card.id} className={`synth-card grade-${card.grade}${avail <= 0 ? ' disabled' : ''}`} onClick={() => avail > 0 && addToSlot(card)}>
+                <div key={card.id} className={`synth-card grade-${card.grade}${avail <= 0 ? ' disabled' : ''}`} onClick={() => avail > 0 && handleCardTypeClick(card)}>
                   <img src={`/${card.img}`} alt={card.name} loading="lazy" />
                   <div className="sc-footer">
                     <div className="sc-name">{card.name}</div>
