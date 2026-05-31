@@ -11,7 +11,7 @@ const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestor
 
 initializeApp();
 
-const BOSS_IDS      = ['current_boss'];
+const BOSS_IDS      = ['cursed_doll_king'];
 const BOSS_HP       = 50_000_000;
 const TICK_MS       = 3_000;
 const RUN_MS        = 60_000;
@@ -43,40 +43,45 @@ exports.raidAutoTick = onSchedule(
     const db = getFirestore();
 
     for (const bossId of BOSS_IDS) {
-      const raidRef = db.collection('raids').doc(bossId);
+      const channelsSnap = await db
+        .collection('raids').doc(bossId)
+        .collection('channels')
+        .where('status', '==', 'active')
+        .get();
 
-      await db.runTransaction(async (tx) => {
-        const snap = await tx.get(raidRef);
-        if (!snap.exists) return;
+      for (const channelDoc of channelsSnap.docs) {
+        const channelRef = channelDoc.ref;
 
-        const raid = snap.data();
-        if (raid.status !== 'active') return;
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(channelRef);
+          if (!snap.exists) return;
 
-        const parts = raid.participants || {};
-        if (Object.keys(parts).length === 0) return;
+          const channel = snap.data();
+          if (channel.status !== 'active') return;
 
-        const currentHp = Math.max(0, raid.hp || 0);
-        if (currentHp <= 0) return;
+          const parts = channel.participants || {};
+          if (Object.keys(parts).length === 0) return;
 
-        const updates = {};
-        let totalBatchDmg = 0;
+          const currentHp = Math.max(0, channel.hp || 0);
+          if (currentHp <= 0) return;
 
-        for (const [uid, part] of Object.entries(parts)) {
-          const dmgPerTick = avgDmg(part.cardGrade, part.cardCondition, part.cardEnhanceLevel || 0) + (part.cardBonus || 0);
-          const batchDmg   = dmgPerTick * TICKS_PER_RUN;
-          updates[`participants.${uid}.damage`] = FieldValue.increment(batchDmg);
-          totalBatchDmg += batchDmg;
-        }
+          const updates = {};
+          let totalBatchDmg = 0;
 
-        const newHp = Math.max(0, currentHp - totalBatchDmg);
-        updates.hp  = newHp;
+          for (const [uid, part] of Object.entries(parts)) {
+            const dmgPerTick = avgDmg(part.cardGrade, part.cardCondition, part.cardEnhanceLevel || 0) + (part.cardBonus || 0);
+            const batchDmg   = dmgPerTick * TICKS_PER_RUN;
+            updates[`participants.${uid}.damage`] = FieldValue.increment(batchDmg);
+            totalBatchDmg += batchDmg;
+          }
 
-        if (newHp <= 0) {
-          updates.status = 'defeated';
-        }
+          const newHp = Math.max(0, currentHp - totalBatchDmg);
+          updates.hp  = newHp;
+          if (newHp <= 0) updates.status = 'defeated';
 
-        tx.update(raidRef, updates);
-      });
+          tx.update(channelRef, updates);
+        });
+      }
     }
 
     return null;
