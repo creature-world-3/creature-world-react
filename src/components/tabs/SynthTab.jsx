@@ -43,7 +43,33 @@ function calcDmgRange(grade, cond, enhanceLevel = 0) {
 }
 
 // ── 공통 인스턴스 피커 바텀시트 ──
+const INST_CARD_W = 76; // 카드 68px + gap 8px
+const INST_SCROLL = INST_CARD_W * 3; // 한 번에 3장씩
+
 function InstanceSheet({ cardDef, instances, title, onSelect, onClose }) {
+  const listRef = useRef(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd,   setAtEnd]   = useState(false);
+
+  const onScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
+    setAtStart(el.scrollLeft <= 2);
+    setAtEnd(el.scrollLeft >= el.scrollWidth - el.clientWidth - 2);
+  };
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    setAtEnd(el.scrollWidth <= el.clientWidth + 2);
+  }, [instances]);
+
+  const scroll = (dir) => {
+    listRef.current?.scrollBy({ left: dir * INST_SCROLL, behavior: 'smooth' });
+  };
+
+  const showArrows = instances.length > 4;
+
   return (
     <div className="card-zoom-overlay" onClick={onClose}>
       <div className="inst-sheet" onClick={e => e.stopPropagation()}>
@@ -51,26 +77,34 @@ function InstanceSheet({ cardDef, instances, title, onSelect, onClose }) {
           {title || cardDef.name}
           <span className="inst-sheet-count">{instances.length}장 보유</span>
         </div>
-        <div className="inst-list">
-          {instances.map((inst, i) => {
-            const lvl  = inst.enhanceLevel || 0;
-            const cond = inst.condition || 1;
-            const cc   = cond >= 9 ? '#d97706' : cond >= 6 ? '#7c3aed' : '#888';
-            return (
-              <div
-                key={inst.uid}
-                className="inst-item"
-                style={{ animationDelay: `${i * 50}ms` }}
-                onClick={() => onSelect(inst)}
-              >
-                <div className="inst-item-img">
-                  <img src={`/${cardDef.img}`} alt={cardDef.name} />
-                  {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
+        <div className="inst-list-wrap">
+          {showArrows && (
+            <button className="inst-scroll-btn" disabled={atStart} onClick={() => scroll(-1)}>‹</button>
+          )}
+          <div className="inst-list" ref={listRef} onScroll={onScroll}>
+            {instances.map((inst, i) => {
+              const lvl  = inst.enhanceLevel || 0;
+              const cond = inst.condition || 1;
+              const cc   = cond >= 9 ? '#d97706' : cond >= 6 ? '#7c3aed' : '#888';
+              return (
+                <div
+                  key={inst.uid}
+                  className="inst-item"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                  onClick={() => onSelect(inst)}
+                >
+                  <div className="inst-item-img">
+                    <img src={`/${cardDef.img}`} alt={cardDef.name} />
+                    {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
+                  </div>
+                  <div className="inst-item-meta" style={{ color: cc }}>컨디션 {cond}</div>
                 </div>
-                <div className="inst-item-meta" style={{ color: cc }}>컨디션 {cond}</div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {showArrows && (
+            <button className="inst-scroll-btn" disabled={atEnd} onClick={() => scroll(1)}>›</button>
+          )}
         </div>
         <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
       </div>

@@ -3129,9 +3129,24 @@ body.raid-theme .music-toggle-btn {
 }
 
 /* 공통 인스턴스 목록 (수평 스크롤) */
+.inst-list-wrap {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 16px;
+}
+.inst-scroll-btn {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+  border: 1.5px solid #d0eaf8; background: white;
+  font-size: 1.3rem; line-height: 1; color: var(--blue-dark);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; padding: 0;
+}
+.inst-scroll-btn:hover:not(:disabled) { background: #f0f7ff; border-color: var(--blue); }
+.inst-scroll-btn:disabled { opacity: 0.25; cursor: default; }
+/* 모바일(터치)에서는 숨김 — 스와이프로 충분 */
+@media (pointer: coarse) { .inst-scroll-btn { display: none; } }
+
 .inst-list {
-  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
-  scrollbar-width: none; margin-bottom: 16px;
+  flex: 1; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+  scrollbar-width: none;
 }
 .inst-list::-webkit-scrollbar { display: none; }
 
