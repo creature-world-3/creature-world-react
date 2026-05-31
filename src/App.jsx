@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
+import {
+  onAuthStateChanged, signInWithPopup, signInWithRedirect,
+  getRedirectResult, signOut, GoogleAuthProvider,
+} from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase/config.js';
 import Header from './components/Header.jsx';
@@ -248,7 +251,15 @@ export default function App() {
         }
       }
 
-      // 3) Firebase Google 인증
+      // 3) Google signInWithRedirect 결과 처리 (모바일 리다이렉트 후 복귀 시)
+      try {
+        await getRedirectResult(auth);
+        // 결과가 있으면 onAuthStateChanged가 자동으로 처리함
+      } catch (e) {
+        console.error('getRedirectResult error:', e);
+      }
+
+      // 4) Firebase Google 인증
       unsubFirebase = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           try {
@@ -283,10 +294,33 @@ export default function App() {
   }, [gs, user]);
 
   const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    // 모바일 또는 Safari: 팝업이 차단/오동작하므로 처음부터 리다이렉트 사용
+    const isMobileSafari = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (isMobileSafari) {
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (e) {
+        console.error('redirect login error:', e);
+      }
+      return;
+    }
+    // 데스크탑: 팝업 시도 → 실패 시 리다이렉트 폴백
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      await signInWithPopup(auth, provider);
     } catch (e) {
-      if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+      const fallbackCodes = [
+        'auth/popup-blocked',
+        'auth/operation-not-supported-in-this-environment',
+      ];
+      if (fallbackCodes.includes(e.code)) {
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch (re) {
+          console.error('redirect fallback error:', re);
+        }
+      } else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
         console.error('login error:', e);
       }
     }
