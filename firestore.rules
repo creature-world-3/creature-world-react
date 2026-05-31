@@ -28,6 +28,18 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
+    // ── trades 컬렉션 ──
+    // 읽기: 로그인한 유저 누구나 (거래소 목록)
+    // 생성: 로그인한 유저, 본인 uid로만
+    // 수정: 본인 등록 카드 취소 or 트랜잭션(구매)으로 status 변경
+    // 삭제: 본인 등록 카드만 (취소 / 보상 수령 후 정리)
+    match /trades/{tradeId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
     // ── raids 컬렉션 ──
     // 읽기/쓰기: 로그인한 유저 (레이드 참여·데미지 업데이트)
     match /raids/{raidId}/channels/{channelId} {
