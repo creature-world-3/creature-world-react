@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── users 컬렉션 ──
+    // 읽기: 로그인한 유저라면 누구의 문서든 읽기 가능 (랭킹 기능)
+    // 쓰기: 본인 문서만 가능
+    match /users/{userId} {
+      allow get, list: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── mailbox 컬렉션 ──
+    // 읽기: 로그인한 유저라면 전체 읽기 가능 (공지 메일 + 개인 메일 클라이언트 필터)
+    // 쓰기: 관리자(Admin SDK)만 — 클라이언트에서 직접 쓰기 불가
+    match /mailbox/{mailId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ── raids 컬렉션 ──
+    // 읽기/쓰기: 로그인한 유저 (레이드 참여·데미지 업데이트)
+    match /raids/{raidId}/channels/{channelId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
