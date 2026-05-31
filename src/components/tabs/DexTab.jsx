@@ -237,6 +237,10 @@ export default function DexTab({ gs }) {
           <div className="modal-card-main">
             {/* 왼쪽: 카드 이미지 */}
             <div className={`zoom-card grade-${zoomCard.card.grade}`}>
+              <div className="card-header">
+                <span className="card-name">{zoomCard.card.name}</span>
+                <span className="grade-badge">{GRADE_LABEL[zoomCard.card.grade]}</span>
+              </div>
               <div className="card-art">
                 <img src={`/${zoomCard.card.img}`} alt={zoomCard.card.name} />
               </div>
@@ -277,14 +281,7 @@ export default function DexTab({ gs }) {
               )}
             </div>
           </div>
-          {/* 하단: 이름, 등급, 닫기 */}
-          <div className="modal-card-footer">
-            <span className="modal-card-name">{zoomCard.card.name}</span>
-            <span className="modal-card-grade" style={{ color: GRADE_COLOR[zoomCard.card.grade] }}>
-              {GRADE_LABEL[zoomCard.card.grade]}
-            </span>
-            <button className="zoom-close" onClick={() => setZoomCard(null)}>닫기 ✕</button>
-          </div>
+          <button className="zoom-close" onClick={() => setZoomCard(null)}>닫기 ✕</button>
         </div>
       </div>
     )}

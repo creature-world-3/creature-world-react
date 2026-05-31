@@ -112,6 +112,10 @@ function CardDetailModal({ item, onClose }) {
         <div className="modal-card-main">
           {/* 왼쪽: 카드 이미지 */}
           <div className={`zoom-card grade-${card.grade}`}>
+            <div className="card-header">
+              <span className="card-name">{card.name}</span>
+              <span className="grade-badge">{GRADE_LABEL[card.grade]}</span>
+            </div>
             <div className="card-art">
               <img src={`/${card.img}`} alt={card.name} />
             </div>
@@ -148,14 +152,7 @@ function CardDetailModal({ item, onClose }) {
             )}
           </div>
         </div>
-        {/* 하단: 이름, 등급, 닫기 */}
-        <div className="modal-card-footer">
-          <span className="modal-card-name">{card.name}</span>
-          <span className="modal-card-grade" style={{ color: GRADE_COLOR[card.grade] }}>
-            {GRADE_LABEL[card.grade]}
-          </span>
-          <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
-        </div>
+        <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
       </div>
     </div>
   );
