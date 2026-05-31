@@ -591,9 +591,14 @@
 /* 이벤트 프리뷰: 황금 그라데이션 */
 .shop-card-preview-event {
   background:linear-gradient(145deg,#f59e0b,#fbbf24,#fde68a);
-  display:flex; align-items:center; justify-content:center;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
 }
 .shop-card-gift { font-size:2.4rem; }
+.shop-card-event-label {
+  font-size:1.05rem; font-weight:900; letter-spacing:2px;
+  color:#fff;
+  text-shadow:0 1px 6px rgba(160,70,0,0.55), 0 0 12px rgba(255,200,0,0.4);
+}
 
 /* 프리미엄 카드 뒷면 */
 .shop-card-back {

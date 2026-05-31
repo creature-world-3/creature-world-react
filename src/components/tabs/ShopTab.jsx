@@ -34,6 +34,7 @@ export default function ShopTab({ gs, setGs }) {
           <div className="shop-item-left">
             <div className="shop-card-preview shop-card-preview-event">
               <span className="shop-card-gift"></span>
+              <span className="shop-card-event-label">EVENT</span>
             </div>
           </div>
           <div className="shop-item-right">
