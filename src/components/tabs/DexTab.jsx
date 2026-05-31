@@ -15,6 +15,13 @@ const GRADE_TABS = [
   { key: 'raid', label: 'RAID'   },
 ];
 
+const GRADE_RANGE = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
+function dmgRange(grade, cond, enhanceLevel = 0) {
+  const [mn, mx] = GRADE_RANGE[grade] || [1, 10];
+  const mult = 1 + enhanceLevel * 0.1;
+  return `${Math.floor((mn + (cond||1)) * mult)}~${Math.floor((mx + (cond||1)) * mult)}`;
+}
+
 function condStyle(grade, cond) {
   if (grade === 'lg' || grade === 'raid') return 'gold';
   if (grade === 'ur') return 'holo';
@@ -231,9 +238,6 @@ export default function DexTab({ gs }) {
             <div className={`draw-cond-badge cond-badge-${zoomCs}`}>
               {zoomCard.best.condition}
             </div>
-            {(zoomCard.best.enhanceLevel || 0) > 0 && (
-              <div className="zoom-enhance-badge">+{zoomCard.best.enhanceLevel}</div>
-            )}
           </div>
           <div className="zoom-info">
             {zoomCard.count > 1 && (
@@ -242,6 +246,7 @@ export default function DexTab({ gs }) {
             {(zoomCard.best.enhanceLevel || 0) > 0 && (
               <div className="zoom-enhance-info">강화 : {zoomCard.best.enhanceLevel}단계</div>
             )}
+            <div className="zoom-dmg-info">데미지 : {dmgRange(zoomCard.card.grade, zoomCard.best.condition, zoomCard.best.enhanceLevel || 0)}/틱</div>
             <button className="zoom-close" onClick={() => setZoomCard(null)}>닫기 ✕</button>
           </div>
         </div>

@@ -5,6 +5,17 @@ const GRADE_WEIGHT = { n: 70, r: 22, sr: 6.9, ur: 1, lg: 0.1 };
 const GRADE_LABEL  = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const FLASH_LABEL  = { sr: 'SUPER RARE!', ur: 'ULTRA RARE!', lg: 'L E G E N D !' };
 const GRADE_COLOR  = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
+const GRADE_RANGE  = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
+function dmgRange(grade, cond, enhanceLevel = 0) {
+  const [mn, mx] = GRADE_RANGE[grade] || [1, 10];
+  const mult = 1 + enhanceLevel * 0.1;
+  return `${Math.floor((mn + (cond||1)) * mult)}~${Math.floor((mx + (cond||1)) * mult)}`;
+}
+function condColor(cond) {
+  if (cond >= 9) return '#d97706';
+  if (cond >= 6) return '#7c3aed';
+  return '#888';
+}
 const CARDS_PER_PAGE = 6;
 let _uid = 0;
 const genUid = () => `${++_uid}_${Date.now()}`;
@@ -40,11 +51,48 @@ const D10_AURORA = {
 const D10_GRADE_BG  = { n:'rgba(80,80,80,0.9)', r:'#1a3a6a', sr:'#2d1b4e', ur:'#3a2800', lg:'linear-gradient(90deg,#ff6b6b,#4d96ff,#c77dff)' };
 const D10_GRADE_COL = { n:'#ccc', r:'#7eb8ff', sr:'#d4a8ff', ur:'#ffd97a', lg:'#fff' };
 
+// ── 인스턴스 피커 바텀시트 (수집북 중복 카드 선택) ──
+function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
+  return (
+    <div className="card-zoom-overlay" onClick={onClose}>
+      <div className="inst-sheet" onClick={e => e.stopPropagation()}>
+        <div className="inst-sheet-title">
+          {cardDef.name} &nbsp;<span className="inst-sheet-count">{instances.length}장 보유</span>
+        </div>
+        <div className="inst-list">
+          {instances.map((inst, i) => {
+            const lvl = inst.enhanceLevel || 0;
+            const cond = inst.condition || 1;
+            return (
+              <div
+                key={inst.uid}
+                className="inst-item"
+                style={{ animationDelay: `${i * 50}ms` }}
+                onClick={() => onSelect(inst)}
+              >
+                <div className="inst-item-img">
+                  <img src={`/${cardDef.img}`} alt={cardDef.name} />
+                  {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
+                </div>
+                <div className="inst-item-meta" style={{ color: condColor(cond) }}>
+                  컨디션 {cond}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
+      </div>
+    </div>
+  );
+}
+
 // ── 카드 상세 모달 (10뽑 + 수집북 공용) ──
 function CardDetailModal({ item, onClose }) {
   if (!item) return null;
   const { card, cond, count } = item;
   const cs = condStyle(card.grade, cond);
+  const enhLvl = item.enhanceLevel || 0;
   return (
     <div className="card-zoom-overlay card-detail-overlay" onClick={onClose}>
       <div className="card-zoom-inner" onClick={e => e.stopPropagation()}>
@@ -67,9 +115,10 @@ function CardDetailModal({ item, onClose }) {
           {count > 1 && (
             <span className="zoom-detail-count">{count}개 보유</span>
           )}
-          {(item.enhanceLevel || 0) > 0 && (
-            <div className="zoom-enhance-info">강화 : {item.enhanceLevel}단계</div>
+          {enhLvl > 0 && (
+            <div className="zoom-enhance-info">강화 : {enhLvl}단계</div>
           )}
+          <div className="zoom-dmg-info">데미지 : {dmgRange(card.grade, cond, enhLvl)}/틱</div>
           <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
         </div>
       </div>
@@ -88,6 +137,7 @@ export default function GachaTab({ gs, setGs }) {
   const [gradeF, setGradeF]         = useState('all');
   const [page, setPage]             = useState(0);
   const [zoomItem, setZoomItem]     = useState(null);
+  const [pickerCard, setPickerCard] = useState(null);
   const toastTimer = useRef(null);
 
   useEffect(() => {
@@ -214,6 +264,19 @@ export default function GachaTab({ gs, setGs }) {
 
   return (
     <>
+      {/* 수집북 인스턴스 피커 */}
+      {pickerCard && (
+        <InstanceSheet
+          cardDef={pickerCard.card}
+          instances={pickerCard.instances}
+          onSelect={(inst) => {
+            setZoomItem({ card: pickerCard.card, cond: inst.condition, count: pickerCard.instances.length, enhanceLevel: inst.enhanceLevel || 0 });
+            setPickerCard(null);
+          }}
+          onClose={() => setPickerCard(null)}
+        />
+      )}
+
       {/* 카드 상세 모달 */}
       <CardDetailModal item={zoomItem} onClose={() => setZoomItem(null)} />
 
@@ -417,7 +480,14 @@ export default function GachaTab({ gs, setGs }) {
                 <div
                   key={card.id}
                   className={`col-card grade-${card.grade}${locked ? ' locked' : ''}${isRaidLocked ? ' raid-locked' : ''}`}
-                  onClick={() => !locked && best && setZoomItem({ card, cond: best.condition, count: myCards.length, enhanceLevel: best.enhanceLevel || 0 })}
+                  onClick={() => {
+                    if (locked || !best) return;
+                    if (myCards.length > 1) {
+                      setPickerCard({ card, instances: myCards });
+                    } else {
+                      setZoomItem({ card, cond: best.condition, count: 1, enhanceLevel: best.enhanceLevel || 0 });
+                    }
+                  }}
                 >
                   {!locked ? (
                     <>
