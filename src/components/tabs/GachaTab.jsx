@@ -211,7 +211,8 @@ export default function GachaTab({ gs, setGs }) {
   const [page, setPage]             = useState(0);
   const [zoomItem, setZoomItem]     = useState(null);
   const [pickerCard, setPickerCard] = useState(null);
-  const toastTimer = useRef(null);
+  const toastTimer  = useRef(null);
+  const slideDir    = useRef('right'); // 페이지 슬라이드 방향
 
   useEffect(() => {
     if (!flash) return;
@@ -520,7 +521,7 @@ export default function GachaTab({ gs, setGs }) {
                 <button
                   key={c.id}
                   className={`col-filter-pill${charF === c.id ? ' active' : ''}`}
-                  onClick={() => { setCharF(c.id); setPage(0); }}
+                  onClick={() => { slideDir.current = 'right'; setCharF(c.id); setPage(0); }}
                 >{c.name}</button>
               ))}
             </div>
@@ -533,12 +534,13 @@ export default function GachaTab({ gs, setGs }) {
                   key={val}
                   className={`col-filter-pill${gradeF === val ? ' active' : ''}`}
                   style={color ? { color } : {}}
-                  onClick={() => { setGradeF(val); setPage(0); }}
+                  onClick={() => { slideDir.current = 'right'; setGradeF(val); setPage(0); }}
                 >{label}</button>
               ))}
             </div>
           </div>
 
+          <div className={`col-page-wrap slide-${slideDir.current}`} key={`p${safePage}`}>
           <div className="card-grid">
             {pageCards.length === 0 ? (
               <div className="col-empty">아직 카드가 없어요!<br />뽑기권을 사용해보세요</div>
@@ -584,11 +586,12 @@ export default function GachaTab({ gs, setGs }) {
 
           {totalPages > 1 && (
             <div className="pagination">
-              <button className="page-arrow" onClick={() => setPage(p => p - 1)} disabled={safePage === 0}>← 이전</button>
+              <button className="page-arrow" onClick={() => { slideDir.current = 'left'; setPage(p => p - 1); }} disabled={safePage === 0}>← 이전</button>
               <span className="page-info">{safePage + 1} / {totalPages}</span>
-              <button className="page-arrow" onClick={() => setPage(p => p + 1)} disabled={safePage >= totalPages - 1}>다음 →</button>
+              <button className="page-arrow" onClick={() => { slideDir.current = 'right'; setPage(p => p + 1); }} disabled={safePage >= totalPages - 1}>다음 →</button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </>
