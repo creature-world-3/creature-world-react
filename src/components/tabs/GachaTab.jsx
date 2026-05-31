@@ -74,34 +74,59 @@ function StarRating({ value }) {
 }
 
 // ── 인스턴스 피커 바텀시트 (수집북 중복 카드 선택) ──
+const INST_SCROLL = 76 * 3;
+
 function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
+  const listRef = useRef(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd,   setAtEnd]   = useState(false);
+
+  const onScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
+    setAtStart(el.scrollLeft <= 2);
+    setAtEnd(el.scrollLeft >= el.scrollWidth - el.clientWidth - 2);
+  };
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) setAtEnd(el.scrollWidth <= el.clientWidth + 2);
+  }, [instances]);
+
+  const scroll = (dir) => listRef.current?.scrollBy({ left: dir * INST_SCROLL, behavior: 'smooth' });
+  const showArrows = instances.length > 4;
+
   return (
     <div className="card-zoom-overlay" onClick={onClose}>
       <div className="inst-sheet" onClick={e => e.stopPropagation()}>
         <div className="inst-sheet-title">
           {cardDef.name} &nbsp;<span className="inst-sheet-count">{instances.length}장 보유</span>
         </div>
-        <div className="inst-list">
-          {instances.map((inst, i) => {
-            const lvl = inst.enhanceLevel || 0;
-            const cond = inst.condition || 1;
-            return (
-              <div
-                key={inst.uid}
-                className="inst-item"
-                style={{ animationDelay: `${i * 50}ms` }}
-                onClick={() => onSelect(inst)}
-              >
-                <div className="inst-item-img">
-                  <img src={`/${cardDef.img}`} alt={cardDef.name} />
-                  {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
+        <div className="inst-list-wrap">
+          {showArrows && <button className="inst-scroll-btn" disabled={atStart} onClick={() => scroll(-1)}>‹</button>}
+          <div className="inst-list" ref={listRef} onScroll={onScroll}>
+            {instances.map((inst, i) => {
+              const lvl = inst.enhanceLevel || 0;
+              const cond = inst.condition || 1;
+              return (
+                <div
+                  key={inst.uid}
+                  className="inst-item"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                  onClick={() => onSelect(inst)}
+                >
+                  <div className="inst-item-img">
+                    <img src={`/${cardDef.img}`} alt={cardDef.name} />
+                    {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
+                  </div>
+                  <div className="inst-item-meta" style={{ color: condColor(cond) }}>
+                    컨디션 {cond}
+                  </div>
                 </div>
-                <div className="inst-item-meta" style={{ color: condColor(cond) }}>
-                  컨디션 {cond}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {showArrows && <button className="inst-scroll-btn" disabled={atEnd} onClick={() => scroll(1)}>›</button>}
         </div>
         <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
       </div>
