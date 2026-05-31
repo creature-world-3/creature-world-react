@@ -253,10 +253,18 @@ export default function App() {
 
       // 3) Google signInWithRedirect 결과 처리 (모바일 리다이렉트 후 복귀 시)
       try {
-        await getRedirectResult(auth);
-        // 결과가 있으면 onAuthStateChanged가 자동으로 처리함
+        const redirectResult = await getRedirectResult(auth);
+        if (redirectResult?.user) {
+          // 리다이렉트 로그인 성공 - onAuthStateChanged가 자동으로 처리함
+          localStorage.removeItem('google_redirect_pending');
+        } else if (localStorage.getItem('google_redirect_pending') === '1') {
+          // 리다이렉트를 시작했지만 결과 없음 (사용자가 취소)
+          localStorage.removeItem('google_redirect_pending');
+        }
       } catch (e) {
         console.error('getRedirectResult error:', e);
+        localStorage.removeItem('google_redirect_pending');
+        setLoginError('Google 로그인 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
 
       // 4) Firebase Google 인증
@@ -294,15 +302,19 @@ export default function App() {
   }, [gs, user]);
 
   const handleLogin = async () => {
+    setLoginError('');
     const provider = new GoogleAuthProvider();
-    // 모바일 또는 Safari: 팝업이 차단/오동작하므로 처음부터 리다이렉트 사용
-    const isMobileSafari = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    // 모바일 감지: 팝업이 차단/오동작하므로 리다이렉트 사용
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
       || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    if (isMobileSafari) {
+    if (isMobile) {
       try {
+        localStorage.setItem('google_redirect_pending', '1');
         await signInWithRedirect(auth, provider);
       } catch (e) {
+        localStorage.removeItem('google_redirect_pending');
         console.error('redirect login error:', e);
+        setLoginError('Google 로그인을 시작할 수 없습니다. 다시 시도해주세요.');
       }
       return;
     }
@@ -316,12 +328,16 @@ export default function App() {
       ];
       if (fallbackCodes.includes(e.code)) {
         try {
+          localStorage.setItem('google_redirect_pending', '1');
           await signInWithRedirect(auth, provider);
         } catch (re) {
+          localStorage.removeItem('google_redirect_pending');
           console.error('redirect fallback error:', re);
+          setLoginError('Google 로그인을 시작할 수 없습니다. 다시 시도해주세요.');
         }
       } else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
         console.error('login error:', e);
+        setLoginError('Google 로그인에 실패했습니다. 다시 시도해주세요.');
       }
     }
   };
