@@ -551,6 +551,11 @@
 .zoom-detail-grade { font-weight: 900; }
 .zoom-detail-cond  { color: rgba(255,255,255,0.8); }
 .zoom-detail-count { color: #fbbf24; }
+.zoom-enhance-info {
+  font-size: 0.82rem; font-weight: 700;
+  color: #fbbf24;
+  letter-spacing: 0.3px;
+}
 .zoom-count {
   font-family:'Nunito',sans-serif; font-weight:900; font-size:1.05rem; color:white;
 }

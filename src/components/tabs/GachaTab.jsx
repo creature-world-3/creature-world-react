@@ -67,6 +67,9 @@ function CardDetailModal({ item, onClose }) {
           {count > 1 && (
             <span className="zoom-detail-count">{count}개 보유</span>
           )}
+          {(item.enhanceLevel || 0) > 0 && (
+            <div className="zoom-enhance-info">강화 : {item.enhanceLevel}단계</div>
+          )}
           <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
         </div>
       </div>
@@ -414,7 +417,7 @@ export default function GachaTab({ gs, setGs }) {
                 <div
                   key={card.id}
                   className={`col-card grade-${card.grade}${locked ? ' locked' : ''}${isRaidLocked ? ' raid-locked' : ''}`}
-                  onClick={() => !locked && best && setZoomItem({ card, cond: best.condition, count: myCards.length })}
+                  onClick={() => !locked && best && setZoomItem({ card, cond: best.condition, count: myCards.length, enhanceLevel: best.enhanceLevel || 0 })}
                 >
                   {!locked ? (
                     <>

@@ -239,6 +239,9 @@ export default function DexTab({ gs }) {
             {zoomCard.count > 1 && (
               <span className="zoom-detail-count">{zoomCard.count}개 보유</span>
             )}
+            {(zoomCard.best.enhanceLevel || 0) > 0 && (
+              <div className="zoom-enhance-info">강화 : {zoomCard.best.enhanceLevel}단계</div>
+            )}
             <button className="zoom-close" onClick={() => setZoomCard(null)}>닫기 ✕</button>
           </div>
         </div>
