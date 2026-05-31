@@ -2767,7 +2767,8 @@ body.raid-theme .music-toggle-btn {
 }
 .enhance-cost-item  { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .enhance-cost-label { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
-.enhance-cost-val   { font-size: 0.95rem; font-weight: 900; color: var(--blue-dark); }
+.enhance-cost-val   { font-size: 0.95rem; font-weight: 900; color: var(--blue-dark); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.enhance-cost-tier  { font-size: 0.6rem; font-weight: 600; color: var(--muted); letter-spacing: 0.3px; }
 .enhance-rate-val   { color: #16a34a; }
 .enhance-cost-divider { width: 1px; height: 28px; background: #d0eaf8; margin: 0 12px; }
 .enhance-cost-warn  { font-size: 0.68rem; color: #ef4444; font-weight: 700; margin-left: 8px; }

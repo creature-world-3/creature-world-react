@@ -9,7 +9,17 @@ const GRADE_BG    = { n: 'rgba(80,80,80,0.9)', r: '#1a6fd4', sr: '#7c3aed', ur: 
 const GRADE_COL   = { n: '#ccc', r: '#7eb8ff', sr: '#d4a8ff', ur: '#ffd97a', lg: '#fff', raid: '#fff' };
 const EXCHANGE_COST = 10;
 
-const ENHANCE_COST = { n: 5, r: 10, sr: 20, ur: 35, lg: 50, raid: 70 };
+// 단계별 강화 비용: +1~+5 / +6~+10 / +11 이상
+const ENHANCE_COST = {
+  base: { n: 5,  r: 10, sr: 20, ur: 35,  lg: 50,  raid: 70  }, // +1~+5
+  mid:  { n: 8,  r: 15, sr: 30, ur: 53,  lg: 75,  raid: 105 }, // +6~+10
+  high: { n: 10, r: 20, sr: 40, ur: 70,  lg: 100, raid: 140 }, // +11 이상
+};
+function getEnhanceCost(grade, currentLevel) {
+  if (currentLevel <= 4) return ENHANCE_COST.base[grade] ?? 5;
+  if (currentLevel <= 9) return ENHANCE_COST.mid[grade]  ?? 8;
+  return ENHANCE_COST.high[grade] ?? 10;
+}
 const ENHANCE_RATE = { 1: 90, 2: 80, 3: 70, 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10, 10: 5 };
 const GRADE_RANGE  = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
 
@@ -340,7 +350,7 @@ function EnhanceSubTab({ gs, setGs }) {
     const grade        = selectedCardDef.grade;
     const currentLevel = selectedInst.enhanceLevel || 0;
     const nextLevel    = currentLevel + 1;
-    const cost         = currentLevel >= 10 ? 100 : (ENHANCE_COST[grade] ?? 5);
+    const cost         = getEnhanceCost(grade, currentLevel);
 
     if ((gs.tickets || 0) < cost) { showToast('뽑기권이 부족합니다!'); return; }
 
@@ -407,7 +417,8 @@ function EnhanceSubTab({ gs, setGs }) {
   const [curMin, curMax] = selectedCardDef ? calcDmgRange(selectedCardDef.grade, cond, currentLevel) : [0, 0];
   const [nxtMin, nxtMax] = selectedCardDef ? calcDmgRange(selectedCardDef.grade, cond, nextLevel)    : [0, 0];
 
-  const cost     = selectedCardDef ? (currentLevel >= 10 ? 100 : (ENHANCE_COST[selectedCardDef.grade] ?? 5)) : 0;
+  const cost     = selectedCardDef ? getEnhanceCost(selectedCardDef.grade, currentLevel) : 0;
+  const costTier = currentLevel <= 4 ? '+1~+5' : currentLevel <= 9 ? '+6~+10' : '+11 이상';
   const rate     = currentLevel >= 10 ? 1 : (ENHANCE_RATE[nextLevel] ?? 1);
   const isAurora = displayLevel >= 8;
   const isBusy   = enhancePhase !== 'idle';
@@ -520,7 +531,10 @@ function EnhanceSubTab({ gs, setGs }) {
           <div className="enhance-cost-row">
             <div className="enhance-cost-item">
               <span className="enhance-cost-label">비용</span>
-              <span className="enhance-cost-val">{cost}장</span>
+              <span className="enhance-cost-val">
+                {cost}장
+                <span className="enhance-cost-tier">{costTier}</span>
+              </span>
             </div>
             <div className="enhance-cost-divider" />
             <div className="enhance-cost-item">
