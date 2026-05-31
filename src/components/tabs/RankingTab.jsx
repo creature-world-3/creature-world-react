@@ -168,30 +168,41 @@ export default function RankingTab() {
     setLoading(true);
     setLoadError(null);
     try {
-      console.log('[Ranking] users 컬렉션 조회 시작...');
+      console.log('[Ranking] ▶ users 컬렉션 조회 시작...');
+      console.log('[Ranking] CARDS 총 개수:', CARDS.length);
       const snap = await getDocs(collection(db, 'users'));
-      console.log('[Ranking] 문서 수:', snap.size);
+      console.log('[Ranking] ✅ 문서 수:', snap.size);
+
+      if (snap.size === 0) {
+        console.warn('[Ranking] ⚠️ users 컬렉션에 문서가 없음');
+      }
 
       const rows = [];
+      let docIdx = 0;
       snap.forEach(docSnap => {
         const data = docSnap.data();
-        // 첫 번째 문서의 전체 구조 확인
-        if (rows.length === 0) {
-          console.log('[Ranking] 첫 문서 ID:', docSnap.id);
-          console.log('[Ranking] 필드 목록:', Object.keys(data));
-          console.log('[Ranking] ownedCards 타입:', typeof data.ownedCards, Array.isArray(data.ownedCards) ? `(배열 ${data.ownedCards.length}개)` : '');
-          if (Array.isArray(data.ownedCards) && data.ownedCards.length > 0) {
-            console.log('[Ranking] ownedCards[0] 샘플:', JSON.stringify(data.ownedCards[0]));
-          }
-          console.log('[Ranking] nickname:', data.nickname);
+        const fieldKeys = Object.keys(data);
+        console.log(`[Ranking] 문서 #${docIdx} id=${docSnap.id} | 필드:`, fieldKeys);
+
+        const rawOwned = data.ownedCards ?? data.cards ?? data.cardList ?? null;
+        const ownedType = Array.isArray(rawOwned) ? 'Array' : typeof rawOwned;
+        const ownedLen  = Array.isArray(rawOwned) ? rawOwned.length : 'N/A';
+        console.log(`[Ranking] 문서 #${docIdx} ownedCards 타입:${ownedType} 길이:${ownedLen} nickname:"${data.nickname}"`);
+
+        if (Array.isArray(rawOwned) && rawOwned.length > 0) {
+          console.log(`[Ranking] 문서 #${docIdx} ownedCards[0] 샘플:`, JSON.stringify(rawOwned[0]));
+        } else {
+          console.warn(`[Ranking] 문서 #${docIdx} ownedCards 비어있거나 배열 아님:`, rawOwned);
         }
 
-        const owned = data.ownedCards ?? data.cards ?? data.cardList ?? [];
+        const owned = rawOwned ?? [];
         const best  = getBestCard(owned);
         if (!best) {
-          console.log('[Ranking] 스킵 (카드 없음):', docSnap.id, '| ownedCards 길이:', owned?.length ?? 0);
+          console.log(`[Ranking] 문서 #${docIdx} 스킵: 매칭 카드 없음 (owned ${owned.length}개 중 CARDS 매칭 0개)`);
+          docIdx++;
           return;
         }
+        console.log(`[Ranking] 문서 #${docIdx} bestCard: ${best.card.name}(${best.card.grade}) score=${best.score}`);
         rows.push({
           uid:      docSnap.id,
           nickname: data.nickname || '유저',
@@ -199,21 +210,24 @@ export default function RankingTab() {
           inst:     best.inst,
           score:    best.score,
         });
+        docIdx++;
       });
 
-      console.log('[Ranking] 유효 유저 수:', rows.length);
+      console.log('[Ranking] 유효 유저 수:', rows.length, '/ 전체:', snap.size);
       rows.sort((a, b) => b.score - a.score);
       const top10 = rows.slice(0, 10);
-      console.log('[Ranking] 상위 10개:', top10.map(r => `${r.nickname}(${r.score})`));
+      console.log('[Ranking] 최종 상위 10개:', top10.map(r => `${r.nickname}(score=${r.score})`));
       setEntries(top10);
       setLastUpdated(new Date().toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' }));
     } catch (e) {
-      console.error('[Ranking] 오류 코드:', e.code);
-      console.error('[Ranking] 오류 메시지:', e.message);
-      console.error('[Ranking] 전체 오류:', e);
+      console.error('[Ranking] ❌ 오류 코드:', e.code);
+      console.error('[Ranking] ❌ 오류 메시지:', e.message);
+      console.error('[Ranking] ❌ 전체 오류:', e);
       setLoadError(`${e.code ?? '오류'}: ${e.message}`);
+    } finally {
+      console.log('[Ranking] ▶ setLoading(false) 호출 (finally)');
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
