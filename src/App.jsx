@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import {
-  onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider, getRedirectResult,
+  onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, GoogleAuthProvider, getRedirectResult,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase/config.js';
@@ -230,7 +230,8 @@ export default function App() {
     const init = async () => {
       initKakao();
 
-      // 이전 redirect 방식 캐시 정리 (auth/missing-initial-state 방지)
+      // 리다이렉트 로그인 결과 처리 (signInWithRedirect 폴백 후 복귀 시)
+      // 성공 시 onAuthStateChanged가 자동으로 처리, 에러는 무시(캐시 정리 목적)
       getRedirectResult(auth).catch(() => {});
 
       // 1) 인앱브라우저 implicit grant 리다이렉트 후 hash 토큰 처리
@@ -304,12 +305,15 @@ export default function App() {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
         return;
       }
-      if (e.code === 'auth/popup-blocked') {
-        setLoginError('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
-        return;
-      }
-      if (e.code === 'auth/missing-initial-state') {
-        setLoginError('로그인 상태가 초기화되었습니다. 페이지를 새로고침 후 다시 시도해주세요.');
+      // 팝업이 차단되거나 브라우저가 세션 스토리지 공유를 막는 경우(Safari, Brave 등)
+      // → 리다이렉트 방식으로 자동 전환
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/missing-initial-state') {
+        try {
+          await signInWithRedirect(auth, provider);
+        } catch (redirectErr) {
+          console.error('redirect login error:', redirectErr);
+          setLoginError('Google 로그인에 실패했습니다. Chrome 브라우저에서 다시 시도해주세요.');
+        }
         return;
       }
       console.error('login error:', e);
