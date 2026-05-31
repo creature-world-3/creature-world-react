@@ -18,17 +18,18 @@ const RUN_MS        = 60_000;
 const TICKS_PER_RUN = Math.floor(RUN_MS / TICK_MS); // 20틱
 
 const GRADE_RANGE = {
-  n:    [1,   10 ],
-  r:    [21,  30 ],
-  sr:   [31,  40 ],
-  ur:   [41,  50 ],
-  lg:   [91,  100],
-  raid: [101, 120],
+  n:    [1,  10],
+  r:    [11, 20],
+  sr:   [21, 30],
+  ur:   [31, 40],
+  lg:   [51, 60],
+  raid: [56, 65],
 };
 
-function avgDmg(grade, cond) {
+function avgDmg(grade, cond, enhanceLevel = 0) {
   const [min, max] = GRADE_RANGE[grade] || [1, 10];
-  return Math.floor((min + max) / 2) + (cond || 1);
+  const base = Math.floor((min + max) / 2);
+  return Math.floor((base + (cond || 1)) * (1 + (enhanceLevel || 0) * 0.1));
 }
 
 // ── 매 1분마다 자동 데미지 틱 ──
@@ -61,7 +62,7 @@ exports.raidAutoTick = onSchedule(
         let totalBatchDmg = 0;
 
         for (const [uid, part] of Object.entries(parts)) {
-          const dmgPerTick = avgDmg(part.cardGrade, part.cardCondition) + (part.cardBonus || 0);
+          const dmgPerTick = avgDmg(part.cardGrade, part.cardCondition, part.cardEnhanceLevel || 0) + (part.cardBonus || 0);
           const batchDmg   = dmgPerTick * TICKS_PER_RUN;
           updates[`participants.${uid}.damage`] = FieldValue.increment(batchDmg);
           totalBatchDmg += batchDmg;

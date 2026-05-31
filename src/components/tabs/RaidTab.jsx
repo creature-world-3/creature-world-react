@@ -16,7 +16,7 @@ const MIN_REWARD_DMG = 3_000_000;
 
 const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND', raid:'RAID' };
 const GRADE_COLOR = { n:'#888', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b', raid:'#ffd700' };
-const GRADE_RANGE = { n:[1,10], r:[21,30], sr:[31,40], ur:[41,50], lg:[91,100], raid:[101,120] };
+const GRADE_RANGE = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
 const GRADE_ORDER = { n:0, r:1, sr:2, ur:3, lg:4, raid:5 };
 const BONUS_MULT  = { n: 0.5, r: 1, sr: 2, ur: 3, lg: 5, raid: 10 };
 
@@ -44,17 +44,20 @@ const BOSS_CONFIGS = [
 ];
 
 // ── 유틸 ──
-function calcDmg(grade, cond, bonus = 0) {
+function calcDmg(grade, cond, bonus = 0, enhanceLevel = 0) {
   const [min, max] = GRADE_RANGE[grade] || [1, 10];
-  return Math.floor(Math.random() * (max - min + 1)) + min + (cond || 1) + bonus;
+  const base = Math.floor(Math.random() * (max - min + 1)) + min;
+  return Math.floor((base + (cond || 1)) * (1 + enhanceLevel * 0.1)) + bonus;
 }
-function avgDmg(grade, cond) {
+function avgDmg(grade, cond, enhanceLevel = 0) {
   const [min, max] = GRADE_RANGE[grade] || [1, 10];
-  return Math.floor((min + max) / 2) + (cond || 1);
+  const base = Math.floor((min + max) / 2);
+  return Math.floor((base + (cond || 1)) * (1 + enhanceLevel * 0.1));
 }
-function dmgRange(grade, cond, bonus = 0) {
+function dmgRange(grade, cond, bonus = 0, enhanceLevel = 0) {
   const [min, max] = GRADE_RANGE[grade] || [1, 10];
-  return `${min + (cond || 1) + bonus}~${max + (cond || 1) + bonus}`;
+  const mult = 1 + enhanceLevel * 0.1;
+  return `${Math.floor((min + (cond || 1)) * mult) + bonus}~${Math.floor((max + (cond || 1)) * mult) + bonus}`;
 }
 function fmtTimeLeft(ts) {
   if (!ts) return '';
@@ -243,7 +246,7 @@ export default function RaidTab({ gs, setGs, user }) {
 
     setTicking(true);
     tickRef.current = setInterval(async () => {
-      const dmg     = calcDmg(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus || 0);
+      const dmg     = calcDmg(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus || 0, myPart.cardEnhanceLevel || 0);
       const floatId = Date.now() + Math.random();
       setShaking(true);
       setHpFlash(true);
@@ -270,7 +273,7 @@ export default function RaidTab({ gs, setGs, user }) {
     }, TICK_MS);
 
     return () => { clearInterval(tickRef.current); setTicking(false); };
-  }, [!!myPart, myPart?.cardGrade, myPart?.cardCondition, myPart?.cardBonus, raid?.status, user?.uid, selectedBossId]);
+  }, [!!myPart, myPart?.cardGrade, myPart?.cardCondition, myPart?.cardBonus, myPart?.cardEnhanceLevel, raid?.status, user?.uid, selectedBossId]);
 
   // ── 참여자 uid로 Firestore users 닉네임 일괄 조회 ──
   useEffect(() => {
@@ -314,7 +317,8 @@ export default function RaidTab({ gs, setGs, user }) {
     const inst = (gs?.ownedCards || []).find(c => c.id === card.id && c.uid !== lockedUid);
     if (!inst) { showToast('카드를 찾을 수 없어요'); return; }
 
-    const cardBonus = calcBonus(gs?.ownedCards || []);
+    const cardBonus        = calcBonus(gs?.ownedCards || []);
+    const cardEnhanceLevel = inst.enhanceLevel || 0;
     const partData = {
       uid:           user.uid,
       displayName:   gs?.nickname || user.displayName,
@@ -324,7 +328,8 @@ export default function RaidTab({ gs, setGs, user }) {
       cardImg:       card.img,
       cardName:      card.name,
       cardGrade:     card.grade,
-      cardCondition: inst.condition,
+      cardCondition:    inst.condition,
+      cardEnhanceLevel,
       cardBonus,
       damage:        isChanging ? (myPart?.damage || 0) : 0,
       joinedAt:      isChanging ? (myPart?.joinedAt || serverTimestamp()) : serverTimestamp(),
@@ -620,7 +625,10 @@ export default function RaidTab({ gs, setGs, user }) {
                 내 데미지 <strong>{myDmg.toLocaleString()}</strong>
               </div>
               <div className="raid-my-tick">
-                {dmgRange(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus || 0)}dmg / 3초
+                {dmgRange(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus || 0, myPart.cardEnhanceLevel || 0)}dmg / 3초
+                {(myPart.cardEnhanceLevel || 0) > 0 && (
+                  <span className="raid-enhance-tag">+{myPart.cardEnhanceLevel}</span>
+                )}
               </div>
               {(myPart.cardBonus || 0) > 0 && (
                 <div className="raid-my-bonus">카드 보너스 +{myPart.cardBonus}dmg/틱</div>
@@ -719,8 +727,8 @@ export default function RaidTab({ gs, setGs, user }) {
               {[...availCards].sort((a, b) => {
                 const iA = (gs?.ownedCards || []).find(o => o.id === a.id && o.uid !== lockedUid);
                 const iB = (gs?.ownedCards || []).find(o => o.id === b.id && o.uid !== lockedUid);
-                const dA = avgDmg(a.grade, iA?.condition || 1);
-                const dB = avgDmg(b.grade, iB?.condition || 1);
+                const dA = avgDmg(a.grade, iA?.condition || 1, iA?.enhanceLevel || 0);
+                const dB = avgDmg(b.grade, iB?.condition || 1, iB?.enhanceLevel || 0);
                 if (cardSort === 'dmg-desc') return dB - dA;
                 if (cardSort === 'dmg-asc')  return dA - dB;
                 return GRADE_ORDER[b.grade] - GRADE_ORDER[a.grade];
@@ -729,16 +737,19 @@ export default function RaidTab({ gs, setGs, user }) {
                 return (
                   <div
                     key={card.id}
-                    className={`raid-picker-card grade-${card.grade}`}
+                    className={`raid-picker-card grade-${card.grade}${(inst?.enhanceLevel || 0) >= 8 ? ' enhance-aurora-card' : ''}`}
                     onClick={() => handleJoin(card)}
                   >
                     <img src={`/${card.img}`} alt={card.name} />
+                    {(inst?.enhanceLevel || 0) > 0 && (
+                      <div className="enhance-badge-card">+{inst.enhanceLevel}</div>
+                    )}
                     <div className="raid-picker-overlay">
                       <div className="raid-picker-name">{card.name}</div>
                       <div className="raid-picker-grade" style={{ color: GRADE_COLOR[card.grade] }}>
                         {GRADE_LABEL[card.grade]}
                       </div>
-                      <div className="raid-picker-dmg">{dmgRange(card.grade, inst?.condition || 1)}dmg/틱</div>
+                      <div className="raid-picker-dmg">{dmgRange(card.grade, inst?.condition || 1, 0, inst?.enhanceLevel || 0)}dmg/틱</div>
                     </div>
                   </div>
                 );
@@ -791,7 +802,7 @@ export default function RaidTab({ gs, setGs, user }) {
                       <span className="raid-part-grade" style={{ color: GRADE_COLOR[p.cardGrade] }}>
                         {GRADE_LABEL[p.cardGrade]}
                       </span>
-                      <span className="raid-part-dps">{dmgRange(p.cardGrade, p.cardCondition, p.cardBonus || 0)}dmg/틱</span>
+                      <span className="raid-part-dps">{dmgRange(p.cardGrade, p.cardCondition, p.cardBonus || 0, p.cardEnhanceLevel || 0)}dmg/틱</span>
                     </div>
                     <div className="raid-part-dmg-row">
                       <span className="raid-part-dmg">{(p.damage || 0).toLocaleString()}</span>

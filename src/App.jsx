@@ -19,7 +19,7 @@ import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import './App.css';
 
-const TAB_ORDER = ['gacha', 'synth', 'shop', 'dex', 'board', 'trade', 'raid'];
+const TAB_ORDER = ['gacha', 'synth', 'dex', 'raid', 'shop', 'board', 'trade'];
 
 const KAKAO_JS_KEY   = '86daeae42ced20dec5fb375bf0b15aec';
 const KAKAO_REDIRECT = 'https://creature-world-react.vercel.app';
@@ -104,6 +104,7 @@ export default function App() {
   const [toast, setToast]           = useState(null);
   const [user, setUser]             = useState(null);
   const [authReady, setAuthReady]   = useState(false);
+  const [moreOpen, setMoreOpen]                   = useState(false);
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [nicknameInput, setNicknameInput]         = useState('');
   const [showWelcomeNotice, setShowWelcomeNotice] = useState(false);
@@ -417,6 +418,7 @@ export default function App() {
     setSlideDir(newIdx >= oldIdx ? 'right' : 'left');
     prevTabRef.current = newTab;
     setActiveTab(newTab);
+    setMoreOpen(false);
   };
 
   const handleRefreshTickets = async () => {
@@ -560,7 +562,12 @@ export default function App() {
             </div>
           </div>
 
-          <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
+          <TabBar
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            moreOpen={moreOpen}
+            onMoreToggle={() => setMoreOpen(p => !p)}
+          />
           <div className="tab-slide-wrapper">
             <div key={activeTab} className={slideDir ? `tab-slide-${slideDir}` : undefined}>
               {TABS[activeTab]}

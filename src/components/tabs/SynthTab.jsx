@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { CARDS } from '../../data/cards.js';
 
-const GRADES     = ['n', 'r', 'sr', 'ur', 'lg'];
+const GRADES      = ['n', 'r', 'sr', 'ur', 'lg'];
+const ALL_GRADES  = ['n', 'r', 'sr', 'ur', 'lg', 'raid'];
 const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const FLASH_LABEL = { sr: 'SUPER RARE!', ur: 'ULTRA RARE!', lg: 'L E G E N D !' };
-const GRADE_BG   = { n: 'rgba(80,80,80,0.9)', r: '#1a6fd4', sr: '#7c3aed', ur: '#d97706', lg: '#ff6b6b' };
-const GRADE_COL  = { n: '#ccc', r: '#7eb8ff', sr: '#d4a8ff', ur: '#ffd97a', lg: '#fff' };
+const GRADE_BG    = { n: 'rgba(80,80,80,0.9)', r: '#1a6fd4', sr: '#7c3aed', ur: '#d97706', lg: '#ff6b6b', raid: '#b8860b' };
+const GRADE_COL   = { n: '#ccc', r: '#7eb8ff', sr: '#d4a8ff', ur: '#ffd97a', lg: '#fff', raid: '#fff' };
 const EXCHANGE_COST = 10;
+
+const ENHANCE_COST = { n: 5, r: 10, sr: 20, ur: 35, lg: 50, raid: 70 };
+const ENHANCE_RATE = { 1: 90, 2: 80, 3: 70, 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10, 10: 5 };
 
 let _uid = 0;
 const genUid = () => `${++_uid}_${Date.now()}`;
@@ -19,7 +23,8 @@ function randomCondition() {
   return 1;
 }
 
-export default function SynthTab({ gs, setGs }) {
+// ── 합성 서브탭 ──
+function SynthSubTab({ gs, setGs }) {
   const [synthGrade, setSynthGrade] = useState('n');
   const [slots, setSlots]   = useState([null, null, null]);
   const [result, setResult] = useState(null);
@@ -40,6 +45,9 @@ export default function SynthTab({ gs, setGs }) {
     setToast(msg);
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   };
+
+  const lockedUid  = gs?.raidCard?.uid;
+  const ownedCards = (gs?.ownedCards || []).filter(c => c.uid !== lockedUid);
 
   const addToSlot = (card) => {
     const emptyIdx = slots.findIndex(s => s === null);
@@ -76,7 +84,7 @@ export default function SynthTab({ gs, setGs }) {
     const pool = CARDS.filter(c => c.grade === resultGrade && !c.raid);
     const card  = pool[Math.floor(Math.random() * pool.length)] ?? CARDS[0];
     const cond  = randomCondition();
-    newOwned.push({ uid: genUid(), id: card.id, condition: cond });
+    newOwned.push({ uid: genUid(), id: card.id, condition: cond, enhanceLevel: 0 });
 
     setGs(prev => ({ ...prev, ownedCards: newOwned }));
     setResult({ card, cond });
@@ -86,7 +94,6 @@ export default function SynthTab({ gs, setGs }) {
     setTimeout(() => setFlipped(true), 300);
   };
 
-  // ── 카드 교환: 같은 카드 10장 → 뽑기권 1장 (낮은 컨디션부터 자동 선택) ──
   const doExchange = (card) => {
     const myCards = ownedCards.filter(c => c.id === card.id);
     if (myCards.length < EXCHANGE_COST) return;
@@ -103,13 +110,10 @@ export default function SynthTab({ gs, setGs }) {
     showToast(`${card.name} ${EXCHANGE_COST}장 → 뽑기권 1장 교환 완료!`);
   };
 
-  const lockedUid  = gs?.raidCard?.uid;
-  const ownedCards = (gs?.ownedCards || []).filter(c => c.uid !== lockedUid);
   const canSynth   = slots.every(s => s !== null);
   const gradeCards = CARDS.filter(c => c.grade === synthGrade && !c.raid && ownedCards.some(oc => oc.id === c.id));
   const noCards    = ownedCards.length === 0 || gradeCards.length === 0;
 
-  // 교환 가능한 카드 목록 (같은 카드 10장 이상 보유)
   const countById = {};
   ownedCards.forEach(oc => { countById[oc.id] = (countById[oc.id] || 0) + 1; });
   const exchangeable = CARDS.filter(c => (countById[c.id] || 0) >= EXCHANGE_COST);
@@ -123,7 +127,6 @@ export default function SynthTab({ gs, setGs }) {
       )}
       {toast && <div className="cw-toast">{toast}</div>}
 
-      {/* ── 상단: 슬롯 + 결과 ── */}
       <div className="synth-top">
         <div className="synth-title">카드 합성</div>
         <div className="synth-desc">같은 등급 카드 3장으로 합성! 10% 확률로 상위 등급 카드 획득!</div>
@@ -188,7 +191,6 @@ export default function SynthTab({ gs, setGs }) {
         </button>
       </div>
 
-      {/* ── 카드 교환 ── */}
       {exchangeable.length > 0 && (
         <div className="synth-exchange-section">
           <div className="col-header" style={{ marginBottom: 12 }}>
@@ -227,7 +229,6 @@ export default function SynthTab({ gs, setGs }) {
         </div>
       )}
 
-      {/* ── 하단: 카드 선택 ── */}
       <div className="synth-cards-section">
         <div className="col-header" style={{ marginBottom: 14 }}>
           <div className="col-title">카드 선택</div>
@@ -278,6 +279,209 @@ export default function SynthTab({ gs, setGs }) {
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+// ── 강화 서브탭 ──
+function EnhanceSubTab({ gs, setGs }) {
+  const [filterGrade, setFilterGrade] = useState('n');
+  const [selectedInst, setSelectedInst] = useState(null);
+  const [enhanceResult, setEnhanceResult] = useState(null); // null | 'success' | 'fail'
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  const resultTimer = useRef(null);
+
+  const showToast = (msg) => {
+    clearTimeout(toastTimer.current);
+    setToast(msg);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  };
+
+  const lockedUid  = gs?.raidCard?.uid;
+  const ownedCards = (gs?.ownedCards || []).filter(c => c.uid !== lockedUid);
+
+  const cardTypesInGrade = CARDS.filter(c =>
+    c.grade === filterGrade && ownedCards.some(oc => oc.id === c.id),
+  );
+
+  const selectCardType = (cardDef) => {
+    const instances = ownedCards.filter(c => c.id === cardDef.id);
+    if (instances.length === 0) return;
+    // 가장 강화 단계가 높은 인스턴스 선택
+    const best = instances.reduce((a, b) =>
+      (a.enhanceLevel || 0) >= (b.enhanceLevel || 0) ? a : b,
+    );
+    setSelectedInst({ ...best, cardDef });
+    setEnhanceResult(null);
+  };
+
+  const doEnhance = () => {
+    if (!selectedInst) return;
+    const grade = selectedInst.cardDef.grade;
+    const currentLevel = selectedInst.enhanceLevel || 0;
+    const nextLevel    = currentLevel + 1;
+
+    const cost = currentLevel >= 10 ? 100 : (ENHANCE_COST[grade] ?? 5);
+    if ((gs.tickets || 0) < cost) { showToast('뽑기권이 부족합니다!'); return; }
+
+    const rate    = (currentLevel >= 10 ? 1 : (ENHANCE_RATE[nextLevel] ?? 1)) / 100;
+    const success = Math.random() < rate;
+
+    if (success) {
+      const newCards = (gs.ownedCards || []).map(c =>
+        c.uid === selectedInst.uid ? { ...c, enhanceLevel: nextLevel } : c,
+      );
+      setGs(prev => ({ ...prev, tickets: prev.tickets - cost, ownedCards: newCards }));
+      setSelectedInst(prev => ({ ...prev, enhanceLevel: nextLevel }));
+      setEnhanceResult('success');
+    } else {
+      // +11 이상 실패 시 1단계 하락
+      const newLevel = currentLevel >= 11 ? currentLevel - 1 : currentLevel;
+      const newCards = (gs.ownedCards || []).map(c =>
+        c.uid === selectedInst.uid ? { ...c, enhanceLevel: newLevel } : c,
+      );
+      setGs(prev => ({ ...prev, tickets: prev.tickets - cost, ownedCards: newCards }));
+      if (currentLevel >= 11) setSelectedInst(prev => ({ ...prev, enhanceLevel: newLevel }));
+      setEnhanceResult('fail');
+    }
+
+    clearTimeout(resultTimer.current);
+    resultTimer.current = setTimeout(() => setEnhanceResult(null), 1600);
+  };
+
+  const cardDef      = selectedInst?.cardDef;
+  const currentLevel = selectedInst ? (selectedInst.enhanceLevel || 0) : 0;
+  const nextLevel    = currentLevel + 1;
+  const cost         = cardDef ? (currentLevel >= 10 ? 100 : (ENHANCE_COST[cardDef.grade] ?? 5)) : 0;
+  const rate         = currentLevel >= 10 ? 1 : (ENHANCE_RATE[nextLevel] ?? 1);
+  const isAurora     = currentLevel >= 8;
+
+  return (
+    <>
+      {toast && <div className="cw-toast">{toast}</div>}
+
+      {/* ── 강화 패널 ── */}
+      {selectedInst && cardDef ? (
+        <div className={`enhance-panel${enhanceResult ? ` enhance-${enhanceResult}` : ''}`}>
+          <div className={`enhance-card-preview${isAurora ? ' enhance-aurora' : ''}`}>
+            <img src={`/${cardDef.img}`} alt={cardDef.name} />
+            {currentLevel > 0 && <div className="enhance-badge">+{currentLevel}</div>}
+          </div>
+          <div className="enhance-info">
+            <div className="enhance-card-name">
+              {cardDef.name}
+              <span className="enhance-grade-tag" style={{ background: GRADE_BG[cardDef.grade], color: GRADE_COL[cardDef.grade] }}>
+                {GRADE_LABEL[cardDef.grade]}
+              </span>
+            </div>
+            <div className="enhance-level-row">
+              <span className="enhance-current">+{currentLevel}</span>
+              <span className="enhance-arrow">→</span>
+              <span className="enhance-next">+{nextLevel}</span>
+            </div>
+            <div className="enhance-meta">
+              비용 <strong>{cost}장</strong> &nbsp;·&nbsp; 성공률 <strong>{rate}%</strong>
+              {currentLevel >= 11 && <span className="enhance-warn"> · 실패시 -1단계</span>}
+            </div>
+            <div className="enhance-tickets">보유 뽑기권: {gs.tickets}장</div>
+            <button
+              className="enhance-btn"
+              onClick={doEnhance}
+              disabled={(gs.tickets || 0) < cost || !!enhanceResult}
+            >
+              {enhanceResult === 'success' ? '✨ 강화 성공!' : enhanceResult === 'fail' ? '강화 실패...' : '강화하기'}
+            </button>
+          </div>
+          {enhanceResult && (
+            <div className={`enhance-result-overlay enhance-result-${enhanceResult}`}>
+              {enhanceResult === 'success' ? '✨ 강화 성공!' : '💔 강화 실패'}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="enhance-empty-hint">
+          강화할 카드를 아래에서 선택하세요
+        </div>
+      )}
+
+      {/* ── 카드 선택 ── */}
+      <div className="synth-cards-section">
+        <div className="col-header" style={{ marginBottom: 14 }}>
+          <div className="col-title">카드 선택</div>
+          <div className="col-count">{GRADE_LABEL[filterGrade]} 등급</div>
+        </div>
+
+        <div className="synth-grade-filter">
+          {ALL_GRADES.map(g => (
+            <button
+              key={g}
+              className={`col-filter-btn${filterGrade === g ? ' active' : ''}`}
+              onClick={() => { setFilterGrade(g); setSelectedInst(null); setEnhanceResult(null); }}
+            >
+              {GRADE_LABEL[g]}
+            </button>
+          ))}
+        </div>
+
+        {cardTypesInGrade.length === 0 ? (
+          <div className="col-empty">{GRADE_LABEL[filterGrade]} 등급 카드가 없어요!</div>
+        ) : (
+          <div className="synth-card-grid">
+            {cardTypesInGrade.map(cd => {
+              const instances  = ownedCards.filter(c => c.id === cd.id);
+              const bestLevel  = Math.max(...instances.map(c => c.enhanceLevel || 0));
+              const isSelected = selectedInst?.id === cd.id;
+              return (
+                <div
+                  key={cd.id}
+                  className={`synth-card grade-${cd.grade}${isSelected ? ' enhance-selected' : ''}${bestLevel >= 8 ? ' enhance-aurora-card' : ''}`}
+                  onClick={() => selectCardType(cd)}
+                >
+                  <img src={`/${cd.img}`} alt={cd.name} loading="lazy" />
+                  {bestLevel > 0 && <div className="enhance-badge-card">+{bestLevel}</div>}
+                  <div className="sc-footer">
+                    <div className="sc-name">{cd.name}</div>
+                    <span className="sc-grade" style={{ background: GRADE_BG[cd.grade], color: GRADE_COL[cd.grade] }}>
+                      {GRADE_LABEL[cd.grade]}
+                    </span>
+                  </div>
+                  <div className="sc-count">×{instances.length}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ── 메인 탭 ──
+export default function SynthTab({ gs, setGs }) {
+  const [subTab, setSubTab] = useState('synth');
+
+  return (
+    <>
+      <div className="subtab-bar">
+        <button
+          className={`subtab-btn${subTab === 'synth' ? ' active' : ''}`}
+          onClick={() => setSubTab('synth')}
+        >
+          합성
+        </button>
+        <button
+          className={`subtab-btn${subTab === 'enhance' ? ' active' : ''}`}
+          onClick={() => setSubTab('enhance')}
+        >
+          강화
+        </button>
+      </div>
+
+      {subTab === 'synth'
+        ? <SynthSubTab gs={gs} setGs={setGs} />
+        : <EnhanceSubTab gs={gs} setGs={setGs} />
+      }
     </>
   );
 }

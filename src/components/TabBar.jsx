@@ -1,25 +1,59 @@
-const TABS = [
-  { id: 'gacha',   label: '뽑기' },
-  { id: 'synth',   label: '합성' },
-  { id: 'shop',    label: '상점' },
-  { id: 'dex',     label: '도감' },
-  { id: 'board',   label: '게시판' },
-  { id: 'trade',   label: '거래소' },
-  { id: 'raid',    label: '레이드' },
+const MAIN_TABS = [
+  { id: 'gacha', label: '뽑기' },
+  { id: 'synth', label: '합성/강화' },
+  { id: 'dex',   label: '도감' },
+  { id: 'raid',  label: '레이드' },
 ];
 
-export default function TabBar({ activeTab, onTabChange }) {
+const MORE_TABS = [
+  { id: 'shop',  label: '상점' },
+  { id: 'board', label: '게시판' },
+  { id: 'trade', label: '거래소' },
+];
+
+const MORE_IDS = new Set(MORE_TABS.map(t => t.id));
+
+export default function TabBar({ activeTab, onTabChange, moreOpen, onMoreToggle }) {
+  const isMoreActive = MORE_IDS.has(activeTab);
+
+  const handleMoreTabClick = (tabId) => {
+    onTabChange(tabId);
+    if (moreOpen) onMoreToggle();
+  };
+
   return (
-    <div className="page-tabs">
-      {TABS.map(tab => (
+    <div className="tab-bar-wrap">
+      <div className="page-tabs">
+        {MAIN_TABS.map(tab => (
+          <button
+            key={tab.id}
+            className={`page-tab${activeTab === tab.id ? ' active' : ''}${tab.id === 'raid' ? ' raid-tab' : ''}`}
+            onClick={() => onTabChange(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
         <button
-          key={tab.id}
-          className={`page-tab${activeTab === tab.id ? ' active' : ''}${tab.id === 'raid' ? ' raid-tab' : ''}`}
-          onClick={() => onTabChange(tab.id)}
+          className={`page-tab more-tab${(moreOpen || isMoreActive) ? ' active' : ''}`}
+          onClick={onMoreToggle}
         >
-          {tab.label}
+          더보기 {moreOpen ? '▲' : '▼'}
         </button>
-      ))}
+      </div>
+
+      <div className={`more-drawer${moreOpen ? ' open' : ''}`}>
+        <div className="more-drawer-inner">
+          {MORE_TABS.map(tab => (
+            <button
+              key={tab.id}
+              className={`more-drawer-btn${activeTab === tab.id ? ' active' : ''}`}
+              onClick={() => handleMoreTabClick(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
