@@ -2424,99 +2424,200 @@ body.raid-theme .music-toggle-btn {
    강화 시스템 스타일
 ══════════════════════════════════════ */
 
-/* 강화 패널 */
-.enhance-panel {
-  background: white; border: 1.5px solid #d0eaf8; border-radius: 20px;
-  padding: 18px; margin-bottom: 20px; display: flex; gap: 16px;
-  align-items: center; position: relative; overflow: hidden;
-  box-shadow: 0 2px 12px rgba(74,158,255,0.08);
+/* 서브탭 슬라이드 */
+.subtab-content { }
+@keyframes subtabSlideRight {
+  from { transform: translateX(32px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
-.enhance-panel.enhance-success { border-color: #4ade80; }
-.enhance-panel.enhance-fail    { border-color: #f87171; }
-
-.enhance-card-preview {
-  width: 84px; height: 126px; border-radius: 12px;
-  border: 2px solid #d0eaf8; overflow: hidden; position: relative;
-  flex-shrink: 0; transition: border-color 0.3s;
+@keyframes subtabSlideLeft {
+  from { transform: translateX(-32px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
 }
-.enhance-card-preview img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.subtab-slide-right { animation: subtabSlideRight 0.28s ease; }
+.subtab-slide-left  { animation: subtabSlideLeft  0.28s ease; }
 
-.enhance-badge {
+/* 강화 메인 패널 */
+.enhance-main-panel {
+  background: white; border: 1.5px solid #d0eaf8; border-radius: 22px;
+  padding: 22px 18px 18px; margin-bottom: 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  box-shadow: 0 2px 16px rgba(74,158,255,0.10);
+}
+
+/* 대형 카드 래퍼 (파티클이 바깥으로 나올 수 있도록 overflow:visible) */
+.enhance-card-large-wrap {
+  position: relative; width: 130px; height: 195px;
+  display: flex; align-items: center; justify-content: center;
+  transition: filter 0.3s;
+}
+@keyframes successGlow {
+  0%   { filter: brightness(1) drop-shadow(0 0 0px #fbbf24); }
+  25%  { filter: brightness(1.25) drop-shadow(0 0 18px #fbbf24); }
+  100% { filter: brightness(1) drop-shadow(0 0 4px #fbbf24); }
+}
+.enhance-success-glow { animation: successGlow 2.2s ease forwards; }
+
+/* 대형 카드 본체 */
+.enhance-card-large {
+  width: 100%; height: 100%; border-radius: 14px; overflow: hidden;
+  position: relative; border: 2px solid #d0eaf8;
+  box-shadow: 0 4px 20px rgba(74,158,255,0.15);
+}
+.enhance-card-large img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+
+/* 1.5초 흔들기 */
+@keyframes cardShake {
+  0%,100% { transform: translateX(0) rotate(0); }
+  7%  { transform: translateX(-9px) rotate(-3deg); }
+  14% { transform: translateX(9px)  rotate(3deg); }
+  21% { transform: translateX(-8px) rotate(-2.5deg); }
+  28% { transform: translateX(8px)  rotate(2.5deg); }
+  36% { transform: translateX(-7px) rotate(-2deg); }
+  43% { transform: translateX(7px)  rotate(2deg); }
+  52% { transform: translateX(-5px) rotate(-1.5deg); }
+  60% { transform: translateX(5px)  rotate(1.5deg); }
+  70% { transform: translateX(-4px) rotate(-1deg); }
+  80% { transform: translateX(4px)  rotate(1deg); }
+  90% { transform: translateX(-2px) rotate(-0.5deg); }
+}
+.enhance-shaking { animation: cardShake 1.5s ease-in-out; }
+
+/* 강화 단계 배지 (대형 카드) */
+.enhance-badge-large {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, #ff6b6b, #fbbf24);
+  color: white; font-size: 1rem; font-weight: 900;
+  padding: 3px 14px; border-radius: 99px; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+@keyframes badgePop {
+  0%   { transform: translateX(-50%) scale(2.4); opacity: 0.6; }
+  55%  { transform: translateX(-50%) scale(0.88); }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+.enhance-badge-pop { animation: badgePop 0.52s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* 페이즈 오버레이 (카드 내부, overflow:hidden 허용) */
+.enhance-overlay {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font-size: 1rem; font-weight: 900;
+  border-radius: 14px; pointer-events: none;
+  animation: overlayAppear 0.25s ease;
+}
+@keyframes overlayAppear {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.enhance-overlay-pending  { background: rgba(30,30,60,0.45);  color: #c7d2fe; }
+.enhance-overlay-success  { background: rgba(74,222,128,0.6); color: #052e16; }
+.enhance-overlay-fail     { background: rgba(248,113,113,0.7); color: #fff; }
+.enhance-overlay-descend  { background: rgba(159,18,57,0.75);  color: #fff; }
+
+/* 파티클 (래퍼 기준 position:absolute) */
+@keyframes particleFly {
+  0%   { transform: translate(-50%, -50%) translate(0, 0) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+.enhance-particle {
+  position: absolute; top: 50%; left: 50%;
+  border-radius: 50%; pointer-events: none; z-index: 20;
+  animation: particleFly 0.9s ease-out forwards;
+}
+
+/* 카드 이름/등급 */
+.enhance-card-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 1rem; font-weight: 800;
+}
+.enhance-card-name-txt { color: var(--blue-dark); }
+.enhance-grade-tag { font-size: 0.65rem; padding: 3px 8px; border-radius: 99px; font-weight: 700; }
+
+/* 같은 카드 인스턴스 선택 */
+.enhance-sibling-section {
+  width: 100%; background: #f4f8ff; border-radius: 14px; padding: 10px 12px;
+}
+.enhance-sibling-label {
+  font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-bottom: 8px;
+}
+.enhance-sibling-list {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.enhance-sibling-list::-webkit-scrollbar { display: none; }
+.enhance-sibling-item {
+  flex-shrink: 0; width: 62px; cursor: pointer; border-radius: 10px;
+  border: 2px solid transparent; overflow: hidden; transition: border-color 0.2s;
+  animation: siblingSlideIn 0.3s ease both;
+}
+.enhance-sibling-item.active { border-color: var(--blue); }
+.enhance-sibling-img { position: relative; }
+.enhance-sibling-img img { width: 100%; aspect-ratio: 2/3; object-fit: cover; object-position: center 30%; display: block; }
+.enhance-sibling-badge {
   position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
   background: linear-gradient(135deg, #ff6b6b, #fbbf24);
-  color: white; font-size: 0.65rem; font-weight: 900;
-  padding: 2px 8px; border-radius: 99px; white-space: nowrap;
+  color: white; font-size: 0.52rem; font-weight: 900;
+  padding: 1px 5px; border-radius: 99px; white-space: nowrap;
+}
+.enhance-sibling-cond {
+  padding: 3px 2px; font-size: 0.58rem; font-weight: 700;
+  text-align: center; background: white;
+}
+@keyframes siblingSlideIn {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 
+/* 데미지 범위 표시 */
+.enhance-dmg-section {
+  width: 100%; background: #f4f8ff; border-radius: 14px; padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.enhance-dmg-row {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.enhance-dmg-after .enhance-dmg-label { color: #16a34a; font-weight: 700; }
+.enhance-dmg-label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.enhance-dmg-val   { font-size: 0.9rem; font-weight: 800; color: var(--blue-dark); }
+.enhance-dmg-unit  { font-size: 0.7rem; font-weight: 600; color: var(--muted); }
+.enhance-dmg-highlight { color: #16a34a; }
+.enhance-dmg-divider   { text-align: center; color: #a0aec0; font-size: 0.75rem; }
+
+/* 강화 비용/성공률 */
+.enhance-cost-row {
+  width: 100%; display: flex; align-items: center; gap: 0;
+  background: #f4f8ff; border-radius: 12px; padding: 10px 16px;
+}
+.enhance-cost-item  { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.enhance-cost-label { font-size: 0.7rem; color: var(--muted); font-weight: 600; }
+.enhance-cost-val   { font-size: 0.95rem; font-weight: 900; color: var(--blue-dark); }
+.enhance-rate-val   { color: #16a34a; }
+.enhance-cost-divider { width: 1px; height: 28px; background: #d0eaf8; margin: 0 12px; }
+.enhance-cost-warn  { font-size: 0.68rem; color: #ef4444; font-weight: 700; margin-left: 8px; }
+
+.enhance-tickets-row {
+  font-size: 0.78rem; color: var(--muted); align-self: flex-start;
+}
+.enhance-tickets-row strong { color: var(--blue-dark); }
+
+/* 강화하기 버튼 */
+.enhance-btn-main {
+  width: 100%; padding: 13px 0;
+  background: linear-gradient(135deg, #4a9eff, #7c3aed);
+  color: white; border: none; border-radius: 14px;
+  font-family: 'Noto Sans KR', sans-serif; font-size: 1rem; font-weight: 900;
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
+}
+.enhance-btn-main:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.enhance-btn-main:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+/* 강화 배지 (그리드 카드용) */
 .enhance-badge-card {
   position: absolute; top: 4px; left: 4px; z-index: 3;
   background: linear-gradient(135deg, #ff6b6b, #fbbf24);
   color: white; font-size: 0.55rem; font-weight: 900;
   padding: 1px 5px; border-radius: 99px;
 }
-
-.enhance-info {
-  flex: 1; display: flex; flex-direction: column; gap: 7px; min-width: 0;
-}
-.enhance-card-name {
-  font-size: 0.95rem; font-weight: 800; display: flex; align-items: center;
-  gap: 6px; flex-wrap: wrap;
-}
-.enhance-grade-tag {
-  font-size: 0.62rem; padding: 2px 7px; border-radius: 99px; font-weight: 700;
-}
-.enhance-level-row {
-  display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 800;
-}
-.enhance-current { color: var(--muted); }
-.enhance-arrow   { color: #4a9eff; font-size: 1.1rem; }
-.enhance-next    { color: #ff6b6b; font-size: 1.1rem; }
-.enhance-meta    { font-size: 0.78rem; color: var(--muted); }
-.enhance-warn    { color: #ef4444; font-weight: 700; }
-.enhance-tickets { font-size: 0.72rem; color: var(--muted); }
-
-.enhance-btn {
-  background: linear-gradient(135deg, #4a9eff, #7c3aed);
-  color: white; border: none; border-radius: 12px;
-  padding: 8px 22px; font-size: 0.85rem; font-weight: 800;
-  cursor: pointer; transition: all 0.2s; align-self: flex-start;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-.enhance-btn:hover:not(:disabled) { opacity: 0.88; transform: scale(1.03); }
-.enhance-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-
-.enhance-result-overlay {
-  position: absolute; inset: 0; display: flex; align-items: center;
-  justify-content: center; font-size: 1.4rem; font-weight: 900;
-  border-radius: 20px; pointer-events: none;
-  animation: enhanceFadeInOut 1.6s ease forwards;
-}
-.enhance-result-success { background: rgba(74,222,128,0.88); color: #065f46; }
-.enhance-result-fail    { background: rgba(248,113,113,0.88); color: #7f1d1d; }
-
-@keyframes enhanceFadeInOut {
-  0%   { opacity: 0; transform: scale(0.85); }
-  15%  { opacity: 1; transform: scale(1.05); }
-  70%  { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1); }
-}
-
-/* 패널 성공/실패 shake */
-@keyframes enhanceSuccessShake {
-  0%,100% { transform: scale(1); }
-  25%     { transform: scale(1.08) rotate(-2deg); }
-  50%     { transform: scale(1.12) rotate(2deg); }
-  75%     { transform: scale(1.08) rotate(-1deg); }
-}
-@keyframes enhanceFailShake {
-  0%,100% { transform: translateX(0); }
-  20%     { transform: translateX(-7px); }
-  40%     { transform: translateX(7px); }
-  60%     { transform: translateX(-5px); }
-  80%     { transform: translateX(5px); }
-}
-.enhance-success .enhance-card-preview { animation: enhanceSuccessShake 0.55s ease; }
-.enhance-fail    .enhance-card-preview { animation: enhanceFailShake 0.55s ease; }
 
 .enhance-empty-hint {
   text-align: center; padding: 20px; font-size: 0.85rem;
@@ -2525,9 +2626,10 @@ body.raid-theme .music-toggle-btn {
 }
 
 .enhance-selected {
-  outline: 2px solid var(--blue);
-  outline-offset: 2px;
+  outline: 2px solid var(--blue); outline-offset: 2px;
 }
+
+.enhance-cards-locked { pointer-events: none; opacity: 0.55; }
 
 /* 강화 태그 (레이드 탭) */
 .raid-enhance-tag {
