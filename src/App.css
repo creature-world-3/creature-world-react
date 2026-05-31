@@ -2941,3 +2941,73 @@ body.raid-theme .music-toggle-btn {
   font-size: 0.52rem; font-weight: 900;
   padding: 1px 4px; border-radius: 99px; pointer-events: none;
 }
+
+/* ── MAILBOX ── */
+.mailbox-wrap { padding: 0 0 40px; }
+.mailbox-header { margin-bottom: 20px; }
+.mailbox-title { font-size: 1.3rem; font-weight: 900; color: var(--blue-dark); margin-bottom: 4px; }
+.mailbox-subtitle { font-size: 0.78rem; color: var(--muted); }
+.mailbox-empty {
+  text-align: center; padding: 60px 20px;
+  color: var(--muted); font-size: 0.9rem;
+}
+.mailbox-list { display: flex; flex-direction: column; gap: 12px; }
+.mailbox-item {
+  position: relative; border-radius: 16px; cursor: pointer;
+  border: 1.5px solid #d0eaf8; background: white;
+  box-shadow: 0 2px 10px rgba(74,158,255,0.07);
+  transition: transform 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+}
+.mailbox-item.mailbox-unclaimed {
+  border-color: #4a9eff;
+  box-shadow: 0 2px 14px rgba(74,158,255,0.18);
+}
+.mailbox-item.mailbox-unclaimed:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(74,158,255,0.22);
+}
+.mailbox-item.mailbox-claimed { opacity: 0.6; cursor: default; }
+.mailbox-item-inner { padding: 16px 18px; }
+.mailbox-new-badge {
+  position: absolute; top: 12px; right: 12px;
+  background: linear-gradient(135deg, #ff6b6b, #f97316);
+  color: white; font-size: 0.62rem; font-weight: 900;
+  padding: 2px 7px; border-radius: 99px; letter-spacing: 0.5px;
+}
+.mailbox-item-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 8px; margin-bottom: 6px;
+}
+.mailbox-item-title { font-size: 1rem; font-weight: 800; color: var(--blue-dark); }
+.mailbox-item-date  { font-size: 0.7rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.mailbox-item-message { font-size: 0.85rem; color: #555; line-height: 1.6; margin-bottom: 10px; }
+.mailbox-reward-row {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(74,158,255,0.07); border-radius: 8px;
+  padding: 6px 10px; margin-bottom: 12px; font-size: 0.82rem;
+}
+.mailbox-reward-icon { font-size: 1rem; }
+.mailbox-reward-label { font-weight: 700; color: var(--blue-dark); }
+.mailbox-claim-btn {
+  display: inline-block;
+  background: linear-gradient(135deg, #4a9eff, #1a6fd4);
+  color: white; font-size: 0.82rem; font-weight: 700;
+  padding: 8px 20px; border-radius: 99px;
+  text-align: center; transition: opacity 0.15s;
+}
+.mailbox-claim-btn.done {
+  background: #e8f4fd; color: #4a9eff; pointer-events: none;
+}
+
+/* 더보기 미확인 우편 빨간 점 */
+.more-unread-dot {
+  position: absolute; top: 4px; right: 4px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #ff4444;
+  animation: unread-blink 1.2s ease-in-out infinite;
+}
+@keyframes unread-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}

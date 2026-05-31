@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import {
   onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase/config.js';
 import Header from './components/Header.jsx';
 import TabBar from './components/TabBar.jsx';
@@ -15,11 +15,12 @@ import DexTab from './components/tabs/DexTab.jsx';
 import BoardTab from './components/tabs/BoardTab.jsx';
 import TradeTab from './components/tabs/TradeTab.jsx';
 import RaidTab from './components/tabs/RaidTab.jsx';
+import MailboxTab from './components/tabs/MailboxTab.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import './App.css';
 
-const TAB_ORDER = ['gacha', 'synth', 'dex', 'raid', 'shop', 'board', 'trade'];
+const TAB_ORDER = ['gacha', 'synth', 'dex', 'raid', 'shop', 'board', 'trade', 'mailbox'];
 
 const KAKAO_JS_KEY   = '86daeae42ced20dec5fb375bf0b15aec';
 const KAKAO_REDIRECT = 'https://creature-world-react.vercel.app';
@@ -32,6 +33,7 @@ export const BASE_STATE = {
   sessionMinutes: 0, sessionBonus: false, sessionDate: null,
   raidCard: null,
   claimedRaids: {},
+  claimedMails: {},
   nickname: null,
 };
 
@@ -109,6 +111,7 @@ export default function App() {
   const [nicknameInput, setNicknameInput]         = useState('');
   const [showWelcomeNotice, setShowWelcomeNotice] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [mailboxDocs, setMailboxDocs] = useState([]);
   const [musicOn, setMusicOn]   = useState(() => localStorage.getItem('music_on') !== 'false');
   const [interacted, setInteracted] = useState(false);
   const homeAudioRef = useRef(null);
@@ -415,6 +418,17 @@ export default function App() {
     return () => clearInterval(interval);
   }, [user]);
 
+  // ── 우편함 구독 ──
+  useEffect(() => {
+    if (!user) { setMailboxDocs([]); return; }
+    const q = query(collection(db, 'mailbox'), orderBy('createdAt', 'desc'));
+    const unsub = onSnapshot(q,
+      snap => setMailboxDocs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      err => console.error('mailbox snapshot:', err),
+    );
+    return unsub;
+  }, [user]);
+
   const handleTabChange = (newTab) => {
     const oldIdx = TAB_ORDER.indexOf(prevTabRef.current);
     const newIdx = TAB_ORDER.indexOf(newTab);
@@ -448,14 +462,19 @@ export default function App() {
   const sessionPct  = (sessionMins / 60) * 100;
   const tabProps    = { gs, setGs };
 
+  const hasUnreadMail = mailboxDocs.some(m =>
+    (!m.targetUid || m.targetUid === user?.uid) && !(gs.claimedMails?.[m.id]),
+  );
+
   const TABS = {
-    gacha: <GachaTab {...tabProps} />,
-    synth: <SynthTab {...tabProps} />,
-    shop:  <ShopTab {...tabProps} />,
-    dex:   <DexTab gs={gs} />,
-    board: <BoardTab gs={gs} user={user} />,
-    trade: <TradeTab gs={gs} setGs={setGs} user={user} />,
-    raid:  <RaidTab gs={gs} setGs={setGs} user={user} />,
+    gacha:   <GachaTab {...tabProps} />,
+    synth:   <SynthTab {...tabProps} />,
+    shop:    <ShopTab {...tabProps} />,
+    dex:     <DexTab gs={gs} />,
+    board:   <BoardTab gs={gs} user={user} />,
+    trade:   <TradeTab gs={gs} setGs={setGs} user={user} />,
+    raid:    <RaidTab gs={gs} setGs={setGs} user={user} />,
+    mailbox: <MailboxTab gs={gs} setGs={setGs} user={user} />,
   };
 
   // ── 로딩 화면 ──
@@ -570,6 +589,7 @@ export default function App() {
             onTabChange={handleTabChange}
             moreOpen={moreOpen}
             onMoreToggle={() => setMoreOpen(p => !p)}
+            hasUnreadMail={hasUnreadMail}
           />
           <div className="tab-slide-wrapper">
             <div key={activeTab} className={slideDir ? `tab-slide-${slideDir}` : undefined}>

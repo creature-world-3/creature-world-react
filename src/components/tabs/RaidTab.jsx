@@ -31,6 +31,7 @@ const BOSS_CONFIGS = [
     durationMs: DURATION_MS,
     schedule:   '매주 월요일',
     desc:       '저주에 걸린 인형들의 왕. 14일간 도전 가능.',
+    fixedEndDate: new Date('2026-06-07T00:00:00Z'), // 2026-06-07T09:00:00+09:00
   },
 ];
 
@@ -93,7 +94,9 @@ const INITIAL_CHANNEL = (boss, channelNum) => ({
   participants: {},
   status:       'active',
   startDate:    serverTimestamp(),
-  endDate:      Timestamp.fromDate(new Date(Date.now() + boss.durationMs)),
+  endDate:      boss.fixedEndDate
+    ? Timestamp.fromDate(boss.fixedEndDate)
+    : Timestamp.fromDate(new Date(Date.now() + boss.durationMs)),
 });
 
 // ══════════════════════════════════════════════
@@ -101,7 +104,15 @@ const INITIAL_CHANNEL = (boss, channelNum) => ({
 // ══════════════════════════════════════════════
 function BossListScreen({ gs, user, onEnter }) {
   const [bossChannels, setBossChannels] = useState({});
-  const [entering, setEntering] = useState({}); // { [bossId]: true }
+  const [entering, setEntering] = useState({});
+  const [toast, setToast] = useState(null);
+  const toastRef = useRef(null);
+
+  const showToast = (msg) => {
+    clearTimeout(toastRef.current);
+    setToast(msg);
+    toastRef.current = setTimeout(() => setToast(null), 2500);
+  };
 
   useEffect(() => {
     const unsubs = BOSS_CONFIGS.map(boss => {
@@ -125,6 +136,12 @@ function BossListScreen({ gs, user, onEnter }) {
 
   const handleBossClick = async (boss) => {
     if (entering[boss.id]) return;
+
+    const status = getBossStatus(boss.id);
+    if (status === 'waiting') {
+      showToast('월요일 오전 9시에 입장 가능합니다');
+      return;
+    }
 
     // 이미 이 보스에 참여 중이면 그 채널로 바로 입장
     const myBossId    = gs?.raidCard?.raidId;
@@ -167,6 +184,7 @@ function BossListScreen({ gs, user, onEnter }) {
 
   return (
     <div className="raid-boss-select-screen">
+      {toast && <div className="cw-toast">{toast}</div>}
       <div className="raid-boss-select-title">레이드 보스</div>
       <div className="raid-boss-card-row">
         {BOSS_CONFIGS.map(boss => {

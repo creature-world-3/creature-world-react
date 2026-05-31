@@ -6,14 +6,15 @@ const MAIN_TABS = [
 ];
 
 const MORE_TABS = [
-  { id: 'shop',  label: '상점' },
-  { id: 'board', label: '게시판' },
-  { id: 'trade', label: '거래소' },
+  { id: 'shop',    label: '상점' },
+  { id: 'board',   label: '게시판' },
+  { id: 'trade',   label: '거래소' },
+  { id: 'mailbox', label: '우편함' },
 ];
 
 const MORE_IDS = new Set(MORE_TABS.map(t => t.id));
 
-export default function TabBar({ activeTab, onTabChange, moreOpen, onMoreToggle }) {
+export default function TabBar({ activeTab, onTabChange, moreOpen, onMoreToggle, hasUnreadMail }) {
   const isMoreActive = MORE_IDS.has(activeTab);
 
   const handleMoreTabClick = (tabId) => {
@@ -36,8 +37,10 @@ export default function TabBar({ activeTab, onTabChange, moreOpen, onMoreToggle 
         <button
           className={`page-tab more-tab${(moreOpen || isMoreActive) ? ' active' : ''}`}
           onClick={onMoreToggle}
+          style={{ position: 'relative' }}
         >
           더보기 {moreOpen ? '▲' : '▼'}
+          {hasUnreadMail && <span className="more-unread-dot" />}
         </button>
       </div>
 
@@ -48,8 +51,10 @@ export default function TabBar({ activeTab, onTabChange, moreOpen, onMoreToggle 
               key={tab.id}
               className={`more-drawer-btn${activeTab === tab.id ? ' active' : ''}`}
               onClick={() => handleMoreTabClick(tab.id)}
+              style={{ position: 'relative' }}
             >
               {tab.label}
+              {tab.id === 'mailbox' && hasUnreadMail && <span className="more-unread-dot" />}
             </button>
           ))}
         </div>
