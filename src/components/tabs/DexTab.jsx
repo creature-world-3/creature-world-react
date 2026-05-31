@@ -16,11 +16,20 @@ const GRADE_TABS = [
   { key: 'raid', label: 'RAID'   },
 ];
 
-const GRADE_RANGE = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
-function dmgRange(grade, cond, enhanceLevel = 0) {
+const GRADE_RANGE  = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
+const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
+function calcBonus(ownedCards) {
+  let b = 0;
+  for (const o of ownedCards) {
+    const c = CARDS.find(x => x.id === o.id);
+    if (c) b += BONUS_MULT[c.grade] || 0;
+  }
+  return Math.floor(b);
+}
+function dmgRange(grade, cond, enhanceLevel = 0, bonus = 0) {
   const [mn, mx] = GRADE_RANGE[grade] || [1, 10];
   const mult = 1 + enhanceLevel * 0.1;
-  return `${Math.floor((mn + (cond||1)) * mult)}~${Math.floor((mx + (cond||1)) * mult)}`;
+  return `${Math.floor((mn + (cond||1)) * mult) + bonus}~${Math.floor((mx + (cond||1)) * mult) + bonus}`;
 }
 
 function condStyle(grade, cond) {
@@ -134,7 +143,8 @@ export default function DexTab({ gs }) {
   const ownedIds    = new Set(ownedCards.map(c => c.id));
   const uniqueOwned = ownedIds.size;
 
-  const zoomCs = zoomCard ? condStyle(zoomCard.card.grade, zoomCard.best.condition) : null;
+  const zoomCs    = zoomCard ? condStyle(zoomCard.card.grade, zoomCard.best.condition) : null;
+  const zoomBonus = calcBonus(ownedCards);
 
   const filteredNormal = gradeTab !== 'all' && gradeTab !== 'raid'
     ? NORMAL_CARDS.filter(c => c.grade === gradeTab)
@@ -260,13 +270,19 @@ export default function DexTab({ gs }) {
               <div className="modal-stat-row">
                 <span className="modal-stat-label">데미지</span>
                 <span className="modal-stat-value modal-stat-dmg">
-                  {dmgRange(zoomCard.card.grade, zoomCard.best.condition, zoomCard.best.enhanceLevel || 0)}
+                  {dmgRange(zoomCard.card.grade, zoomCard.best.condition, zoomCard.best.enhanceLevel || 0, zoomBonus)}
                 </span>
               </div>
               {(zoomCard.best.enhanceLevel || 0) > 0 && (
                 <div className="modal-stat-row">
                   <span className="modal-stat-label">강화</span>
                   <span className="modal-stat-value modal-stat-enhance">{zoomCard.best.enhanceLevel}단계</span>
+                </div>
+              )}
+              {zoomBonus > 0 && (
+                <div className="modal-stat-row">
+                  <span className="modal-stat-label">보너스</span>
+                  <span className="modal-stat-value modal-stat-enhance">+{zoomBonus}</span>
                 </div>
               )}
               <div className="modal-stat-row">

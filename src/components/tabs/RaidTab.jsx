@@ -735,7 +735,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
                 {dmgRange(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus||0, myPart.cardEnhanceLevel||0)}dmg / 3초
                 {(myPart.cardEnhanceLevel||0) > 0 && <span className="raid-enhance-tag">+{myPart.cardEnhanceLevel}</span>}
               </div>
-              {(myPart.cardBonus||0) > 0 && <div className="raid-my-bonus">카드 보너스 +{myPart.cardBonus}dmg/틱</div>}
+              {(myPart.cardBonus||0) > 0 && <div className="raid-my-bonus">보너스 데미지 +{myPart.cardBonus}</div>}
               {myDmg >= MIN_REWARD_DMG
                 ? <div className="raid-reward-qualify">✓ 보상 수령 가능!</div>
                 : <div className="raid-reward-progress">보상까지 {Math.max(0, MIN_REWARD_DMG - myDmg).toLocaleString()} 데미지</div>}
@@ -765,7 +765,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
               <button className="raid-join-btn" onClick={() => { setIsChanging(false); setShowPicker(p => !p); }}>레이드 참여하기</button>
               <div className="raid-join-sub">카드 1장을 선택해 보스에게 도전하세요</div>
               {calcBonus(gs?.ownedCards || []) > 0 && (
-                <div className="raid-bonus-info">내 카드 보너스 +{calcBonus(gs?.ownedCards || [])}dmg/틱</div>
+                <div className="raid-bonus-info">보너스 데미지 +{calcBonus(gs?.ownedCards || [])}</div>
               )}
             </>
           )}

@@ -6,10 +6,19 @@ const GRADE_LABEL  = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: '
 const FLASH_LABEL  = { sr: 'SUPER RARE!', ur: 'ULTRA RARE!', lg: 'L E G E N D !' };
 const GRADE_COLOR  = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
 const GRADE_RANGE  = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
-function dmgRange(grade, cond, enhanceLevel = 0) {
+const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
+function calcBonus(ownedCards) {
+  let b = 0;
+  for (const o of ownedCards) {
+    const c = CARDS.find(x => x.id === o.id);
+    if (c) b += BONUS_MULT[c.grade] || 0;
+  }
+  return Math.floor(b);
+}
+function dmgRange(grade, cond, enhanceLevel = 0, bonus = 0) {
   const [mn, mx] = GRADE_RANGE[grade] || [1, 10];
   const mult = 1 + enhanceLevel * 0.1;
-  return `${Math.floor((mn + (cond||1)) * mult)}~${Math.floor((mx + (cond||1)) * mult)}`;
+  return `${Math.floor((mn + (cond||1)) * mult) + bonus}~${Math.floor((mx + (cond||1)) * mult) + bonus}`;
 }
 function condColor(cond) {
   if (cond >= 9) return '#d97706';
@@ -104,8 +113,9 @@ function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
 function CardDetailModal({ item, onClose }) {
   if (!item) return null;
   const { card, cond, count } = item;
-  const cs = condStyle(card.grade, cond);
+  const cs     = condStyle(card.grade, cond);
   const enhLvl = item.enhanceLevel || 0;
+  const bonus  = item.bonus || 0;
   return (
     <div className="card-zoom-overlay card-detail-overlay" onClick={onClose}>
       <div className="card-zoom-inner" onClick={e => e.stopPropagation()}>
@@ -131,13 +141,19 @@ function CardDetailModal({ item, onClose }) {
             <div className="modal-stat-row">
               <span className="modal-stat-label">데미지</span>
               <span className="modal-stat-value modal-stat-dmg">
-                {dmgRange(card.grade, cond, enhLvl)}
+                {dmgRange(card.grade, cond, enhLvl, bonus)}
               </span>
             </div>
             {enhLvl > 0 && (
               <div className="modal-stat-row">
                 <span className="modal-stat-label">강화</span>
                 <span className="modal-stat-value modal-stat-enhance">{enhLvl}단계</span>
+              </div>
+            )}
+            {bonus > 0 && (
+              <div className="modal-stat-row">
+                <span className="modal-stat-label">보너스</span>
+                <span className="modal-stat-value modal-stat-enhance">+{bonus}</span>
               </div>
             )}
             <div className="modal-stat-row">
@@ -302,7 +318,7 @@ export default function GachaTab({ gs, setGs }) {
           cardDef={pickerCard.card}
           instances={pickerCard.instances}
           onSelect={(inst) => {
-            setZoomItem({ card: pickerCard.card, cond: inst.condition, count: pickerCard.instances.length, enhanceLevel: inst.enhanceLevel || 0 });
+            setZoomItem({ card: pickerCard.card, cond: inst.condition, count: pickerCard.instances.length, enhanceLevel: inst.enhanceLevel || 0, bonus: calcBonus(gs.ownedCards) });
             setPickerCard(null);
           }}
           onClose={() => setPickerCard(null)}
@@ -327,7 +343,7 @@ export default function GachaTab({ gs, setGs }) {
                     key={idx}
                     className={`draw10-card grade-${card.grade}`}
                     style={getBurstStyle(idx)}
-                    onClick={(e) => { e.stopPropagation(); setZoomItem({ card, cond }); }}
+                    onClick={(e) => { e.stopPropagation(); setZoomItem({ card, cond, bonus: calcBonus(gs.ownedCards) }); }}
                   >
                     <img src={`/${card.img}`} alt={card.name} loading="lazy" />
                     <div className="d10-header">
@@ -517,7 +533,7 @@ export default function GachaTab({ gs, setGs }) {
                     if (myCards.length > 1) {
                       setPickerCard({ card, instances: myCards });
                     } else {
-                      setZoomItem({ card, cond: best.condition, count: 1, enhanceLevel: best.enhanceLevel || 0 });
+                      setZoomItem({ card, cond: best.condition, count: 1, enhanceLevel: best.enhanceLevel || 0, bonus: calcBonus(gs.ownedCards) });
                     }
                   }}
                 >
