@@ -82,13 +82,13 @@ const NOTICES = [
 ];
 
 const HELP_ITEMS = [
-  { icon: '🎟️', title: '매일 뽑기권',    desc: '매일 처음 접속하면 뽑기권 5장을 드려요!' },
-  { icon: '⏰', title: '1시간 접속 보너스', desc: '오늘 1시간 이상 접속하면 추가로 30장을 드려요.' },
-  { icon: '🐾', title: '클릭 뽑기',      desc: '100번 클릭할 때마다 뽑기권 1장! 하루 최대 10장까지!' },
-  { icon: '✅', title: '출석체크',       desc: '하루 1회 출석체크로 5~15장을 받아요. 7일 개근 시 보너스 100장!' },
-  { icon: '⚗️', title: '카드 합성',      desc: '같은 등급 카드 3장을 합성하면 새 카드가 나와요. 10% 확률로 상위 등급!' },
-  { icon: '📚', title: '카드 수집',      desc: '카드를 수집북에 모아보세요. 도감에서 전체 카드를 확인할 수 있어요!' },
-  { icon: '💾', title: '자동 저장',      desc: '수집한 카드는 클라우드에 자동으로 저장돼요.' },
+  { icon: '', title: '매일 뽑기권',    desc: '매일 처음 접속하면 뽑기권 5장을 드려요!' },
+  { icon: '', title: '1시간 접속 보너스', desc: '오늘 1시간 이상 접속하면 추가로 30장을 드려요.' },
+  { icon: '', title: '클릭 뽑기',      desc: '100번 클릭할 때마다 뽑기권 1장! 하루 최대 10장까지!' },
+  { icon: '', title: '출석체크',       desc: '하루 1회 출석체크로 5~15장을 받아요. 7일 개근 시 보너스 100장!' },
+  { icon: '', title: '카드 합성',      desc: '같은 등급 카드 3장을 합성하면 새 카드가 나와요. 10% 확률로 상위 등급!' },
+  { icon: '', title: '카드 수집',      desc: '카드를 수집북에 모아보세요. 도감에서 전체 카드를 확인할 수 있어요!' },
+  { icon: '', title: '자동 저장',      desc: '수집한 카드는 클라우드에 자동으로 저장돼요.' },
 ];
 
 export default function App() {
@@ -391,7 +391,7 @@ export default function App() {
         const newMins = (prev.sessionMinutes || 0) + 1;
         if (newMins >= 60 && !prev.sessionBonus) {
           clearTimeout(toastTimer.current);
-          setToast('1시간 접속 달성! 뽑기권 +30장! 🎉');
+          setToast('1시간 접속 달성! 뽑기권 +30장!');
           toastTimer.current = setTimeout(() => setToast(null), 2500);
           return { ...prev, sessionMinutes: newMins, sessionBonus: true, tickets: prev.tickets + 30 };
         }
@@ -422,7 +422,7 @@ export default function App() {
     navigator.clipboard.writeText(url)
       .then(() => {
         clearTimeout(toastTimer.current);
-        setToast('링크가 복사됐어요! 친구에게 공유해보세요 🎉');
+        setToast('링크가 복사됐어요! 친구에게 공유해보세요');
         toastTimer.current = setTimeout(() => setToast(null), 2500);
       })
       .catch(() => window.prompt('링크를 복사해서 친구에게 보내주세요!', url));
@@ -638,7 +638,7 @@ export default function App() {
         {showBonusInfo && (
           <div className="modal-overlay show" onClick={() => setShowBonusInfo(false)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
-              <div className="modal-title">🃏 레이드 보너스 데미지</div>
+              <div className="modal-title">레이드 보너스 데미지</div>
               <div style={{ fontSize: '0.85rem', color: '#444', lineHeight: 1.9 }}>
                 보유 카드 수에 따라 레이드 보너스 데미지가 적용됩니다.
               </div>
@@ -665,7 +665,7 @@ export default function App() {
         {showWelcomeNotice && (
           <div className="modal-overlay show" onClick={() => setShowWelcomeNotice(false)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
-              <div className="modal-title">🔔 공지사항</div>
+              <div className="modal-title">공지사항</div>
               <div style={{ fontSize: '0.88rem', color: '#444', lineHeight: 1.8 }}>
                 현재 <strong>테스트 서버 운영 중</strong>입니다.<br />
                 서버 안정화 및 기능 개선 작업이 진행 중이며 일부 오류가 있을 수 있습니다.<br /><br />

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { CARDS, CHARACTERS } from '../../data/cards.js';
 
 const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
-const RAID_CARDS  = CARDS.filter(c => c.raid);
-const NORMAL_CARDS = CARDS.filter(c => !c.raid);
+const RAID_CARDS  = CARDS.filter(c => c.raid === true || c.grade === 'raid' || c.grade === 'RAID');
+const NORMAL_CARDS = CARDS.filter(c => !c.raid && c.grade !== 'raid' && c.grade !== 'RAID');
 
 const GRADE_TABS = [
   { key: 'all',  label: '전체'   },
@@ -43,9 +43,8 @@ function CardItem({ card, ownedCards, onClick }) {
           <span className="col-grade">{GRADE_LABEL[card.grade]}</span>
         </div>
       )}
-      {!owned && card.raid && (
+      {!owned && (card.raid || card.grade === 'raid') && (
         <div className="dex-raid-lock-overlay">
-          <span className="dex-raid-lock-icon">⚔️</span>
           <span className="dex-raid-lock-text">RAID</span>
         </div>
       )}
@@ -73,7 +72,7 @@ export default function DexTab({ gs }) {
     <div className="dex-tab">
       <div className="col-header">
         <span className="col-title">도감</span>
-        <span className="col-count">{uniqueOwned} / 31</span>
+        <span className="col-count">{uniqueOwned} / {CARDS.length}</span>
       </div>
 
       {/* 등급 필터 탭 */}
@@ -89,7 +88,7 @@ export default function DexTab({ gs }) {
         ))}
       </div>
 
-      {/* 전체: 캐릭터별 그룹 */}
+      {/* 전체: 캐릭터별 그룹 + 하단 RAID 섹션 */}
       {gradeTab === 'all' && (
         <>
           {CHARACTERS.map(char => (
@@ -107,6 +106,24 @@ export default function DexTab({ gs }) {
               </div>
             </div>
           ))}
+          {RAID_CARDS.length > 0 && (
+            <div className="dex-raid-group">
+              <div className="dex-char-name dex-raid-title">
+                RAID 한정
+                <span className="dex-raid-hint">레이드 보상으로만 획득 가능</span>
+              </div>
+              <div className="card-grid">
+                {RAID_CARDS.map(card => (
+                  <CardItem
+                    key={card.id}
+                    card={card}
+                    ownedCards={ownedCards}
+                    onClick={setZoomCard}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -128,19 +145,23 @@ export default function DexTab({ gs }) {
       {gradeTab === 'raid' && (
         <div className="dex-raid-group">
           <div className="dex-char-name dex-raid-title">
-            ⚔️ RAID 한정
+            RAID 한정
             <span className="dex-raid-hint">레이드 보상으로만 획득 가능</span>
           </div>
-          <div className="card-grid">
-            {RAID_CARDS.map(card => (
-              <CardItem
-                key={card.id}
-                card={card}
-                ownedCards={ownedCards}
-                onClick={setZoomCard}
-              />
-            ))}
-          </div>
+          {RAID_CARDS.length === 0 ? (
+            <div className="col-empty">RAID 카드 데이터가 없습니다</div>
+          ) : (
+            <div className="card-grid">
+              {RAID_CARDS.map(card => (
+                <CardItem
+                  key={card.id}
+                  card={card}
+                  ownedCards={ownedCards}
+                  onClick={setZoomCard}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

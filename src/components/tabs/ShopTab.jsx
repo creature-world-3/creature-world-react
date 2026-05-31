@@ -15,9 +15,9 @@ export default function ShopTab({ gs, setGs }) {
   const tickets  = gs?.tickets ?? 0;
 
   const doTestEvent = () => {
-    if (testDone) { showToast('오늘 이미 받았어요! 내일 다시 와요 😊'); return; }
+    if (testDone) { showToast('오늘 이미 받았어요! 내일 다시 와요'); return; }
     setGs(prev => ({ ...prev, tickets: prev.tickets + 100, testEventDate: today }));
-    showToast('테스트 이벤트! 뽑기권 +100장 획득! 🎉');
+    showToast('테스트 이벤트! 뽑기권 +100장 획득!');
   };
 
   return (
@@ -33,11 +33,11 @@ export default function ShopTab({ gs, setGs }) {
         <div className="shop-item shop-item-event">
           <div className="shop-item-left">
             <div className="shop-card-preview shop-card-preview-event">
-              <span className="shop-card-gift">🎁</span>
+              <span className="shop-card-gift"></span>
             </div>
           </div>
           <div className="shop-item-right">
-            <div className="shop-item-name shop-item-name-event">🧪 테스트 이벤트</div>
+            <div className="shop-item-name shop-item-name-event">테스트 이벤트</div>
             <div className="shop-item-desc">테스트 서버 한정! 뽑기권 100장을 드려요. 하루 1회.</div>
             <div className="shop-item-price shop-item-price-event">무료 (하루 1회)</div>
             <button

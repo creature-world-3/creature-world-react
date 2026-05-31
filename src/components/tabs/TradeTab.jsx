@@ -93,7 +93,7 @@ export default function TradeTab({ gs, setGs, user }) {
       setSelectedCard(null);
       setPrice('');
       setShowForm(false);
-      showToast('카드가 등록됐어요! 🎉');
+      showToast('카드가 등록됐어요!');
     } catch (e) {
       console.error(e);
       showToast('등록 중 오류가 발생했어요');
@@ -151,7 +151,7 @@ export default function TradeTab({ gs, setGs, user }) {
         tickets:    prev.tickets - trade.price,
         ownedCards: [...prev.ownedCards, { uid: newCardUid, id: trade.cardId, condition: trade.cardCondition }],
       }));
-      showToast(`${trade.cardName} (${GRADE_LABEL[trade.cardGrade]}) 구매 완료! 🎉`);
+      showToast(`${trade.cardName} (${GRADE_LABEL[trade.cardGrade]}) 구매 완료!`);
 
     } catch (e) {
       if (e.message === 'already_sold') {
@@ -199,7 +199,7 @@ export default function TradeTab({ gs, setGs, user }) {
         pendingRewards.forEach(t => tx.delete(doc(db, 'trades', t.id)));
       });
       setGs(prev => ({ ...prev, tickets: prev.tickets + pendingTotal }));
-      showToast(`보상 수령 완료! +${pendingTotal}장 🎟️`);
+      showToast(`보상 수령 완료! +${pendingTotal}장`);
     } catch (e) {
       console.error('[claim] 보상 수령 오류:', e.code, e.message, e);
       showToast('보상 수령 중 오류가 발생했어요');
@@ -216,7 +216,7 @@ export default function TradeTab({ gs, setGs, user }) {
         <div className="trade-header-right">
           {pendingTotal > 0 && (
             <button className="trade-reward-btn" onClick={handleClaimRewards}>
-              보상 수령 +{pendingTotal}장 🎟️
+              보상 수령 +{pendingTotal}장
             </button>
           )}
           <button
@@ -330,7 +330,7 @@ export default function TradeTab({ gs, setGs, user }) {
                     </span>
                   </div>
                   <div className="trade-item-cond">컨디션 {trade.cardCondition}</div>
-                  <div className="trade-item-price">🎟️ {trade.price}장</div>
+                  <div className="trade-item-price">뽑기권 {trade.price}장</div>
                 </div>
                 <button className="trade-cancel-btn" onClick={() => handleCancel(trade)}>취소</button>
               </div>
@@ -357,7 +357,7 @@ export default function TradeTab({ gs, setGs, user }) {
       <div className="trade-list">
         {filtered.length === 0 ? (
           <div className="trade-empty">
-            <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔄</div>
+            <div style={{ fontSize: '1rem', marginBottom: 8 }}>-</div>
             등록된 카드가 없어요
           </div>
         ) : filtered.map(trade => (
@@ -383,7 +383,7 @@ export default function TradeTab({ gs, setGs, user }) {
                 )}
                 <span>{trade.sellerName}</span>
               </div>
-              <div className="trade-item-price">🎟️ {trade.price}장</div>
+              <div className="trade-item-price">뽑기권 {trade.price}장</div>
             </div>
             <button
               className="trade-buy-btn"

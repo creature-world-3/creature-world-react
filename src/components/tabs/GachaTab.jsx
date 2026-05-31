@@ -3,7 +3,7 @@ import { CARDS, CHARACTERS } from '../../data/cards.js';
 
 const GRADE_WEIGHT = { n: 70, r: 22, sr: 6.9, ur: 1, lg: 0.1 };
 const GRADE_LABEL  = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
-const FLASH_LABEL  = { sr: '💜 SUPER RARE!', ur: '✨ ULTRA RARE!', lg: '🌈 L E G E N D !' };
+const FLASH_LABEL  = { sr: 'SUPER RARE!', ur: 'ULTRA RARE!', lg: 'L E G E N D !' };
 const GRADE_COLOR  = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
 const CARDS_PER_PAGE = 6;
 let _uid = 0;
@@ -101,7 +101,7 @@ export default function GachaTab({ gs, setGs }) {
 
   // ── 뽑기 ──
   const doDraw = () => {
-    if (gs.tickets <= 0) { showToast('뽑기권이 없어요 😢'); return; }
+    if (gs.tickets <= 0) { showToast('뽑기권이 없어요'); return; }
     if (flipped) return;
     const card = randomCard();
     const cond = randomCondition();
@@ -112,7 +112,7 @@ export default function GachaTab({ gs, setGs }) {
       ownedCards: [...prev.ownedCards, { uid: genUid(), id: card.id, condition: cond }],
     }));
     setDrawn({ card, cond });
-    showToast((isNew ? 'NEW! 🎉 ' : '✨ ') + card.name + ' 획득!');
+    showToast((isNew ? 'NEW! ' : '') + card.name + ' 획득!');
     if (['sr', 'ur', 'lg'].includes(card.grade)) {
       setFlash(card.grade);
       setTimeout(() => setFlipped(true), 400);
@@ -124,7 +124,7 @@ export default function GachaTab({ gs, setGs }) {
 
   // ── 10연속 뽑기 ──
   const doDraw10 = () => {
-    if (gs.tickets < 10) { showToast('뽑기권이 부족해요! 10장이 필요해요 😢'); return; }
+    if (gs.tickets < 10) { showToast('뽑기권이 부족해요! 10장이 필요해요'); return; }
     const results = [];
     const newOwned = [...gs.ownedCards];
     for (let i = 0; i < 10; i++) {
@@ -161,7 +161,7 @@ export default function GachaTab({ gs, setGs }) {
   // ── 출석체크 ──
   const doAttendance = () => {
     const today = new Date().toDateString();
-    if (gs.attendDate === today) { showToast('오늘 이미 출석했어요! 내일 다시 와요 😊'); return; }
+    if (gs.attendDate === today) { showToast('오늘 이미 출석했어요! 내일 다시 와요'); return; }
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const wasYesterday = gs.attendDate === yesterday.toDateString();
@@ -174,7 +174,7 @@ export default function GachaTab({ gs, setGs }) {
       attendDate: today,
       attendStreak: newStreak,
     }));
-    showToast(`출석 완료! 뽑기권 ${amount}장 획득!${bonus ? ' 🎉 7일 개근 +100장!' : ''}`);
+    showToast(`출석 완료! 뽑기권 ${amount}장 획득!${bonus ? ' 7일 개근 +100장!' : ''}`);
   };
 
   // ── 수집북 필터/페이지 ──
@@ -218,7 +218,7 @@ export default function GachaTab({ gs, setGs }) {
       {draw10Results && (
         <div className="card-zoom-overlay" onClick={() => setDraw10Results(null)}>
           <div className="draw10-wrap" onClick={e => e.stopPropagation()}>
-            <div className="draw10-title">✨ 10뽑 결과!</div>
+            <div className="draw10-title">10뽑 결과!</div>
             <div className="draw10-grid">
               {draw10Results.map(({ card, cond }, idx) => {
                 const cs = condStyle(card.grade, cond);
@@ -261,7 +261,7 @@ export default function GachaTab({ gs, setGs }) {
                 className="draw10-btn-again"
                 onClick={() => doDraw10()}
                 disabled={gs.tickets < 10}
-              >✨ 한번 더 뽑기 ({gs.tickets}장)</button>
+              >한번 더 뽑기 ({gs.tickets}장)</button>
               <button className="draw10-btn-close" onClick={() => setDraw10Results(null)}>닫기 ✕</button>
             </div>
           </div>
@@ -328,7 +328,7 @@ export default function GachaTab({ gs, setGs }) {
               </button>
             )}
             <button className="draw-btn draw-btn-10" disabled={gs.tickets < 10} onClick={doDraw10}>
-              ✨ 10뽑 (10장)
+              10뽑 (10장)
             </button>
           </div>
           </div>
@@ -357,11 +357,11 @@ export default function GachaTab({ gs, setGs }) {
               disabled={attendDone}
               style={{ fontSize: '0.82rem' }}
             >
-              {attendDone ? '오늘 출석 완료 ✓' : '✅ 출석체크 하기'}
+              {attendDone ? '오늘 출석 완료 ✓' : '출석체크 하기'}
             </button>
             <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
               {(gs.attendStreak || 0) > 0
-                ? `🔥 ${gs.attendStreak}일 연속 출석 중`
+                ? `${gs.attendStreak}일 연속 출석 중`
                 : '7일 개근하면 보너스 100장!'}
             </div>
           </div>
@@ -387,7 +387,8 @@ export default function GachaTab({ gs, setGs }) {
             </div>
             <div className="col-filter-row">
               {[['all','전체',''],['n','N',GRADE_COLOR.n],['r','R',GRADE_COLOR.r],
-                ['sr','SR',GRADE_COLOR.sr],['ur','UR',GRADE_COLOR.ur],['lg','LEGEND',GRADE_COLOR.lg]
+                ['sr','SR',GRADE_COLOR.sr],['ur','UR',GRADE_COLOR.ur],['lg','LEGEND',GRADE_COLOR.lg],
+                ['raid','RAID',GRADE_COLOR.raid],
               ].map(([val, label, color]) => (
                 <button
                   key={val}
@@ -415,7 +416,7 @@ export default function GachaTab({ gs, setGs }) {
                   className={`col-card grade-${card.grade}${locked ? ' locked' : ''}${isRaidLocked ? ' raid-locked' : ''}`}
                   onClick={() => !locked && best && setZoomItem({ card, cond: best.condition, count: myCards.length })}
                 >
-                  {!locked && (
+                  {!locked ? (
                     <>
                       <img src={`/${card.img}`} alt={card.name} loading="lazy" />
                       {cstyle === 'gold' && <div className="cond-gold-overlay" />}
@@ -425,9 +426,11 @@ export default function GachaTab({ gs, setGs }) {
                         <span className="col-grade">{GRADE_LABEL[card.grade]}</span>
                       </div>
                       {myCards.length > 1 && <div className="dup">×{myCards.length}</div>}
-                      {isRaidLocked && <div className="raid-lock-badge">⚔️</div>}
+                      {isRaidLocked && <div className="raid-lock-badge">RAID</div>}
                     </>
-                  )}
+                  ) : (card.raid || card.grade === 'raid') ? (
+                    <img src={`/${card.img}`} alt={card.name} loading="lazy" style={{ filter:'grayscale(1)', opacity:0.4, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%' }} />
+                  ) : null}
                 </div>
               );
             })}

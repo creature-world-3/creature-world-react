@@ -112,7 +112,7 @@ function BossList({ bosses, raidDataMap, onSelect }) {
             <div className="raid-boss-list-info">
               <div className="raid-boss-list-name">{boss.name}</div>
               <div className={`raid-status-badge raid-status-${status}`}>
-                {status === 'active' ? '⚔️ 진행 중' : status === 'waiting' ? '⏳ 대기 중' : status === 'defeated' ? '💀 처치 완료' : '⌛ 종료됨'}
+                {status === 'active' ? '진행 중' : status === 'waiting' ? '대기 중' : status === 'defeated' ? '처치 완료' : '종료됨'}
               </div>
               {raid && (
                 <>
@@ -342,8 +342,8 @@ export default function RaidTab({ gs, setGs, user }) {
       setShowPicker(false);
       setIsChanging(false);
       showToast(isChanging
-        ? `${card.name}으로 카드 교체! ⚔️`
-        : `${card.name} (${GRADE_LABEL[card.grade]})로 레이드 참여! ⚔️`,
+        ? `${card.name}으로 카드 교체!`
+        : `${card.name} (${GRADE_LABEL[card.grade]})로 레이드 참여!`,
       );
     } catch (e) {
       console.error('join error:', e);
@@ -409,8 +409,8 @@ export default function RaidTab({ gs, setGs, user }) {
       setRewardPhase(null);
       setRewardResult(null);
       showToast(rewardResult.type === 'tickets'
-        ? `뽑기권 ${rewardResult.amount}장 획득! 🎉`
-        : '🎉 RAID 한정 카드 획득!',
+        ? `뽑기권 ${rewardResult.amount}장 획득!`
+        : 'RAID 한정 카드 획득!',
       );
     } catch (e) {
       console.error('reward error:', e);
@@ -490,7 +490,7 @@ export default function RaidTab({ gs, setGs, user }) {
             {rewardPhase === 'revealed' && rewardResult && (
               <div className="raid-reward-revealed">
                 <div className="raid-reward-result-title">
-                  {rewardResult.type === 'card' ? '🎉 RAID 한정 카드 획득!' : `🎟️ 뽑기권 ${rewardResult.amount}장!`}
+                  {rewardResult.type === 'card' ? 'RAID 한정 카드 획득!' : `뽑기권 ${rewardResult.amount}장!`}
                 </div>
                 {rewardResult.type === 'card' && raidCardDef ? (
                   <div className="raid-reward-result-card">
@@ -500,7 +500,7 @@ export default function RaidTab({ gs, setGs, user }) {
                   </div>
                 ) : (
                   <div className="raid-reward-ticket-wrap">
-                    <div className="raid-reward-ticket-icon">🎟️</div>
+                    <div className="raid-reward-ticket-icon"></div>
                     <div className="raid-reward-ticket-amount">{rewardResult.amount}</div>
                     <div className="raid-reward-ticket-label">장</div>
                   </div>
@@ -526,11 +526,11 @@ export default function RaidTab({ gs, setGs, user }) {
             )}
             <div className="raid-reward-info-body">
               <div className="raid-reward-info-title">클리어 보상 안내</div>
-              <div className="raid-reward-info-row">✅ <span>300만 데미지 이상 기여 시 수령 가능</span></div>
-              <div className="raid-reward-info-row">🎴 <span>RAID 카드 미보유 → 30% 확률로 카드 획득</span></div>
-              <div className="raid-reward-info-row">🎟️ <span>해당 보스 RAID 카드 보유 시 → 뽑기권 200~400장 랜덤 지급</span></div>
-              <div className="raid-reward-info-row">♾️ <span>레이드 도전 횟수는 무제한</span></div>
-              <div className="raid-reward-info-row">🔒 <span>보상은 보스 1마리당 1회만 수령 가능</span></div>
+              <div className="raid-reward-info-row"><span>300만 데미지 이상 기여 시 수령 가능</span></div>
+              <div className="raid-reward-info-row"><span>RAID 카드 미보유 → 30% 확률로 카드 획득</span></div>
+              <div className="raid-reward-info-row"><span>해당 보스 RAID 카드 보유 시 → 뽑기권 200~400장 랜덤 지급</span></div>
+              <div className="raid-reward-info-row"><span>레이드 도전 횟수는 무제한</span></div>
+              <div className="raid-reward-info-row"><span>보상은 보스 1마리당 1회만 수령 가능</span></div>
             </div>
             <button className="zoom-close" onClick={() => setShowRewardInfo(false)}>닫기 ✕</button>
           </div>
@@ -562,13 +562,13 @@ export default function RaidTab({ gs, setGs, user }) {
         <div className="raid-boss-info">
           <div className="raid-boss-name">{bossConfig?.name}</div>
           <div className={`raid-status-badge raid-status-${raid.status}`}>
-            {raid.status === 'active' ? '⚔️ 진행 중' : raid.status === 'waiting' ? '⏳ 대기 중' : raid.status === 'defeated' ? '💀 처치 완료' : '⌛ 종료됨'}
+            {raid.status === 'active' ? '진행 중' : raid.status === 'waiting' ? '대기 중' : raid.status === 'defeated' ? '처치 완료' : '종료됨'}
           </div>
           {timeLeft && raid.status === 'active' && (
-            <div className="raid-time-left">🕐 {timeLeft}</div>
+            <div className="raid-time-left">{timeLeft}</div>
           )}
           {raid.status === 'waiting' && startCountdown && (
-            <div className="raid-time-left raid-countdown-inline">⏳ 레이드 시작까지 {startCountdown}</div>
+            <div className="raid-time-left raid-countdown-inline">레이드 시작까지 {startCountdown}</div>
           )}
           <div className="raid-hp-row">
             <span className="raid-hp-label-text">HP</span>
@@ -581,7 +581,7 @@ export default function RaidTab({ gs, setGs, user }) {
           <div className="raid-meta-row">
             <div className="raid-meta">참여 <strong>{partCount}</strong> / {maxParts}명</div>
             <button className="raid-clear-reward-btn" onClick={() => setShowRewardInfo(true)}>
-              🏆 클리어 보상
+              클리어 보상
             </button>
           </div>
         </div>
@@ -607,7 +607,7 @@ export default function RaidTab({ gs, setGs, user }) {
           <div className="raid-my-row">
             <div className={`raid-my-img grade-${myPart.cardGrade}${ticking && raid.status === 'active' ? ' raid-card-pulse' : ''}`}>
               <img src={`/${myPart.cardImg}`} alt={myPart.cardName} />
-              <div className="raid-lock-tag">⚔️ 레이드</div>
+              <div className="raid-lock-tag">레이드</div>
             </div>
             <div className="raid-my-details">
               <div className="raid-my-name">
@@ -623,7 +623,7 @@ export default function RaidTab({ gs, setGs, user }) {
                 {dmgRange(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus || 0)}dmg / 3초
               </div>
               {(myPart.cardBonus || 0) > 0 && (
-                <div className="raid-my-bonus">🃏 카드 보너스 +{myPart.cardBonus}dmg/틱</div>
+                <div className="raid-my-bonus">카드 보너스 +{myPart.cardBonus}dmg/틱</div>
               )}
               {myDmg >= MIN_REWARD_DMG
                 ? <div className="raid-reward-qualify">✓ 보상 수령 가능!</div>
@@ -637,20 +637,20 @@ export default function RaidTab({ gs, setGs, user }) {
           {raid.status === 'defeated' && (
             hasClaimed ? (
               <button className="raid-reward-btn raid-reward-btn-done" disabled>
-                ✅ 보상 수령 완료
+                보상 수령 완료
               </button>
             ) : myDmg >= MIN_REWARD_DMG ? (
               <button className="raid-reward-btn" onClick={handleStartReward}>
-                🏆 보상 받기
+                보상 받기
               </button>
             ) : (
               <button className="raid-reward-btn raid-reward-btn-disabled" disabled>
-                🏆 보상 수령 불가 (데미지 부족)
+                보상 수령 불가 (데미지 부족)
               </button>
             )
           )}
           {raid.status === 'active' && (
-            <div className="raid-lock-notice">⚠️ 참여 카드는 보스 처치까지 잠금됩니다</div>
+            <div className="raid-lock-notice">참여 카드는 보스 처치까지 잠금됩니다</div>
           )}
         </div>
       ) : (
@@ -662,7 +662,7 @@ export default function RaidTab({ gs, setGs, user }) {
                 <>
                   레이드 시작 대기 중입니다.
                   {startCountdown && (
-                    <div className="raid-countdown-msg">⏳ 레이드 시작까지<br />{startCountdown}</div>
+                    <div className="raid-countdown-msg">레이드 시작까지<br />{startCountdown}</div>
                   )}
                 </>
                ) : '레이드 기간이 종료되었습니다.'}
@@ -675,13 +675,13 @@ export default function RaidTab({ gs, setGs, user }) {
                 className="raid-join-btn"
                 onClick={() => { setIsChanging(false); setShowPicker(p => !p); }}
               >
-                ⚔️ 레이드 참여하기
+                레이드 참여하기
               </button>
               <div className="raid-join-sub">카드 1장을 선택해 보스에게 도전하세요</div>
               {(() => {
                 const myBonus = calcBonus(gs?.ownedCards || []);
                 return myBonus > 0 ? (
-                  <div className="raid-bonus-info">🃏 내 카드 보너스 +{myBonus}dmg/틱</div>
+                  <div className="raid-bonus-info">내 카드 보너스 +{myBonus}dmg/틱</div>
                 ) : null;
               })()}
             </>
@@ -708,8 +708,8 @@ export default function RaidTab({ gs, setGs, user }) {
           </div>
           <div className="raid-picker-hint" style={isChanging ? { color: '#fbbf24' } : {}}>
             {isChanging
-              ? '⚔️ 교체 시 누적 데미지는 유지됩니다'
-              : '⚠️ 선택한 카드는 보스 처치 전까지 잠금 · 300만 데미지 이상 시 보상'
+              ? '교체 시 누적 데미지는 유지됩니다'
+              : '선택한 카드는 보스 처치 전까지 잠금 · 300만 데미지 이상 시 보상'
             }
           </div>
           {availCards.length === 0 ? (

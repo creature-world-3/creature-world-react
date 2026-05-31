@@ -3,7 +3,7 @@ import { CARDS } from '../../data/cards.js';
 
 const GRADES     = ['n', 'r', 'sr', 'ur', 'lg'];
 const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
-const FLASH_LABEL = { sr: '💜 SUPER RARE!', ur: '✨ ULTRA RARE!', lg: '🌈 L E G E N D !' };
+const FLASH_LABEL = { sr: 'SUPER RARE!', ur: 'ULTRA RARE!', lg: 'L E G E N D !' };
 const GRADE_BG   = { n: 'rgba(80,80,80,0.9)', r: '#1a6fd4', sr: '#7c3aed', ur: '#d97706', lg: '#ff6b6b' };
 const GRADE_COL  = { n: '#ccc', r: '#7eb8ff', sr: '#d4a8ff', ur: '#ffd97a', lg: '#fff' };
 const EXCHANGE_COST = 10;
@@ -70,7 +70,7 @@ export default function SynthTab({ gs, setGs }) {
     let resultGrade = grade;
     if (gradeIdx < GRADES.length - 1 && Math.random() < 0.1) {
       resultGrade = GRADES[gradeIdx + 1];
-      showToast('🎉 등급 업그레이드 성공!');
+      showToast('등급 업그레이드 성공!');
     }
 
     const pool = CARDS.filter(c => c.grade === resultGrade && !c.raid);
@@ -100,7 +100,7 @@ export default function SynthTab({ gs, setGs }) {
       ownedCards: prev.ownedCards.filter(c => !removeSet.has(c.uid)),
       tickets:    prev.tickets + 1,
     }));
-    showToast(`${card.name} ${EXCHANGE_COST}장 → 뽑기권 1장 교환 완료! 🎟️`);
+    showToast(`${card.name} ${EXCHANGE_COST}장 → 뽑기권 1장 교환 완료!`);
   };
 
   const lockedUid  = gs?.raidCard?.uid;
@@ -194,7 +194,7 @@ export default function SynthTab({ gs, setGs }) {
           <div className="col-header" style={{ marginBottom: 12 }}>
             <div className="col-title">카드 교환</div>
             <div className="col-count" style={{ background: '#fef3c7', color: '#d97706' }}>
-              {EXCHANGE_COST}장 → 🎟️ 1장
+              {EXCHANGE_COST}장 → 뽑기권 1장
             </div>
           </div>
           <div className="synth-exchange-list">
@@ -218,7 +218,7 @@ export default function SynthTab({ gs, setGs }) {
                     </div>
                   </div>
                   <button className="exchange-btn" onClick={() => doExchange(card)}>
-                    {EXCHANGE_COST}장 → 🎟️ 1장
+                    {EXCHANGE_COST}장 → 뽑기권 1장
                   </button>
                 </div>
               );
