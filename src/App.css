@@ -1463,9 +1463,9 @@
   .header-username { display: none; }
   .help-btn { padding: 5px 8px; font-size: 0.7rem; }
 
-  /* 상태바: 더 압축 */
-  .status-bar { gap: 5px; margin-bottom: 10px; }
-  .status-card { min-width: 70px; padding: 7px 7px; }
+  /* 상태바: 1줄 4개, 압축 */
+  .status-bar { display: flex; flex-wrap: nowrap; gap: 5px; margin-bottom: 10px; }
+  .status-card { flex: 1; min-width: 0; padding: 7px 6px; }
   .status-val { font-size: 1.05rem; }
   .status-label { font-size: 0.56rem; }
   .status-sub { font-size: 0.52rem; }
@@ -2368,9 +2368,16 @@ body.raid-theme .music-toggle-btn {
 }
 
 @media (max-width: 380px) {
-  /* 375px 기기 (iPhone SE 등) 극단적 압축 */
-  .status-bar { grid-template-columns: repeat(2, 1fr); display: grid; gap: 5px; }
-  .status-card:nth-child(3), .status-card:nth-child(4) { display: none; }
   .raid-boss-img-wrap { height: 170px !important; }
   .raid-parts-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 360px) {
+  /* 360px 이하 (Galaxy A 등 좁은 기기): 2×2 그리드 */
+  .status-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+  .status-card { padding: 8px 10px; }
+  .status-val { font-size: 1.1rem; }
+  .status-label { font-size: 0.58rem; }
+  .status-sub { font-size: 0.54rem; }
+  .prob-mini { font-size: 0.58rem; }
 }
