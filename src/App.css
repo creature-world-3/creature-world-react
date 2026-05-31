@@ -1019,6 +1019,59 @@
 .exsub-item-check { font-size:1.3rem; color:#ccc; flex-shrink:0; font-weight:700; }
 .exsub-item.selected .exsub-item-check { color:#fbbf24; }
 
+/* 교환 컨디션 경고 모달 */
+.exsub-confirm-overlay {
+  position:fixed; inset:0; z-index:1000;
+  background:rgba(0,0,0,0.5);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px;
+  animation:fadeIn 0.18s ease;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.exsub-confirm-box {
+  background:white; border-radius:24px; padding:28px 24px 22px;
+  width:100%; max-width:340px; text-align:center;
+  box-shadow:0 12px 40px rgba(0,0,0,0.22);
+  animation:panelSlideDown 0.22s cubic-bezier(.25,.8,.25,1);
+}
+.exsub-confirm-icon { font-size:2.4rem; margin-bottom:10px; }
+.exsub-confirm-title {
+  font-size:1.1rem; font-weight:900; color:#d97706; margin-bottom:10px;
+}
+.exsub-confirm-desc {
+  font-size:0.88rem; color:var(--text); line-height:1.6; margin-bottom:12px;
+}
+.exsub-confirm-desc strong { color:#d97706; }
+.exsub-confirm-conds {
+  display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:14px;
+}
+.exsub-confirm-cond-badge {
+  background:#fef3c7; color:#d97706; border:1.5px solid #fde68a;
+  font-size:0.78rem; font-weight:800; padding:4px 10px; border-radius:99px;
+}
+.exsub-confirm-sub {
+  font-size:0.82rem; color:var(--muted); margin-bottom:20px;
+}
+.exsub-confirm-btns {
+  display:flex; gap:10px;
+}
+.exsub-confirm-cancel {
+  flex:1; padding:13px 0; border:2px solid #e5e7eb; border-radius:14px;
+  background:white; color:var(--muted); font-family:'Noto Sans KR',sans-serif;
+  font-size:0.95rem; font-weight:700; cursor:pointer; transition:all 0.15s;
+}
+.exsub-confirm-cancel:hover { background:#f3f4f6; border-color:#d1d5db; }
+.exsub-confirm-ok {
+  flex:1; padding:13px 0; border:none; border-radius:14px;
+  background:linear-gradient(135deg,#fbbf24,#f59e0b); color:white;
+  font-family:'Noto Sans KR',sans-serif; font-size:0.95rem; font-weight:800;
+  cursor:pointer; transition:all 0.15s;
+  box-shadow:0 4px 14px rgba(251,191,36,0.4);
+}
+.exsub-confirm-ok:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(251,191,36,0.55); }
+.exsub-confirm-ok:active { transform:translateY(0); }
+
 @media (max-width: 430px) {
   .exsub-banner { padding:14px; gap:10px; }
   .exsub-banner-badge { display:none; }

@@ -568,6 +568,7 @@ function ExchangeSubTab({ gs, setGs }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [qty, setQty]   = useState(1);
   const [toast, setToast] = useState(null);
+  const [confirmData, setConfirmData] = useState(null); // { toRemove, qty, totalCards, highCondCards }
   const toastTimer = useRef(null);
 
   const showToast = useCallback((msg) => {
@@ -598,25 +599,58 @@ function ExchangeSubTab({ gs, setGs }) {
     setQty(1);
   };
 
+  const executeExchange = (toRemove, exchangeQty, totalCards) => {
+    setGs(prev => ({
+      ...prev,
+      ownedCards: prev.ownedCards.filter(c => !toRemove.has(c.uid)),
+      tickets:    prev.tickets + exchangeQty,
+    }));
+    setConfirmData(null);
+    showToast(`${selectedCard.name} ${totalCards}장 → 뽑기권 ${exchangeQty}장 교환 완료!`);
+  };
+
   const doExchange = () => {
     if (!selectedCard || qty < 1) return;
     const totalCards = qty * EXCHANGE_COST;
     const myCards = ownedCards.filter(c => c.id === selectedCard.id);
     if (myCards.length < totalCards) return;
-    const toRemove = new Set(
-      [...myCards].sort((a, b) => a.condition - b.condition).slice(0, totalCards).map(c => c.uid),
-    );
-    setGs(prev => ({
-      ...prev,
-      ownedCards: prev.ownedCards.filter(c => !toRemove.has(c.uid)),
-      tickets:    prev.tickets + qty,
-    }));
-    showToast(`${selectedCard.name} ${totalCards}장 → 뽑기권 ${qty}장 교환 완료!`);
+    const toRemoveArr = [...myCards].sort((a, b) => a.condition - b.condition).slice(0, totalCards);
+    const toRemove    = new Set(toRemoveArr.map(c => c.uid));
+    const highCondCards = toRemoveArr.filter(c => (c.condition || 1) >= 8);
+    if (highCondCards.length > 0) {
+      setConfirmData({ toRemove, qty, totalCards, highCondCards });
+      return;
+    }
+    executeExchange(toRemove, qty, totalCards);
   };
 
   return (
     <>
       {toast && <div className="cw-toast">{toast}</div>}
+
+      {/* 컨디션 경고 확인 모달 */}
+      {confirmData && (
+        <div className="exsub-confirm-overlay" onClick={() => setConfirmData(null)}>
+          <div className="exsub-confirm-box" onClick={e => e.stopPropagation()}>
+            <div className="exsub-confirm-icon">⚠️</div>
+            <div className="exsub-confirm-title">고컨디션 카드 포함</div>
+            <div className="exsub-confirm-desc">
+              교환할 카드 중 <strong>컨디션 8 이상</strong> 카드가{' '}
+              <strong>{confirmData.highCondCards.length}장</strong> 포함되어 있습니다.
+            </div>
+            <div className="exsub-confirm-conds">
+              {confirmData.highCondCards.map(c => (
+                <span key={c.uid} className="exsub-confirm-cond-badge">컨디션 {c.condition}</span>
+              ))}
+            </div>
+            <div className="exsub-confirm-sub">정말 교환하시겠습니까?</div>
+            <div className="exsub-confirm-btns">
+              <button className="exsub-confirm-cancel" onClick={() => setConfirmData(null)}>취소</button>
+              <button className="exsub-confirm-ok" onClick={() => executeExchange(confirmData.toRemove, confirmData.qty, confirmData.totalCards)}>교환</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 헤더 배너 */}
       <div className="exsub-banner">
