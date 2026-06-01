@@ -169,12 +169,16 @@ function BossListScreen({ gs, user, onEnter }) {
       return;
     }
 
-    // 이미 이 보스에 참여 중이면 그 채널로 바로 입장
+    // 이미 이 보스에 참여 중이면 그 채널로 바로 입장 (채널 존재 확인)
     const myBossId    = gs?.raidCard?.raidId;
     const myChannelId = gs?.raidCard?.channelId;
     if (myBossId === boss.id && myChannelId) {
-      onEnter(boss.id, myChannelId);
-      return;
+      const channelStillExists = (bossChannels[boss.id] || []).some(c => c.id === myChannelId);
+      if (channelStillExists) {
+        onEnter(boss.id, myChannelId);
+        return;
+      }
+      // 채널이 사라짐 (리셋됨) → 새 채널로 입장
     }
 
     setEntering(prev => ({ ...prev, [boss.id]: true }));
@@ -431,10 +435,19 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
   useEffect(() => {
     const unsub = onSnapshot(channelRef,
       snap => {
-        const data = snap.exists() ? { id: snap.id, ...snap.data() } : null;
-        setRaid(data);
+        if (!snap.exists()) {
+          // 채널이 삭제됨 → raidCard 초기화 후 보스 목록으로
+          setGs(prev => ({ ...prev, raidCard: null }));
+          onBack();
+          return;
+        }
+        setRaid({ id: snap.id, ...snap.data() });
       },
-      err => console.error('battle snapshot:', err),
+      err => {
+        console.error('battle snapshot:', err);
+        setGs(prev => ({ ...prev, raidCard: null }));
+        onBack();
+      },
     );
     return unsub;
   }, [bossId, channelId]);
