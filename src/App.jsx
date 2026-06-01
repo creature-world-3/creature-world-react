@@ -120,6 +120,8 @@ export default function App() {
   const [moreOpen, setMoreOpen]                   = useState(false);
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [nicknameInput, setNicknameInput]         = useState('');
+  const [nicknameError, setNicknameError]         = useState('');
+  const [nicknameChecking, setNicknameChecking]   = useState(false);
   const [referrerInput, setReferrerInput]         = useState(() => {
     const p = new URLSearchParams(window.location.search);
     return decodeURIComponent(p.get('ref') || '');
@@ -418,7 +420,16 @@ export default function App() {
     const trimmed  = nicknameInput.trim();
     const referrer = referrerInput.trim();
     if (!trimmed || trimmed.length < 2 || trimmed.length > 10 || !user) return;
+    setNicknameError('');
+    setNicknameChecking(true);
     try {
+      // 중복 닉네임 확인
+      const dupSnap = await getDocs(query(collection(db, 'users'), where('nickname', '==', trimmed)));
+      if (!dupSnap.empty) {
+        setNicknameError('이미 존재하는 닉네임입니다.');
+        setNicknameChecking(false);
+        return;
+      }
       await updateDoc(doc(db, 'users', user.uid), { nickname: trimmed });
       setGs(prev => ({ ...prev, nickname: trimmed }));
       setShowNicknameModal(false);
@@ -456,6 +467,9 @@ export default function App() {
       }
     } catch (e) {
       console.error('닉네임 저장 실패:', e);
+      setNicknameError('오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setNicknameChecking(false);
     }
   };
 
@@ -718,16 +732,19 @@ export default function App() {
                 <strong>한 번 설정하면 변경할 수 없습니다.</strong>
               </p>
               <input
-                className="nickname-input"
+                className={`nickname-input${nicknameError ? ' nickname-input-error' : ''}`}
                 type="text"
                 placeholder="닉네임 입력 (2~10자)"
                 value={nicknameInput}
-                onChange={e => setNicknameInput(e.target.value.slice(0, 10))}
+                onChange={e => { setNicknameInput(e.target.value.slice(0, 10)); setNicknameError(''); }}
                 onKeyDown={e => e.key === 'Enter' && handleSaveNickname()}
                 maxLength={10}
                 autoFocus
               />
-              <div className="nickname-char-count">{nicknameInput.trim().length} / 10</div>
+              {nicknameError
+                ? <div className="nickname-error">{nicknameError}</div>
+                : <div className="nickname-char-count">{nicknameInput.trim().length} / 10</div>
+              }
 
               <div className="referrer-section">
                 <div className="referrer-label">추천인 닉네임 <span className="referrer-optional">(선택)</span></div>
@@ -745,9 +762,9 @@ export default function App() {
               <button
                 className="modal-close"
                 onClick={handleSaveNickname}
-                disabled={nicknameInput.trim().length < 2}
+                disabled={nicknameInput.trim().length < 2 || nicknameChecking}
               >
-                설정하기
+                {nicknameChecking ? '확인 중...' : '설정하기'}
               </button>
             </div>
           </div>
