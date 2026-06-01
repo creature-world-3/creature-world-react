@@ -152,10 +152,11 @@ function BossListScreen({ gs, user, onEnter }) {
   const getBossStatus = (bossId) => {
     if (!isRaidOpen()) return 'waiting'; // 시간 외엔 무조건 대기 중
     const chs = bossChannels[bossId] || [];
-    if (!chs.length) return 'loading';
-    if (chs.some(c => c.status === 'active'))   return 'active';
-    if (chs.some(c => c.status === 'waiting'))  return 'waiting';
-    if (chs.some(c => c.status === 'defeated')) return 'defeated';
+    // 레이드 오픈 중엔 이전 주 잔여 'waiting' 채널 무시
+    const live = chs.filter(c => c.status !== 'waiting');
+    if (!live.length) return chs.length === 0 ? 'loading' : 'active'; // 채널 없으면 생성 가능
+    if (live.some(c => c.status === 'active'))   return 'active';
+    if (live.some(c => c.status === 'defeated')) return 'defeated';
     return 'expired';
   };
 
@@ -165,12 +166,6 @@ function BossListScreen({ gs, user, onEnter }) {
     // KST 시간 기반 접속 가능 여부 체크 (월요일 00:00~08:59 차단)
     if (!isRaidOpen()) {
       showToast(`월요일 오전 9시부터 입장 가능합니다 (${nextOpenKST()})`);
-      return;
-    }
-
-    const status = getBossStatus(boss.id);
-    if (status === 'waiting') {
-      showToast('월요일 오전 9시에 입장 가능합니다');
       return;
     }
 

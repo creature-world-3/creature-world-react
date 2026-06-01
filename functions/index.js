@@ -101,6 +101,14 @@ exports.weeklyBossReset = onSchedule(
     const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     for (const bossId of BOSS_IDS) {
+      // 기존 채널 전체 삭제 (이전 주 잔여 채널 정리)
+      const channelsSnap = await db
+        .collection('raids').doc(bossId)
+        .collection('channels')
+        .get();
+      await Promise.all(channelsSnap.docs.map(d => d.ref.delete()));
+
+      // 보스 문서 초기화
       await db.collection('raids').doc(bossId).set({
         hp:            BOSS_HP,
         maxHp:         BOSS_HP,
