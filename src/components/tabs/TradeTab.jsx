@@ -51,9 +51,9 @@ export default function TradeTab({ gs, setGs, user }) {
   const lockedUid  = gs?.raidCard?.uid;
   const availInsts = (gs?.ownedCards || []).filter(oc => oc.uid !== lockedUid);
 
-  // 고유 카드 타입 (등록 폼용)
+  // 고유 카드 타입 (등록 폼용) — RAID 카드 제외
   const uniqueCardTypes = CARDS.filter(
-    c => availInsts.some(oc => oc.id === c.id)
+    c => c.grade !== 'raid' && availInsts.some(oc => oc.id === c.id)
   ).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
 
   const handleTradeCardTypeClick = (cardDef) => {
