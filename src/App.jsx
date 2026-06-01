@@ -122,6 +122,8 @@ export default function App() {
   const [nicknameInput, setNicknameInput]         = useState('');
   const [nicknameError, setNicknameError]         = useState('');
   const [nicknameChecking, setNicknameChecking]   = useState(false);
+  const [showInviteModal, setShowInviteModal]     = useState(false);
+  const [inviteCopied, setInviteCopied]           = useState(false);
   const [referrerInput, setReferrerInput]         = useState(() => {
     const p = new URLSearchParams(window.location.search);
     return decodeURIComponent(p.get('ref') || '');
@@ -519,18 +521,24 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  const handleShare = () => {
+  const getInviteUrl = () => {
     const base = window.location.origin + window.location.pathname;
-    const url  = gs.nickname
-      ? `${base}?ref=${encodeURIComponent(gs.nickname)}`
-      : base;
+    return gs.nickname ? `${base}?ref=${encodeURIComponent(gs.nickname)}` : base;
+  };
+
+  const handleCopyInviteLink = () => {
+    const url = getInviteUrl();
     navigator.clipboard.writeText(url)
       .then(() => {
-        clearTimeout(toastTimer.current);
-        setToast('초대 링크가 복사됐어요! 친구에게 공유해보세요 🎉');
-        toastTimer.current = setTimeout(() => setToast(null), 2500);
+        setInviteCopied(true);
+        setTimeout(() => setInviteCopied(false), 2000);
       })
       .catch(() => window.prompt('링크를 복사해서 친구에게 보내주세요!', url));
+  };
+
+  const handleShare = () => {
+    setInviteCopied(false);
+    setShowInviteModal(true);
   };
 
   const uniqueOwned = new Set(gs.ownedCards.map(c => c.id)).size;
@@ -766,6 +774,44 @@ export default function App() {
               >
                 {nicknameChecking ? '확인 중...' : '설정하기'}
               </button>
+            </div>
+          </div>
+        )}
+        {showInviteModal && (
+          <div className="modal-overlay show" onClick={() => setShowInviteModal(false)}>
+            <div className="modal invite-modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-title">친구 초대 이벤트</div>
+
+              <div className="invite-reward-grid">
+                <div className="invite-reward-card invite-reward-me">
+                  <div className="invite-reward-role">나 (추천인)</div>
+                  <div className="invite-reward-amount">뽑기권 100장</div>
+                  <div className="invite-reward-desc">친구가 가입하면 지급</div>
+                </div>
+                <div className="invite-reward-card invite-reward-friend">
+                  <div className="invite-reward-role">초대받은 친구</div>
+                  <div className="invite-reward-amount">뽑기권 500장</div>
+                  <div className="invite-reward-desc">닉네임 설정 시 지급</div>
+                </div>
+              </div>
+
+              <div className="invite-how">
+                <div className="invite-how-title">이용 방법</div>
+                <div className="invite-how-step"><span className="invite-step-num">1</span> 아래 내 초대 링크를 복사해요</div>
+                <div className="invite-how-step"><span className="invite-step-num">2</span> 친구에게 링크를 공유해요</div>
+                <div className="invite-how-step"><span className="invite-step-num">3</span> 친구가 링크로 접속 후 닉네임 설정 시 추천인란에 내 닉네임이 자동 입력돼요</div>
+                <div className="invite-how-step"><span className="invite-step-num">4</span> 둘 다 우편함에서 보상 수령!</div>
+              </div>
+
+              <div className="invite-link-box">
+                <div className="invite-link-label">내 초대 링크</div>
+                <div className="invite-link-url">{getInviteUrl()}</div>
+              </div>
+
+              <button className={`invite-copy-btn${inviteCopied ? ' copied' : ''}`} onClick={handleCopyInviteLink}>
+                {inviteCopied ? '복사 완료!' : '링크 복사하기'}
+              </button>
+              <button className="modal-close" style={{ marginTop: 8, background: 'white', color: 'var(--muted)', border: '1.5px solid #e5e7eb' }} onClick={() => setShowInviteModal(false)}>닫기</button>
             </div>
           </div>
         )}

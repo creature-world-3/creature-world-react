@@ -1245,6 +1245,78 @@
   box-shadow: 0 20px 60px rgba(20,50,80,0.2);
   transform: scale(0.9); transition: transform 0.3s;
 }
+
+/* 친구 초대 모달 */
+.invite-modal { max-width: 440px; max-height: 88vh; overflow-y: auto; }
+.invite-reward-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;
+}
+.invite-reward-card {
+  border-radius: 16px; padding: 14px 12px; text-align: center;
+}
+.invite-reward-me {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1.5px solid #bfdbfe;
+}
+.invite-reward-friend {
+  background: linear-gradient(135deg, #fdf4ff, #f3e8ff);
+  border: 1.5px solid #e9d5ff;
+}
+.invite-reward-role {
+  font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 6px;
+}
+.invite-reward-amount {
+  font-size: 1.05rem; font-weight: 900; color: var(--text); margin-bottom: 4px;
+}
+.invite-reward-me .invite-reward-amount { color: #1d4ed8; }
+.invite-reward-friend .invite-reward-amount { color: #7c3aed; }
+.invite-reward-desc { font-size: 0.7rem; color: var(--muted); }
+
+.invite-how {
+  background: #f8faff; border-radius: 14px; padding: 14px 16px;
+  margin-bottom: 16px; border: 1px solid #e0eaff;
+}
+.invite-how-title {
+  font-size: 0.8rem; font-weight: 800; color: var(--text);
+  margin-bottom: 10px; letter-spacing: 0.03em;
+}
+.invite-how-step {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 0.78rem; color: #444; line-height: 1.5; margin-bottom: 6px;
+}
+.invite-how-step:last-child { margin-bottom: 0; }
+.invite-step-num {
+  flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--blue-dark); color: white;
+  font-size: 0.65rem; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 1px;
+}
+
+.invite-link-box {
+  background: #f0f7ff; border: 1.5px solid #d0eaf8; border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 12px;
+}
+.invite-link-label {
+  font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-bottom: 5px;
+}
+.invite-link-url {
+  font-size: 0.75rem; color: var(--blue-dark); word-break: break-all;
+  font-weight: 600; line-height: 1.4;
+}
+
+.invite-copy-btn {
+  width: 100%; padding: 13px; border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #4a9eff, #1a6fd4); color: white;
+  font-family: 'Noto Sans KR', sans-serif; font-size: 1rem; font-weight: 800;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(74,158,255,0.38);
+}
+.invite-copy-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(74,158,255,0.5); }
+.invite-copy-btn.copied {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 4px 14px rgba(34,197,94,0.35);
+}
 .modal-overlay.show .modal { transform: scale(1); }
 .modal-scroll { max-height: 75vh; overflow-y: auto; }
 .modal-title  { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.2rem; margin-bottom: 16px; color: var(--text); }
