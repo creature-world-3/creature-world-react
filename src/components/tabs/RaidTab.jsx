@@ -433,19 +433,29 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
 
   // ── 채널 onSnapshot 구독 ──
   useEffect(() => {
+    let confirmed = false; // 첫 snap 수신 여부
     const unsub = onSnapshot(channelRef,
-      snap => {
+      async snap => {
         if (!snap.exists()) {
-          // 채널이 삭제됨 → raidCard 초기화 후 보스 목록으로
+          if (!confirmed) {
+            // 첫 응답에서 없음 → getDoc으로 한 번 더 확인 (캐시 오류 방어)
+            try {
+              const check = await getDoc(channelRef);
+              if (check.exists()) { setRaid({ id: check.id, ...check.data() }); confirmed = true; return; }
+            } catch { /* ignore */ }
+          }
+          // 채널이 실제로 없음 → Firestore + 로컬 동시 초기화
+          if (user) updateDoc(doc(db, 'users', user.uid), { raidCard: null }).catch(console.error);
           setGs(prev => ({ ...prev, raidCard: null }));
           onBack();
           return;
         }
+        confirmed = true;
         setRaid({ id: snap.id, ...snap.data() });
       },
       err => {
+        // 네트워크 에러 → raidCard 건드리지 않고 목록으로만 복귀
         console.error('battle snapshot:', err);
-        setGs(prev => ({ ...prev, raidCard: null }));
         onBack();
       },
     );
@@ -483,6 +493,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
     if (raid.status === 'expired' &&
         gs?.raidCard?.raidId === bossId &&
         gs?.raidCard?.channelId === channelId) {
+      if (user) updateDoc(doc(db, 'users', user.uid), { raidCard: null }).catch(console.error);
       setGs(prev => ({ ...prev, raidCard: null }));
     }
   }, [raid?.status]);
@@ -565,11 +576,13 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
       rewardClaimed: myPart?.rewardClaimed || false,
     };
     try {
-      await updateDoc(channelRef, { [`participants.${user.uid}`]: partData });
-      setGs(prev => ({
-        ...prev,
-        raidCard: { uid: inst.uid, cardId: card.id, raidId: bossId, channelId },
-      }));
+      const newRaidCard = { uid: inst.uid, cardId: card.id, raidId: bossId, channelId };
+      // 채널 참여 + raidCard Firestore 동시 저장 (디바운스 의존 제거)
+      await Promise.all([
+        updateDoc(channelRef, { [`participants.${user.uid}`]: partData }),
+        updateDoc(doc(db, 'users', user.uid), { raidCard: newRaidCard }),
+      ]);
+      setGs(prev => ({ ...prev, raidCard: newRaidCard }));
       setShowPicker(false); setIsChanging(false);
       showToast(isChanging ? `${card.name}으로 카드 교체!` : `${card.name} (${GRADE_LABEL[card.grade]})로 레이드 참여!`);
     } catch (e) { console.error('join error:', e); showToast('오류가 발생했어요'); }
