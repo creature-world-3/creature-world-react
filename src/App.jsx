@@ -303,6 +303,7 @@ export default function App() {
   }, []);
 
   // ── Firestore 저장 (gs 변경 시, 1초 디바운스) ──
+  // setDoc 전체 덮어쓰기 대신 updateDoc 사용 → 관리자 직접 수정 데이터 보호
   useEffect(() => {
     if (!user) {
       clearTimeout(saveTimer.current);
@@ -311,7 +312,8 @@ export default function App() {
     if (isFirstLoad.current) { isFirstLoad.current = false; return; }
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      setDoc(doc(db, 'users', user.uid), gs).catch(console.error);
+      updateDoc(doc(db, 'users', user.uid), gs)
+        .catch(() => setDoc(doc(db, 'users', user.uid), gs).catch(console.error));
     }, 1000);
   }, [gs, user]);
 
