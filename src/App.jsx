@@ -23,8 +23,6 @@ import './App.css';
 
 const TAB_ORDER = ['gacha', 'synth', 'dex', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking'];
 
-const KAKAO_JS_KEY   = '86daeae42ced20dec5fb375bf0b15aec';
-const KAKAO_REDIRECT = 'https://creature-world-react.vercel.app';
 
 export const BASE_STATE = {
   tickets: 5, ownedCards: [],
@@ -223,83 +221,29 @@ export default function App() {
     isFirstLoad.current = true;
   };
 
-  // ── 인증 초기화: Kakao 우선, 없으면 Firebase ──
+  // ── 인증 초기화 ──
   useEffect(() => {
-    let unsubFirebase = null;
+    getRedirectResult(auth).catch(() => {});
 
-    const initKakao = () => {
-      const K = window.Kakao;
-      if (K && !K.isInitialized()) K.init(KAKAO_JS_KEY);
-    };
-
-    const loginWithKakaoToken = async (token) => {
-      const K = window.Kakao;
-      K.Auth.setAccessToken(token);
-      const userInfo = await new Promise((res, rej) =>
-        K.API.request({ url: '/v2/user/me', success: res, fail: rej })
-      );
-      const uid         = `kakao_${userInfo.id}`;
-      const displayName = userInfo.kakao_account?.profile?.nickname || '카카오유저';
-      const photoURL    = userInfo.kakao_account?.profile?.thumbnail_image_url || null;
-      await loadUserData(uid, { nickname: displayName });
-      setUser({ uid, displayName, photoURL, isKakao: true });
-      setAuthReady(true);
-    };
-
-    const init = async () => {
-      initKakao();
-
-      // 리다이렉트 로그인 결과 처리 (signInWithRedirect 폴백 후 복귀 시)
-      // 성공 시 onAuthStateChanged가 자동으로 처리, 에러는 무시(캐시 정리 목적)
-      getRedirectResult(auth).catch(() => {});
-
-      // 1) 인앱브라우저 implicit grant 리다이렉트 후 hash 토큰 처리
-      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-      const hashToken  = hashParams.get('access_token');
-      if (hashToken && window.Kakao) {
-        window.history.replaceState({}, '', window.location.pathname);
-        localStorage.setItem('kakao_token', hashToken);
+    const unsubFirebase = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
         try {
-          await loginWithKakaoToken(hashToken);
-          return;
+          await loadUserData(firebaseUser.uid);
         } catch (e) {
-          localStorage.removeItem('kakao_token');
-        }
-      }
-
-      // 2) 저장된 Kakao 토큰 복원 (자동 로그인)
-      const storedToken = localStorage.getItem('kakao_token');
-      if (storedToken && window.Kakao) {
-        try {
-          await loginWithKakaoToken(storedToken);
-          return;
-        } catch (e) {
-          localStorage.removeItem('kakao_token');
-        }
-      }
-
-      // 3) Firebase Google 인증
-      unsubFirebase = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-          try {
-            await loadUserData(firebaseUser.uid);
-          } catch (e) {
-            console.error('Firestore 로드 실패:', e);
-            setGs({ ...BASE_STATE });
-          }
-          setUser(firebaseUser);
-        } else {
+          console.error('Firestore 로드 실패:', e);
           setGs({ ...BASE_STATE });
-          setShowNicknameModal(false);
-          setUser(null);
         }
-        setAuthReady(true);
-        isFirstLoad.current = true;
-      });
-    };
+        setUser(firebaseUser);
+      } else {
+        setGs({ ...BASE_STATE });
+        setShowNicknameModal(false);
+        setUser(null);
+      }
+      setAuthReady(true);
+      isFirstLoad.current = true;
+    });
 
-    init();
-    return () => { unsubFirebase?.(); };
+    return () => { unsubFirebase(); };
   }, []);
 
   // ── Firestore 저장 (gs 변경 시, 1초 디바운스) ──
@@ -343,83 +287,9 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    if (user?.isKakao) {
-      localStorage.removeItem('kakao_token');
-      if (window.Kakao) window.Kakao.Auth.setAccessToken(null);
-      setUser(null);
-      setGs({ ...BASE_STATE });
-      setShowNicknameModal(false);
-    } else {
-      await signOut(auth);
-    }
+    await signOut(auth);
   };
 
-  const handleKakaoLogin = () => {
-    setLoginError('');
-    const K = window.Kakao;
-    if (!K) { setLoginError('카카오 SDK를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.'); return; }
-
-    try {
-      if (!K.isInitialized()) K.init(KAKAO_JS_KEY);
-    } catch (e) {
-      setLoginError('카카오 초기화 실패. 새로고침 후 다시 시도해주세요.');
-      return;
-    }
-
-    // 인앱브라우저 (카카오톡·인스타 등): implicit grant 리다이렉트
-    const ua    = navigator.userAgent || '';
-    const inApp = /KAKAOTALK|Instagram|FBAV|FB_IAB|Line|naver|Snapchat/i.test(ua);
-    if (inApp) {
-      const params = new URLSearchParams({
-        client_id:     KAKAO_JS_KEY,
-        redirect_uri:  KAKAO_REDIRECT,
-        response_type: 'token',
-        scope:         'profile_nickname,profile_image',
-      });
-      window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
-      return;
-    }
-
-    // 일반 브라우저: Kakao.Auth.login() 팝업 방식
-    try {
-      K.Auth.login({
-        scope: 'profile_nickname,profile_image',
-        success: (authObj) => {
-          const token = authObj.access_token;
-          localStorage.setItem('kakao_token', token);
-          K.Auth.setAccessToken(token);
-          new Promise((res, rej) =>
-            K.API.request({ url: '/v2/user/me', success: res, fail: rej })
-          ).then(async (userInfo) => {
-            const uid         = `kakao_${userInfo.id}`;
-            const displayName = userInfo.kakao_account?.profile?.nickname || '카카오유저';
-            const photoURL    = userInfo.kakao_account?.profile?.thumbnail_image_url || null;
-            try {
-              await loadUserData(uid, { nickname: displayName });
-              setUser({ uid, displayName, photoURL, isKakao: true });
-            } catch (e) {
-              console.error('Kakao Firestore 저장 실패:', e);
-              setLoginError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
-              localStorage.removeItem('kakao_token');
-            }
-          }).catch((e) => {
-            console.error('Kakao API 오류:', e);
-            setLoginError('카카오 정보를 가져오지 못했습니다. 다시 시도해주세요.');
-            localStorage.removeItem('kakao_token');
-          });
-        },
-        fail: (err) => {
-          console.error('Kakao login failed:', err);
-          if (err?.error !== 'access_denied') {
-            setLoginError('카카오 로그인에 실패했습니다. 다시 시도해주세요.');
-          }
-        },
-      });
-    } catch (e) {
-      console.error('Kakao.Auth.login 오류:', e);
-      setLoginError('카카오 로그인을 시작할 수 없습니다. 새로고침 후 다시 시도해주세요.');
-    }
-  };
 
   const handleSaveNickname = async () => {
     const trimmed  = nicknameInput.trim();
@@ -604,12 +474,6 @@ export default function App() {
                   <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
                 </svg>
                 Google로 로그인
-              </button>
-              <button className="login-kakao-btn" onClick={handleKakaoLogin}>
-                <svg className="kakao-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 3C6.477 3 2 6.477 2 11c0 2.824 1.607 5.306 4.063 6.875l-.956 3.563a.375.375 0 0 0 .553.421L9.79 19.5A11.18 11.18 0 0 0 12 19.75C17.523 19.75 22 16.274 22 11S17.523 3 12 3z" fill="#3B1D1E"/>
-                </svg>
-                카카오로 로그인
               </button>
               {loginError && (
                 <div style={{ color: '#e53e3e', fontSize: '0.78rem', textAlign: 'center', marginBottom: 8, lineHeight: 1.5 }}>
