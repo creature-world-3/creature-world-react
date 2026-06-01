@@ -150,11 +150,11 @@ function BossListScreen({ gs, user, onEnter }) {
   }, []);
 
   const getBossStatus = (bossId) => {
-    if (!isRaidOpen()) return 'waiting'; // 시간 외엔 무조건 대기 중
-    const chs = bossChannels[bossId] || [];
-    // 레이드 오픈 중엔 이전 주 잔여 'waiting' 채널 무시
-    const live = chs.filter(c => c.status !== 'waiting');
-    if (!live.length) return chs.length === 0 ? 'loading' : 'active'; // 채널 없으면 생성 가능
+    if (!isRaidOpen()) return 'waiting';
+    if (!(bossId in bossChannels)) return 'loading'; // snapshot 아직 미수신
+    const chs  = bossChannels[bossId];
+    const live = chs.filter(c => c.status !== 'waiting'); // 이전 주 waiting 채널 무시
+    if (!live.length) return 'active'; // 채널 없음 → 새 채널 생성 가능
     if (live.some(c => c.status === 'active'))   return 'active';
     if (live.some(c => c.status === 'defeated')) return 'defeated';
     return 'expired';
