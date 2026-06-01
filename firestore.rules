@@ -11,11 +11,13 @@ service cloud.firestore {
     }
 
     // ── mailbox 컬렉션 ──
-    // 읽기: 로그인한 유저라면 전체 읽기 가능 (공지 메일 + 개인 메일 클라이언트 필터)
-    // 쓰기: 관리자(Admin SDK)만 — 클라이언트에서 직접 쓰기 불가
+    // 읽기: 로그인한 유저 누구나
+    // 생성: 로그인한 유저 (레이드 보상, 친구 초대 보상)
+    // 수정/삭제: 불가
     match /mailbox/{mailId} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
     }
 
     // ── posts 컬렉션 ──

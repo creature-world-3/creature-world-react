@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import {
   onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, GoogleAuthProvider, getRedirectResult,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, addDoc, collection, query, where, getDocs, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase/config.js';
 import Header from './components/Header.jsx';
 import TabBar from './components/TabBar.jsx';
@@ -36,6 +36,7 @@ export const BASE_STATE = {
   claimedRaids: {},
   claimedMails: {},
   nickname: null,
+  referredBy: null,
 };
 
 function applyDailyReset(state) {
@@ -119,6 +120,10 @@ export default function App() {
   const [moreOpen, setMoreOpen]                   = useState(false);
   const [showNicknameModal, setShowNicknameModal] = useState(false);
   const [nicknameInput, setNicknameInput]         = useState('');
+  const [referrerInput, setReferrerInput]         = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return decodeURIComponent(p.get('ref') || '');
+  });
   const [showWelcomeNotice, setShowWelcomeNotice] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [mailboxDocs, setMailboxDocs] = useState([]);
@@ -410,12 +415,45 @@ export default function App() {
   };
 
   const handleSaveNickname = async () => {
-    const trimmed = nicknameInput.trim();
+    const trimmed  = nicknameInput.trim();
+    const referrer = referrerInput.trim();
     if (!trimmed || trimmed.length < 2 || trimmed.length > 10 || !user) return;
     try {
       await updateDoc(doc(db, 'users', user.uid), { nickname: trimmed });
       setGs(prev => ({ ...prev, nickname: trimmed }));
       setShowNicknameModal(false);
+
+      // ── 추천인 처리 (최초 가입 시, 자기 자신 제외) ──
+      if (referrer && referrer !== trimmed && !gs.referredBy) {
+        const q = query(collection(db, 'users'), where('nickname', '==', referrer));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const referrerUid = snap.docs[0].id;
+          const now = serverTimestamp();
+
+          // 신규 유저 우편 (500장)
+          await addDoc(collection(db, 'mailbox'), {
+            title: '친구 초대 보상',
+            message: `${referrer} 님의 초대로 가입하셨습니다! 뽑기권 500장을 드립니다.`,
+            targetUid: user.uid,
+            reward: { type: 'tickets', amount: 500 },
+            createdAt: now,
+          });
+
+          // 추천인 우편 (100장)
+          await addDoc(collection(db, 'mailbox'), {
+            title: '친구 초대 보상',
+            message: `${trimmed} 님이 초대로 가입했습니다! 뽑기권 100장을 드립니다.`,
+            targetUid: referrerUid,
+            reward: { type: 'tickets', amount: 100 },
+            createdAt: now,
+          });
+
+          // 추천인 기록 저장 (중복 방지)
+          await updateDoc(doc(db, 'users', user.uid), { referredBy: referrer });
+          setGs(prev => ({ ...prev, referredBy: referrer }));
+        }
+      }
     } catch (e) {
       console.error('닉네임 저장 실패:', e);
     }
@@ -468,11 +506,14 @@ export default function App() {
   };
 
   const handleShare = () => {
-    const url = window.location.href;
+    const base = window.location.origin + window.location.pathname;
+    const url  = gs.nickname
+      ? `${base}?ref=${encodeURIComponent(gs.nickname)}`
+      : base;
     navigator.clipboard.writeText(url)
       .then(() => {
         clearTimeout(toastTimer.current);
-        setToast('링크가 복사됐어요! 친구에게 공유해보세요');
+        setToast('초대 링크가 복사됐어요! 친구에게 공유해보세요 🎉');
         toastTimer.current = setTimeout(() => setToast(null), 2500);
       })
       .catch(() => window.prompt('링크를 복사해서 친구에게 보내주세요!', url));
@@ -687,6 +728,20 @@ export default function App() {
                 autoFocus
               />
               <div className="nickname-char-count">{nicknameInput.trim().length} / 10</div>
+
+              <div className="referrer-section">
+                <div className="referrer-label">추천인 닉네임 <span className="referrer-optional">(선택)</span></div>
+                <input
+                  className="nickname-input"
+                  type="text"
+                  placeholder="추천인 닉네임 입력"
+                  value={referrerInput}
+                  onChange={e => setReferrerInput(e.target.value.slice(0, 10))}
+                  maxLength={10}
+                />
+                <div className="referrer-hint">입력 시 신규 가입 보상 뽑기권 500장 지급</div>
+              </div>
+
               <button
                 className="modal-close"
                 onClick={handleSaveNickname}

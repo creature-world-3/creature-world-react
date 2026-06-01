@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  doc, setDoc, updateDoc, getDoc, collection,
+  doc, setDoc, updateDoc, getDoc, addDoc, collection,
   onSnapshot, serverTimestamp, query, orderBy,
   increment, Timestamp,
 } from 'firebase/firestore';
@@ -598,19 +598,32 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
   const handleConfirmReward = async () => {
     if (!user || !rewardResult) return;
     try {
-      await updateDoc(doc(db, 'users', user.uid), { [`claimedRaids.${raidKey}`]: true });
-      setGs(prev => {
-        const next = { ...prev, raidCard: null, claimedRaids: { ...(prev.claimedRaids || {}), [raidKey]: true } };
-        if (rewardResult.type === 'tickets') {
-          next.tickets = prev.tickets + rewardResult.amount;
-        } else {
-          const c = CARDS.find(x => x.id === rewardResult.cardId);
-          if (c) next.ownedCards = [...prev.ownedCards, { uid: genUid(), id: rewardResult.cardId, condition: 10 }];
-        }
-        return next;
+      // claimedRaids 업데이트 + raidCard 초기화
+      await updateDoc(doc(db, 'users', user.uid), {
+        [`claimedRaids.${raidKey}`]: true,
+        raidCard: null,
       });
+
+      // 우편함으로 보상 발송
+      await addDoc(collection(db, 'mailbox'), {
+        title: '레이드 토벌 보상',
+        message: rewardResult.type === 'tickets'
+          ? `${bossConfig?.name || '보스'} 토벌 성공! 뽑기권 ${rewardResult.amount}장을 드립니다.`
+          : `${bossConfig?.name || '보스'} 토벌 성공! RAID 한정 카드를 드립니다.`,
+        targetUid: user.uid,
+        reward: rewardResult.type === 'tickets'
+          ? { type: 'tickets', amount: rewardResult.amount }
+          : { type: 'card', cardId: rewardResult.cardId, condition: 10 },
+        createdAt: serverTimestamp(),
+      });
+
+      setGs(prev => ({
+        ...prev,
+        raidCard: null,
+        claimedRaids: { ...(prev.claimedRaids || {}), [raidKey]: true },
+      }));
       setRewardPhase(null); setRewardResult(null);
-      showToast(rewardResult.type === 'tickets' ? `뽑기권 ${rewardResult.amount}장 획득!` : 'RAID 한정 카드 획득!');
+      showToast('보상이 우편함으로 전송됐습니다!');
     } catch (e) { console.error('reward error:', e); showToast('오류가 발생했어요. 잠시 후 다시 시도해주세요.'); }
   };
 
