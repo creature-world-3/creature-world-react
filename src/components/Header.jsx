@@ -1,4 +1,4 @@
-export default function Header({ onNotice, onHelp, onShare, user, nickname, onLogin, onLogout }) {
+export default function Header({ onNotice, onHelp, onShare, user, nickname, onLogin, onLogout, isGuest, onExitGuest }) {
   return (
     <header className="cw-header">
       <button className="share-btn" onClick={onShare}>친구 초대</button>
@@ -6,7 +6,12 @@ export default function Header({ onNotice, onHelp, onShare, user, nickname, onLo
       <div className="header-right">
         <button className="help-btn" onClick={onNotice}>공지</button>
         <button className="help-btn" onClick={onHelp}>게임 설명</button>
-        {user ? (
+        {isGuest ? (
+          <>
+            <span className="header-username guest-badge">게스트</span>
+            <button className="header-login-btn" onClick={onExitGuest}>로그인</button>
+          </>
+        ) : user ? (
           <>
             <span className="header-username">{nickname || '유저'}</span>
             <button className="header-logout-btn" onClick={onLogout}>로그아웃</button>

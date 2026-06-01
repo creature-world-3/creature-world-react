@@ -114,7 +114,7 @@ function InstanceSheet({ cardDef, instances, title, onSelect, onClose }) {
 
 // ── 합성 서브탭 ──
 // 슬롯 아이템: { cardDef, inst } | null
-function SynthSubTab({ gs, setGs }) {
+function SynthSubTab({ gs, setGs, isGuest }) {
   const [synthGrade, setSynthGrade] = useState('n');
   const [slots, setSlots]   = useState([null, null, null]); // { cardDef, inst }
   const [synthPicker, setSynthPicker] = useState(null); // { cardDef, instances }
@@ -249,7 +249,9 @@ function SynthSubTab({ gs, setGs }) {
             <div className="synth-result-hint">뒤집힌 후 클릭하면 크게 볼 수 있어요</div>
           </div>
         </div>
-        <button className="synth-btn" onClick={doSynth} disabled={!canSynth}>합성하기</button>
+        <button className="synth-btn" onClick={doSynth} disabled={!canSynth || isGuest}>
+          {isGuest ? '로그인이 필요합니다' : '합성하기'}
+        </button>
       </div>
 
       <div className="synth-cards-section">
@@ -289,7 +291,7 @@ function SynthSubTab({ gs, setGs }) {
 }
 
 // ── 강화 서브탭 ──
-function EnhanceSubTab({ gs, setGs }) {
+function EnhanceSubTab({ gs, setGs, isGuest }) {
   const [filterGrade, setFilterGrade] = useState('n');
 
   // 선택된 카드 정보
@@ -541,9 +543,9 @@ function EnhanceSubTab({ gs, setGs }) {
           <button
             className="enhance-btn-main"
             onClick={doEnhance}
-            disabled={(gs.tickets || 0) < cost || isBusy}
+            disabled={(gs.tickets || 0) < cost || isBusy || isGuest}
           >
-            {isBusy ? '강화 중...' : '강화하기'}
+            {isGuest ? '로그인이 필요합니다' : isBusy ? '강화 중...' : '강화하기'}
           </button>
         </div>
       ) : (
@@ -600,7 +602,7 @@ function EnhanceSubTab({ gs, setGs }) {
 }
 
 // ── 교환 서브탭 ──
-function ExchangeSubTab({ gs, setGs }) {
+function ExchangeSubTab({ gs, setGs, isGuest }) {
   const [filterGrade, setFilterGrade] = useState('n');
   const [selectedCard, setSelectedCard] = useState(null);
   const [qty, setQty]       = useState(1);
@@ -770,7 +772,9 @@ function ExchangeSubTab({ gs, setGs }) {
             <div className="exsub-qty-summary">
               카드 <strong>{qty * EXCHANGE_COST}장</strong> → 뽑기권 <strong>{qty * ticketsPerExchange}장</strong>
             </div>
-            <button className="exsub-do-btn" onClick={doExchange}>교환하기</button>
+            <button className="exsub-do-btn" onClick={doExchange} disabled={!!isGuest} style={isGuest ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>
+              {isGuest ? '로그인이 필요합니다' : '교환하기'}
+            </button>
           </div>
         </div>
       )}
@@ -827,7 +831,7 @@ function ExchangeSubTab({ gs, setGs }) {
 // ── 메인 탭 (서브탭 슬라이드) ──
 const TAB_ORDER = ['synth', 'enhance', 'exchange'];
 
-export default function SynthTab({ gs, setGs }) {
+export default function SynthTab({ gs, setGs, isGuest }) {
   const [subTab, setSubTab]     = useState('synth');
   const [slideClass, setSlideClass] = useState('');
 
@@ -850,9 +854,9 @@ export default function SynthTab({ gs, setGs }) {
       </div>
 
       <div className={`subtab-content${slideClass}`}>
-        {subTab === 'synth'    && <SynthSubTab    gs={gs} setGs={setGs} />}
-        {subTab === 'enhance'  && <EnhanceSubTab  gs={gs} setGs={setGs} />}
-        {subTab === 'exchange' && <ExchangeSubTab gs={gs} setGs={setGs} />}
+        {subTab === 'synth'    && <SynthSubTab    gs={gs} setGs={setGs} isGuest={isGuest} />}
+        {subTab === 'enhance'  && <EnhanceSubTab  gs={gs} setGs={setGs} isGuest={isGuest} />}
+        {subTab === 'exchange' && <ExchangeSubTab gs={gs} setGs={setGs} isGuest={isGuest} />}
       </div>
     </>
   );

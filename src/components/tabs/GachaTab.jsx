@@ -199,7 +199,7 @@ function CardDetailModal({ item, onClose }) {
   );
 }
 
-export default function GachaTab({ gs, setGs }) {
+export default function GachaTab({ gs, setGs, isGuest }) {
   const [flipped, setFlipped]       = useState(false);
   const [drawn, setDrawn]           = useState(null);
   const [flash, setFlash]           = useState(null);
@@ -458,7 +458,11 @@ export default function GachaTab({ gs, setGs }) {
           </div>
 
           <div className="draw-actions">
-            {!flipped ? (
+            {isGuest ? (
+              <div className="guest-action-block">
+                <div className="guest-action-msg">로그인이 필요합니다</div>
+              </div>
+            ) : !flipped ? (
               <button className="draw-btn primary" onClick={doDraw} disabled={gs.tickets <= 0}>
                 {gs.tickets > 0 ? `뽑기권 사용 (${gs.tickets}장 보유)` : '뽑기권이 없어요'}
               </button>
@@ -467,16 +471,18 @@ export default function GachaTab({ gs, setGs }) {
                 다음 뽑기 →
               </button>
             )}
-            <button className="draw-btn draw-btn-10" disabled={gs.tickets < 10} onClick={doDraw10}>
-              10뽑 (10장)
-            </button>
+            {!isGuest && (
+              <button className="draw-btn draw-btn-10" disabled={gs.tickets < 10} onClick={doDraw10}>
+                10뽑 (10장)
+              </button>
+            )}
           </div>
           </div>
 
           <div className="draw-col-right">
           <div className="click-section">
             <div className="click-label">클릭 뽑기 (100번마다 +1장 · 하루 최대 10회)</div>
-            <button className="click-btn" onClick={handleClick} disabled={gs.clickDone}>🐾</button>
+            <button className="click-btn" onClick={handleClick} disabled={gs.clickDone || isGuest}>🐾</button>
             <div className="click-count-text">
               {gs.clickDone ? (
                 <span style={{ color: '#4a9eff', fontWeight: 700 }}>오늘 완료 ✓</span>
@@ -494,10 +500,10 @@ export default function GachaTab({ gs, setGs }) {
             <button
               className="draw-btn primary"
               onClick={doAttendance}
-              disabled={attendDone}
+              disabled={attendDone || isGuest}
               style={{ fontSize: '0.82rem' }}
             >
-              {attendDone ? '오늘 출석 완료 ✓' : '출석체크 하기'}
+              {isGuest ? '로그인이 필요합니다' : attendDone ? '오늘 출석 완료 ✓' : '출석체크 하기'}
             </button>
             <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
               {(gs.attendStreak || 0) > 0

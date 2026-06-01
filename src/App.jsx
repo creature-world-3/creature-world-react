@@ -124,6 +124,7 @@ export default function App() {
   const [nicknameChecking, setNicknameChecking]   = useState(false);
   const [showInviteModal, setShowInviteModal]     = useState(false);
   const [inviteCopied, setInviteCopied]           = useState(false);
+  const [isGuest, setIsGuest]                     = useState(false);
   const [referrerInput, setReferrerInput]         = useState(() => {
     const p = new URLSearchParams(window.location.search);
     return decodeURIComponent(p.get('ref') || '');
@@ -504,7 +505,16 @@ export default function App() {
     return unsub;
   }, [user]);
 
+  const GUEST_BLOCKED = new Set(['raid', 'board', 'trade', 'mailbox']);
+
   const handleTabChange = (newTab) => {
+    if (isGuest && GUEST_BLOCKED.has(newTab)) {
+      clearTimeout(toastTimer.current);
+      setToast('로그인이 필요합니다');
+      toastTimer.current = setTimeout(() => setToast(null), 2000);
+      setMoreOpen(false);
+      return;
+    }
     const oldIdx = TAB_ORDER.indexOf(prevTabRef.current);
     const newIdx = TAB_ORDER.indexOf(newTab);
     setSlideDir(newIdx >= oldIdx ? 'right' : 'left');
@@ -551,8 +561,8 @@ export default function App() {
   );
 
   const TABS = {
-    gacha:   <GachaTab {...tabProps} />,
-    synth:   <SynthTab {...tabProps} />,
+    gacha:   <GachaTab {...tabProps} isGuest={isGuest} />,
+    synth:   <SynthTab {...tabProps} isGuest={isGuest} />,
     shop:    <ShopTab {...tabProps} />,
     dex:     <DexTab gs={gs} />,
     board:   <BoardTab gs={gs} user={user} />,
@@ -573,7 +583,7 @@ export default function App() {
   }
 
   // ── 로그인 유도 화면 ──
-  if (!user) {
+  if (!user && !isGuest) {
     return (
       <Routes>
         <Route path="/privacy" element={<PrivacyPage />} />
@@ -604,6 +614,9 @@ export default function App() {
                   {loginError}
                 </div>
               )}
+              <button className="login-guest-btn" onClick={() => setIsGuest(true)}>
+                로그인 없이 둘러보기
+              </button>
               <div className="login-footer-links">
                 <a href="/privacy" className="login-policy-link">개인정보처리방침</a>
                 <span>·</span>
@@ -630,6 +643,8 @@ export default function App() {
             nickname={gs.nickname}
             onLogin={handleLogin}
             onLogout={handleLogout}
+            isGuest={isGuest}
+            onExitGuest={() => setIsGuest(false)}
           />
 
           <div className="status-bar">
