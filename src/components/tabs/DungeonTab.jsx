@@ -623,19 +623,23 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
                     className={`farming-slot${sel?' filled':''}${!hasCards&&!sel?' no-card':''}`}
                     onClick={() => hasCards||sel ? handleSlotClick(grade) : showToast(`${GRADE_LABEL[grade]} 등급 카드가 없어요`)}
                   >
-                    {sel ? (
-                      <>
-                        <img src={`/${sel.cardDef.img}`} alt={sel.cardDef.name} />
-                        <div className="farming-slot-grade" style={{background:GRADE_BG[grade]}}>{GRADE_LABEL[grade]}</div>
-                        <button className="farming-slot-remove"
-                          onClick={e=>{e.stopPropagation();setSlots(p=>{const n={...p};delete n[grade];return n;})}}>×</button>
-                      </>
-                    ) : (
-                      <div className="farming-slot-empty">
-                        <div className="farming-slot-grade-label" style={{color:GRADE_COLOR[grade]}}>{GRADE_LABEL[grade]}</div>
-                        <div className="farming-slot-plus">{hasCards?'+':'—'}</div>
+                    <div className="farming-slot-inner">
+                      <div className="farming-slot-back">
+                        <div className="farming-slot-back-inner">
+                          <div className="farming-slot-back-logo">CW</div>
+                          <div className="farming-slot-grade-label" style={{color:GRADE_COLOR[grade]}}>{GRADE_LABEL[grade]}</div>
+                          <div className="farming-slot-plus">{hasCards?'+':'—'}</div>
+                        </div>
                       </div>
-                    )}
+                      <div className="farming-slot-front">
+                        {sel && <img src={`/${sel.cardDef.img}`} alt={sel.cardDef.name} />}
+                        {sel && <div className="farming-slot-grade-tag" style={{background:GRADE_BG[grade]}}>{GRADE_LABEL[grade]}</div>}
+                        {sel && (
+                          <button className="farming-slot-remove"
+                            onClick={e=>{e.stopPropagation();setSlots(p=>{const n={...p};delete n[grade];return n;})}}>×</button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 );
               })}

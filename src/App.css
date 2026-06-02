@@ -3667,12 +3667,12 @@ body.raid-theme .music-toggle-btn {
 .dungeon-section-header { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
 .dungeon-section-title { font-size: 1.05rem; font-weight: 900; color: var(--text); letter-spacing: 0.3px; }
 .dungeon-info-btn {
-  font-size: 0.72rem; font-weight: 700; color: var(--muted);
-  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 8px; padding: 4px 11px; cursor: pointer;
-  font-family: 'Noto Sans KR', sans-serif; transition: all 0.15s; flex-shrink: 0;
+  font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 99px; padding: 5px 14px; cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif; transition: all 0.2s; flex-shrink: 0;
 }
-.dungeon-info-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+.dungeon-info-btn:hover { background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.5); }
 .dungeon-info-sheet {
   background: var(--card-bg); border-radius: 18px; padding: 22px 20px 14px;
   width: min(360px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 14px;
@@ -3807,9 +3807,23 @@ body.raid-theme .music-toggle-btn {
 
 /* ── 파밍 던전 ── */
 .farming-boss-preview {
-  text-align: center; border-radius: 14px;
+  position: relative; border-radius: 16px; overflow: hidden;
+  background: linear-gradient(145deg, #07101e 0%, #0d1f3c 45%, #120e2e 100%);
+  border: 1.5px solid rgba(60,100,200,0.35);
+  box-shadow: 0 4px 24px rgba(20,60,180,0.4);
+  display: flex; align-items: center; justify-content: center;
+  min-height: 130px;
 }
-.farming-boss-preview img { width: 100%; object-fit: contain; border-radius: 14px; display: block; }
+.farming-boss-preview::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 65%, rgba(40,90,220,0.22) 0%, transparent 70%);
+}
+.farming-boss-preview img {
+  width: 58%; object-fit: contain; display: block;
+  position: relative; z-index: 1;
+  filter: drop-shadow(0 6px 18px rgba(40,110,240,0.6));
+  padding: 14px 0;
+}
 .farming-done-today {
   background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
   border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; color: #f87171; text-align: center;
@@ -3826,27 +3840,66 @@ body.raid-theme .music-toggle-btn {
 .farming-slots-title { font-size: 0.85rem; font-weight: 800; color: var(--text); }
 .farming-slots-count { color: #7c3aed; font-weight: 900; font-size: 0.9rem; }
 .farming-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+/* 슬롯 - 3D 카드 플립 구조 */
 .farming-slot {
-  aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; position: relative;
-  border: 2px dashed rgba(255,255,255,0.35); cursor: pointer; transition: all 0.18s;
-  background: rgba(255,255,255,0.05);
+  aspect-ratio: 3/4; border-radius: 12px; cursor: pointer;
+  perspective: 600px; transition: transform 0.15s;
 }
-.farming-slot:hover { border-color: rgba(109,40,217,0.7); background: rgba(109,40,217,0.1); box-shadow: 0 0 10px rgba(109,40,217,0.2); }
-.farming-slot.filled { border-style: solid; border-color: rgba(109,40,217,0.65); box-shadow: 0 0 8px rgba(109,40,217,0.25); }
-.farming-slot.filled:hover { border-color: rgba(239,68,68,0.65); box-shadow: 0 0 8px rgba(239,68,68,0.2); }
-.farming-slot.no-card { opacity: 0.4; cursor: not-allowed; }
-.farming-slot img { width: 100%; height: 100%; object-fit: cover; }
-.farming-slot-grade { position: absolute; bottom: 0; left: 0; right: 0; padding: 4px; text-align: center; font-size: 0.65rem; font-weight: 900; color: white; }
+.farming-slot:hover:not(.filled):not(.no-card) { transform: translateY(-2px); }
+.farming-slot.no-card { opacity: 0.38; cursor: not-allowed; }
+
+.farming-slot-inner {
+  width: 100%; height: 100%; position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(.4,0,.2,1);
+}
+.farming-slot.filled .farming-slot-inner { transform: rotateY(180deg); }
+
+.farming-slot-back, .farming-slot-front {
+  position: absolute; inset: 0; border-radius: 10px; overflow: hidden;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+}
+
+/* 뒷면: 카드 뒷면 스타일 (파란색) */
+.farming-slot-back {
+  background: linear-gradient(145deg, #1565c0 0%, #1e88e5 35%, #29b6f6 70%, #00acc1 100%);
+  border: 2px solid rgba(255,255,255,0.28);
+  display: flex; align-items: center; justify-content: center;
+}
+.farming-slot-back::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 12px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 12px);
+}
+.farming-slot-back::after { content: ''; position: absolute; inset: 6px; border: 1px solid rgba(255,255,255,0.22); border-radius: 6px; }
+.farming-slot:not(.no-card):not(.filled):hover .farming-slot-back {
+  box-shadow: 0 0 0 2px rgba(109,40,217,0.7), 0 0 12px rgba(109,40,217,0.35);
+}
+.farming-slot-back-inner {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.farming-slot-back-logo { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 0.78rem; color: rgba(255,255,255,0.85); letter-spacing: 2px; }
+.farming-slot-grade-label { font-size: 0.7rem; font-weight: 800; text-align: center; }
+.farming-slot-plus { font-size: 1.4rem; color: rgba(255,255,255,0.8); line-height: 1; }
+
+/* 앞면: 선택된 카드 */
+.farming-slot-front {
+  transform: rotateY(180deg);
+  background: #1a2a3a; border: 2px solid rgba(109,40,217,0.6);
+}
+.farming-slot-front img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.farming-slot-grade-tag {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 3px; text-align: center; font-size: 0.6rem; font-weight: 900; color: white;
+}
 .farming-slot-remove {
-  position: absolute; top: 4px; right: 4px; width: 20px; height: 20px;
-  border-radius: 50%; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.3); color: white;
-  font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  line-height: 1;
+  position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; z-index: 2;
+  border-radius: 50%; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.35); color: white;
+  font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;
 }
-.farming-slot-empty { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
-.farming-slot-grade-label { font-size: 0.75rem; font-weight: 800; }
-.farming-slot-plus { font-size: 1.6rem; color: rgba(255,255,255,0.45); line-height: 1; }
-.farming-slot.filled .farming-slot-plus { display: none; }
 
 /* 파밍 전투 */
 .farming-battle-wrap { display: flex; flex-direction: column; gap: 14px; align-items: center; }
@@ -3888,6 +3941,8 @@ body.raid-theme .music-toggle-btn {
 @media (max-width: 400px) {
   .growth-grade-grid { grid-template-columns: repeat(3, 1fr); gap: 7px; }
   .farming-slots { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .farming-slot-back-logo { font-size: 0.68rem; }
+  .farming-slot-grade-label { font-size: 0.62rem; }
 }
 
 /* ── 던전 페이즈 슬라이드 전환 ── */
