@@ -119,15 +119,19 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
       const inst = gs.ownedCards.find(c => c.uid === b.cardInstUid);
       const def  = CARDS.find(c => c.id === b.cardId);
       if (!inst || !def) continue;
-      const ticksGone  = Math.floor((now - (b.startTime||now)) / (TICK_S * 1000));
+      const elapsedMs  = now - (b.startTime||now);
+      const ticksGone  = Math.floor(elapsedMs / (TICK_S * 1000));
       const avgDmgTick = calcAvgDmg(grade, inst.condition, inst.enhanceLevel||0, b.bDmg);
       const dmgDealt   = ticksGone * avgDmgTick;
       const currentHp  = Math.max(0, (b.maxHp||0) - dmgDealt);
       if (currentHp > 0) {
+        // 다음 틱까지 남은 시간 계산 → lastTickTime 역산
+        const lastTickTime = (b.startTime||now) + ticksGone * TICK_S * 1000;
         restored[grade] = {
           active: true, hp: currentHp, maxHp: b.maxHp,
           cardInst: inst, cardDef: def, bDmg: b.bDmg,
           totalDmg: dmgDealt, lastDmg: null, shaking: false,
+          lastTickTime,
         };
       }
     }
@@ -148,10 +152,11 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
     const bDmg   = gsRef.current?.cardBonusDmg?.[inst.id] || 0;
     const avgDmg = calcAvgDmg(grade, inst.condition, inst.enhanceLevel||0, bDmg);
     const maxHp  = avgDmg * 1200;
-    const battleData = { cardInstUid: inst.uid, cardId: inst.id, bDmg, maxHp, startTime: Date.now() };
+    const now = Date.now();
+    const battleData = { cardInstUid: inst.uid, cardId: inst.id, bDmg, maxHp, startTime: now };
     setBattles(prev => ({
       ...prev,
-      [grade]: { active: true, hp: maxHp, maxHp, cardInst: inst, cardDef: def, bDmg, totalDmg: 0, lastDmg: null, shaking: false },
+      [grade]: { active: true, hp: maxHp, maxHp, cardInst: inst, cardDef: def, bDmg, totalDmg: 0, lastDmg: null, shaking: false, lastTickTime: now },
     }));
     setGs(prev => ({ ...prev, growthBattles: { ...(prev.growthBattles||{}), [grade]: battleData } }));
     if (user) {
@@ -160,17 +165,20 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
     }
   };
 
-  // 틱 인터벌
+  // 틱 인터벌 — 300ms 폴링, 각 배틀은 lastTickTime 기준으로 독립 틱
   useEffect(() => {
     tickRef.current = setInterval(async () => {
+      const now     = Date.now();
       const current = battlesRef.current;
       const updates = {};
       const clears  = [];
       for (const [grade, b] of Object.entries(current)) {
         if (!b?.active || clearingRef.current.has(grade)) continue;
+        const sinceLastTick = now - (b.lastTickTime || now);
+        if (sinceLastTick < TICK_S * 1000) continue; // 아직 틱 타이밍 아님
         const dmg   = calcTickDmg(b.cardDef.grade, b.cardInst.condition, b.cardInst.enhanceLevel||0, b.bDmg);
         const newHp = Math.max(0, b.hp - dmg);
-        updates[grade] = { ...b, hp: newHp, totalDmg: b.totalDmg + dmg, lastDmg: dmg, shaking: true };
+        updates[grade] = { ...b, hp: newHp, totalDmg: b.totalDmg + dmg, lastDmg: dmg, shaking: true, lastTickTime: now };
         if (newHp === 0) { updates[grade].active = false; clears.push({ grade, battle: b }); }
       }
       if (Object.keys(updates).length > 0) {
@@ -211,10 +219,11 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         if (newCount < MAX_DAILY_GROWTH) {
           const avg   = calcAvgDmg(grade, battle.cardInst.condition, battle.cardInst.enhanceLevel||0, newBonus);
           const maxHp = avg * 1200;
-          const newBD = { cardInstUid: battle.cardInst.uid, cardId: battle.cardInst.id, bDmg: newBonus, maxHp, startTime: Date.now() };
+          const restartNow = Date.now();
+          const newBD = { cardInstUid: battle.cardInst.uid, cardId: battle.cardInst.id, bDmg: newBonus, maxHp, startTime: restartNow };
           setBattles(prev => ({
             ...prev,
-            [grade]: { ...prev[grade], active: true, hp: maxHp, maxHp, bDmg: newBonus, totalDmg: 0, lastDmg: null },
+            [grade]: { ...prev[grade], active: true, hp: maxHp, maxHp, bDmg: newBonus, totalDmg: 0, lastDmg: null, lastTickTime: restartNow },
           }));
           setGs(prev => ({ ...prev, growthBattles: { ...(prev.growthBattles||{}), [grade]: newBD } }));
           if (currentUser) {
@@ -224,7 +233,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         }
         clearingRef.current.delete(grade);
       }
-    }, TICK_S * 1000);
+    }, 300); // 300ms 폴링 — 각 배틀은 자체 lastTickTime으로 TICK_S 간격 유지
     return () => clearInterval(tickRef.current);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -571,6 +580,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
   const [elapsed, setElapsed]             = useState(0);
   const [totalDmg, setTotalDmg]         = useState(0);
   const [dmgFloats, setDmgFloats]       = useState([]);
+  const [bossShaking, setBossShaking]   = useState(false);
   const [reward, setReward]             = useState(null);
   const [toast, setToast]               = useState(null);
   const toastRef    = useRef(null);
@@ -682,6 +692,8 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
               dmg += calcTickDmg(slot.cardDef.grade, slot.inst.condition, slot.inst.enhanceLevel||0, p.bonusDmg[slot.inst.id]||0);
             });
             setTotalDmg(d => d + dmg);
+            setBossShaking(true);
+            setTimeout(() => setBossShaking(false), 500);
             const fid = ++floatIdRef.current;
             setDmgFloats(prev => [...prev, { id: fid, dmg }]);
             setTimeout(() => setDmgFloats(prev => prev.filter(f => f.id !== fid)), 1200);
@@ -895,7 +907,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
           <div className="dg-farm-battle-wrap">
             <div className="dg-boss-section dg-farm-boss-section">
               <div className="dg-boss-img-wrap dg-farm-img-wrap">
-                <img src={FARMING_BOSS_IMG} className="dg-boss-img" alt="boss" />
+                <img src={FARMING_BOSS_IMG} className={`dg-boss-img${bossShaking?' dg-boss-shaking':''}`} alt="boss" />
                 <div className="dg-boss-vignette" />
                 {dmgFloats.map(f => (
                   <div key={f.id} className="dg-dmg-float">-{f.dmg.toLocaleString()}</div>
