@@ -3871,34 +3871,39 @@ body.raid-theme .music-toggle-btn {
   margin-bottom: 8px;
 }
 .farm-sel-hint { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+/* 선택 슬롯: 가로 스크롤 strip */
 .farm-sel-slots {
-  display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px;
-  margin-bottom: 14px;
+  display: flex; flex-direction: row; gap: 8px;
+  overflow-x: auto; padding: 2px 0 10px;
+  scrollbar-width: none; margin-bottom: 6px;
 }
+.farm-sel-slots::-webkit-scrollbar { display: none; }
 .farm-sel-slot {
-  position: relative; border-radius: 10px; overflow: hidden;
-  aspect-ratio: 3/4; border: 1.5px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
+  position: relative; border-radius: 12px; overflow: hidden;
+  width: 68px; height: 90px; flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
 }
-.farm-sel-slot.filled { border-color: rgba(109,40,217,0.6); }
+.farm-sel-slot.filled { border-color: rgba(139,92,246,0.7); box-shadow: 0 0 8px rgba(139,92,246,0.3); }
 .farm-sel-slot img { width: 100%; height: 100%; object-fit: cover; }
 .farm-sel-grade-tag {
   position: absolute; bottom: 0; left: 0; right: 0;
-  font-size: 0.48rem; font-weight: 900; color: white; text-align: center;
-  padding: 2px 0; font-family: 'Nunito', sans-serif;
+  font-size: 0.58rem; font-weight: 900; color: white; text-align: center;
+  padding: 3px 0; font-family: 'Nunito', sans-serif;
 }
 .farm-sel-remove {
-  position: absolute; top: 2px; right: 2px;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: rgba(0,0,0,0.7); border: none; color: white;
-  font-size: 0.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  position: absolute; top: 3px; right: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(0,0,0,0.75); border: none; color: white;
+  font-size: 0.65rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
   line-height: 1;
 }
 .farm-sel-empty {
-  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
 }
 .farm-sel-empty-grade {
-  font-size: 0.55rem; font-weight: 900; font-family: 'Nunito', sans-serif; opacity: 0.5;
+  font-size: 0.62rem; font-weight: 900; font-family: 'Nunito', sans-serif; opacity: 0.55;
 }
 .farm-card-list-title {
   font-size: 0.8rem; color: var(--muted); margin-bottom: 6px;

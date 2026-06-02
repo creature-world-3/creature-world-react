@@ -726,10 +726,14 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
               <div className="farming-done-today">오늘 이미 파밍 던전을 완료했어요. 내일 다시 도전하세요!</div>
             )}
 
+            <div className="farming-boss-preview">
+              <img src={FARMING_BOSS_IMG} alt="파밍 던전 보스" />
+            </div>
+
             {/* 선택된 카드 슬롯 */}
             <div className="farm-sel-header">
               선택된 카드 <span className="farming-slots-count">{selectedCards.length}/6</span>
-              <span className="farm-sel-hint">등급당 1장</span>
+              <span className="farm-sel-hint">등급당 1장 · 탭해서 선택</span>
             </div>
             <div className="farm-sel-slots">
               {GRADES_ALL.map(grade => {
@@ -741,11 +745,12 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
                         <img src={`/${sel.cardDef.img}`} alt={sel.cardDef.name} />
                         <div className="farm-sel-grade-tag" style={{background:GRADE_BG[grade]}}>{GRADE_LABEL[grade]}</div>
                         <button className="farm-sel-remove"
-                          onClick={() => setSelectedCards(prev => prev.filter(s => s.inst.uid !== sel.inst.uid))}>×</button>
+                          onClick={e => { e.stopPropagation(); setSelectedCards(prev => prev.filter(s => s.inst.uid !== sel.inst.uid)); }}>×</button>
                       </>
                     ) : (
                       <div className="farm-sel-empty">
                         <div className="farm-sel-empty-grade" style={{color:GRADE_COLOR[grade]}}>{GRADE_LABEL[grade]}</div>
+                        <div style={{fontSize:'1rem', opacity:0.25}}>+</div>
                       </div>
                     )}
                   </div>
