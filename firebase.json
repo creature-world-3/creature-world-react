@@ -1,5 +1,5 @@
 {
-  "firestore": {
+"firestore": {
     "rules": "firestore.rules"
   },
   "functions": [

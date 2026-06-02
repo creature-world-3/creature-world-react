@@ -716,9 +716,9 @@ export default function App() {
         {showBonusInfo && (
           <div className="modal-overlay show" onClick={() => setShowBonusInfo(false)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
-              <div className="modal-title">레이드 보너스 데미지</div>
+              <div className="modal-title">추가 데미지</div>
               <div style={{ fontSize: '0.85rem', color: '#444', lineHeight: 1.9 }}>
-                보유 카드 종류에 따라 레이드 보너스 데미지가 적용됩니다. (중복 카드는 1종으로 계산)
+                보유 카드 종류에 따라 추가 데미지가 적용됩니다. (중복 카드는 1종으로 계산)
               </div>
               <div className="bonus-info-table">
                 {[

@@ -3866,3 +3866,74 @@ body.raid-theme .music-toggle-btn {
   .growth-grade-grid { grid-template-columns: repeat(3, 1fr); gap: 7px; }
   .farming-slots { grid-template-columns: repeat(3, 1fr); gap: 6px; }
 }
+
+/* ── 던전 페이즈 슬라이드 전환 ── */
+@keyframes dungeonSlideInRight { from { transform:translateX(28px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@keyframes dungeonSlideInLeft  { from { transform:translateX(-28px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+.dungeon-phase-forward { animation: dungeonSlideInRight 0.24s cubic-bezier(.22,.68,0,1.2); }
+.dungeon-phase-back    { animation: dungeonSlideInLeft  0.24s cubic-bezier(.22,.68,0,1.2); }
+
+/* ── 던전 카드 그룹 목록 ── */
+.dungeon-card-group-list { display: flex; flex-direction: column; gap: 8px; }
+.dungeon-card-group {
+  border-radius: 12px; overflow: hidden;
+  background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.07);
+  transition: border-color 0.18s;
+}
+.dungeon-card-group:not(.exhausted):hover { border-color: rgba(109,40,217,0.35); }
+.dungeon-card-group.exhausted { opacity: 0.5; }
+.dungeon-card-group-header {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  cursor: pointer; position: relative;
+}
+.dungeon-card-thumb {
+  width: 54px; height: 72px; border-radius: 8px; overflow: hidden;
+  flex-shrink: 0; position: relative; border: 1.5px solid rgba(255,255,255,0.08);
+}
+.dungeon-card-thumb img { width:100%; height:100%; object-fit:cover; }
+.dungeon-card-group-info { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dungeon-card-group-name { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.dungeon-card-group-dmg  { font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+.dungeon-expand-arrow {
+  font-size: 1.1rem; color: var(--muted); transition: transform 0.2s;
+  flex-shrink: 0; margin-left: auto;
+}
+.dungeon-expand-arrow.open { transform: rotate(90deg); }
+
+/* 인스턴스 펼치기 행 */
+.dungeon-inst-row {
+  display: flex; gap: 8px; padding: 8px 12px 10px;
+  overflow-x: auto; border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.15);
+}
+.dungeon-inst-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer; flex-shrink: 0; animation: instPop 0.2s ease both;
+  padding: 4px; border-radius: 8px; transition: background 0.15s;
+}
+.dungeon-inst-item:hover { background: rgba(109,40,217,0.18); }
+@keyframes instPop { from { transform:scale(0.85); opacity:0; } to { transform:scale(1); opacity:1; } }
+.dungeon-inst-img {
+  width: 52px; height: 68px; border-radius: 8px; overflow: hidden;
+  position: relative; border: 1.5px solid rgba(255,255,255,0.1);
+}
+.dungeon-inst-img img { width:100%; height:100%; object-fit:cover; }
+.dungeon-inst-cond { font-size: 0.62rem; font-weight: 700; }
+.dungeon-inst-dmg  { font-size: 0.6rem; color: var(--muted); font-family: 'Nunito', sans-serif; }
+
+/* 파밍 피커 그룹 */
+.dungeon-picker-group { border-bottom: 1px solid rgba(255,255,255,0.06); }
+.dungeon-picker-group:last-child { border-bottom: none; }
+.dungeon-picker-group-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 8px;
+  cursor: pointer; transition: background 0.15s;
+}
+.dungeon-picker-group-row:hover { background: rgba(255,255,255,0.05); }
+.dungeon-picker-thumb {
+  width: 46px; height: 60px; border-radius: 8px; overflow: hidden;
+  flex-shrink: 0; position: relative;
+}
+.dungeon-picker-thumb img { width:100%; height:100%; object-fit:cover; }
+.dungeon-picker-info { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.dungeon-picker-name { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.dungeon-picker-dmg  { font-size: 0.7rem; color: var(--muted); display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
