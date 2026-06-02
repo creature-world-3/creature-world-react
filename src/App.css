@@ -3674,19 +3674,20 @@ body.raid-theme .music-toggle-btn {
 }
 .dungeon-info-btn:hover { background: #e8f4fd; border-color: #4a9eff; }
 .dungeon-info-sheet {
-  background: var(--card-bg); border-radius: 18px; padding: 22px 20px 14px;
+  background: #fff; border-radius: 18px; padding: 22px 20px 14px;
   width: min(360px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
 }
-.dungeon-info-title { font-size: 1rem; font-weight: 900; color: var(--text); }
-.dungeon-info-body { font-size: 0.85rem; color: var(--muted); line-height: 1.75; margin: 0; }
+.dungeon-info-title { font-size: 1rem; font-weight: 900; color: #1a2a4a; }
+.dungeon-info-body { font-size: 0.85rem; color: #444; line-height: 1.75; margin: 0; }
 .dungeon-info-rewards { display: flex; flex-direction: column; gap: 5px; }
-.dungeon-info-reward-title { font-size: 0.8rem; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+.dungeon-info-reward-title { font-size: 0.8rem; font-weight: 800; color: #1a2a4a; margin-bottom: 3px; }
 .dungeon-info-reward-row {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 0.8rem; color: var(--muted); padding: 7px 11px;
-  background: rgba(255,255,255,0.04); border-radius: 8px;
+  font-size: 0.8rem; color: #555; padding: 7px 11px;
+  background: #f0f6ff; border-radius: 8px;
 }
-.dungeon-info-reward-row span:last-child { color: #4a9eff; font-weight: 700; font-family: 'Nunito', sans-serif; }
+.dungeon-info-reward-row span:last-child { color: #1a6fd4; font-weight: 700; font-family: 'Nunito', sans-serif; }
 .dungeon-nav-row { display: flex; align-items: center; gap: 10px; }
 .dungeon-nav-title { font-size: 0.92rem; font-weight: 700; color: var(--text); }
 .dungeon-back-btn {
@@ -3717,6 +3718,43 @@ body.raid-theme .music-toggle-btn {
   display: flex; flex-direction: column; align-items: center;
 }
 .growth-boss-card:hover:not(.locked) { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(109,40,217,0.4); border-color: rgba(109,40,217,0.7); }
+.growth-boss-card.gbc-active { border-color: rgba(255,200,50,0.6); box-shadow: 0 0 12px rgba(255,200,50,0.25); }
+/* 보스 흔들기 */
+.gbc-shaking { animation: dgBossShake 0.55s cubic-bezier(.36,.07,.19,.97) both; }
+/* HP 바 오버레이 */
+.gbc-hp-wrap {
+  position: absolute; bottom: 28px; left: 6px; right: 6px; z-index: 3;
+}
+.gbc-hp-bar { height: 5px; background: rgba(0,0,0,0.5); border-radius: 99px; overflow: hidden; }
+.gbc-hp-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+/* 도전 횟수 도트 */
+.gbc-attempts {
+  position: absolute; bottom: 6px; left: 0; right: 0;
+  display: flex; justify-content: center; gap: 4px; z-index: 3;
+}
+.gbc-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.3);
+}
+.gbc-dot.used { background: #fbbf24; border-color: #fbbf24; }
+/* 상태 배지 */
+.gbc-status-badge {
+  position: absolute; top: 6px; left: 6px; z-index: 4;
+  font-size: 0.55rem; font-weight: 900; padding: 2px 7px; border-radius: 99px; color: white;
+}
+.gbc-fighting { background: rgba(255,80,80,0.9); animation: gfightPulse 1s ease-in-out infinite; }
+@keyframes gfightPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.gbc-done { background: rgba(100,180,100,0.9); }
+/* 마지막 데미지 */
+.gbc-last-dmg {
+  position: absolute; top: 35%; left: 50%; transform: translateX(-50%); z-index: 5;
+  font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.1rem;
+  text-shadow: 0 0 8px currentColor, 0 1px 4px rgba(0,0,0,0.9);
+  white-space: nowrap; pointer-events: none;
+  animation: dgDmgFloat 1.2s cubic-bezier(.2,.8,.3,1) forwards;
+}
+/* 힌트 */
+.gbc-hint { font-size: 0.72rem; color: var(--muted); text-align: center; padding: 4px 0; }
 .growth-boss-card.locked { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6); }
 .growth-boss-img-wrap { width: 100%; flex: 1; overflow: hidden; }
 .growth-boss-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
@@ -3879,11 +3917,9 @@ body.raid-theme .music-toggle-btn {
 }
 .farming-slot-back-inner {
   position: relative; z-index: 1;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-.farming-slot-back-logo { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 0.78rem; color: rgba(255,255,255,0.85); letter-spacing: 2px; }
-.farming-slot-grade-label { font-size: 0.7rem; font-weight: 800; text-align: center; }
-.farming-slot-plus { font-size: 1.4rem; color: rgba(255,255,255,0.8); line-height: 1; }
+.farming-slot-plus { font-size: 1.8rem; color: rgba(255,255,255,0.85); line-height: 1; font-weight: 300; }
 
 /* 앞면: 선택된 카드 */
 .farming-slot-front {

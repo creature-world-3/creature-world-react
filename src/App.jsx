@@ -575,9 +575,15 @@ export default function App() {
             hasUnreadMail={hasUnreadMail}
           />
           <div className="tab-slide-wrapper">
-            <div key={activeTab} className={slideDir ? `tab-slide-${slideDir}` : undefined}>
-              {TABS[activeTab]}
+            {/* DungeonTab 항상 마운트 유지 → 탭 이동해도 자동사냥 상태 유지 */}
+            <div style={{display: activeTab === 'dungeon' ? 'block' : 'none'}}>
+              <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} musicOn={musicOn} />
             </div>
+            {activeTab !== 'dungeon' && (
+              <div key={activeTab} className={slideDir ? `tab-slide-${slideDir}` : undefined}>
+                {TABS[activeTab]}
+              </div>
+            )}
           </div>
           <Footer />
         </div>

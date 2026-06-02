@@ -75,35 +75,23 @@ function groupByType(cards, bonusDmg) {
 }
 
 // ══════════════════════════════════════
-// 성장 던전
+// 성장 던전 — 등급별 동시 자동사냥
 // ══════════════════════════════════════
 function GrowthDungeon({ gs, setGs, user, isGuest }) {
-  const [phase, setPhase]               = useState('grade');
-  const [slideClass, setSlideClass]     = useState('');
+  // battles[grade] = { active, hp, maxHp, cardInst, cardDef, bDmg, totalDmg, lastDmg, shaking }
+  const [battles, setBattles]           = useState({});
+  const [toast, setToast]               = useState(null);
   const [growthInfoOpen, setGrowthInfoOpen] = useState(false);
-  const [selGrade, setSelGrade]         = useState(null);
-  const [expandedId, setExpandedId]     = useState(null);
-  const [selInst, setSelInst]           = useState(null);
-  const [selDef,  setSelDef]            = useState(null);
-  const [hp,      setHp]                = useState(0);
-  const [maxHp,   setMaxHp]             = useState(0);
-  const [totalDmg,setTotalDmg]          = useState(0);
-  const [tickDmg, setTickDmg]           = useState(null);
-  const [dmgFloats, setDmgFloats]       = useState([]);
-  const [shaking,   setShaking]         = useState(false);
-  const [toast,   setToast]             = useState(null);
-  const [saving,  setSaving]            = useState(false);
-  const tickRef    = useRef(null);
   const toastRef   = useRef(null);
-  const clearedRef = useRef(false);
-  const selInstRef = useRef(null);
-  const selDefRef  = useRef(null);
-  const bonusRef   = useRef({});
-  const floatIdRef = useRef(0);
+  const tickRef    = useRef(null);
+  const gsRef      = useRef(gs);
+  const userRef    = useRef(user);
+  const battlesRef = useRef({});
+  const clearingRef = useRef(new Set());
 
-  useEffect(() => { selInstRef.current = selInst; }, [selInst]);
-  useEffect(() => { selDefRef.current  = selDef;  }, [selDef]);
-  useEffect(() => { bonusRef.current   = gs?.cardBonusDmg || {}; }, [gs?.cardBonusDmg]);
+  useEffect(() => { gsRef.current = gs; }, [gs]);
+  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => { battlesRef.current = battles; }, [battles]);
 
   const showToast = (msg) => {
     clearTimeout(toastRef.current);
@@ -111,120 +99,115 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
     toastRef.current = setTimeout(() => setToast(null), 2500);
   };
 
-  const goPhase = (next, dir = 'forward') => {
-    setPhase(next);
-    const cls = dir === 'forward' ? ' dungeon-slide-right' : ' dungeon-slide-left';
-    setSlideClass(cls);
-    setTimeout(() => setSlideClass(''), 320);
-  };
-
-  const today    = todayKST();
-  const bonusDmg = gs?.cardBonusDmg || {};
-  const attempts = gs?.dungeonAttempts || {};
+  const today = todayKST();
+  const bonusDmg  = gs?.cardBonusDmg || {};
   const lockedUid = gs?.raidCard?.uid;
   const ownedCards = (gs?.ownedCards||[]).filter(c => c.uid !== lockedUid);
 
   const getAttempts = (cardId) => {
-    const a = attempts[cardId];
-    return (!a || a.date !== today) ? 0 : (a.count||0);
+    const a = gsRef.current?.dungeonAttempts?.[cardId];
+    return (!a || a.date !== todayKST()) ? 0 : (a.count||0);
   };
 
-  const handleGradeClick = (grade) => {
+  // 등급별 최고 데미지 카드 찾기
+  const getBestCard = (grade) => {
+    const bDmg = gsRef.current?.cardBonusDmg || {};
+    const gradeCards = ownedCards.filter(oc => CARDS.find(c=>c.id===oc.id)?.grade===grade);
+    if (gradeCards.length === 0) return null;
+    return gradeCards.reduce((best, oc) => {
+      const def = CARDS.find(c=>c.id===oc.id);
+      if (!def) return best;
+      const b = bDmg[oc.id]||0;
+      const dmg = calcAvgDmg(grade, oc.condition, oc.enhanceLevel||0, b);
+      return (!best || dmg > best.dmg) ? { inst: oc, def, dmg, bDmg: b } : best;
+    }, null);
+  };
+
+  const startBattle = (grade) => {
     if (isGuest) { showToast('로그인이 필요합니다'); return; }
-    const has = ownedCards.some(oc => CARDS.find(c=>c.id===oc.id)?.grade===grade);
-    if (!has) { showToast(`${GRADE_LABEL[grade]} 등급 카드가 없어요!`); return; }
-    setSelGrade(grade);
-    setExpandedId(null);
-    goPhase('card', 'forward');
-  };
-
-  const handleCardTypeClick = (groupId) => {
-    setExpandedId(prev => prev === groupId ? null : groupId);
-  };
-
-  const handleInstSelect = (inst) => {
-    const def = CARDS.find(c=>c.id===inst.id);
-    if (!def) return;
-    const att = getAttempts(inst.id);
-    if (att >= MAX_DAILY_GROWTH) { showToast('오늘 이 카드의 도전 횟수를 다 사용했어요!'); return; }
-    const bDmg = bonusDmg[inst.id]||0;
-    const avg  = calcAvgDmg(def.grade, inst.condition, inst.enhanceLevel||0, bDmg);
-    clearedRef.current = false;
-    setSelInst(inst);
-    setSelDef(def);
-    setHp(avg * 1200);
-    setMaxHp(avg * 1200);
-    setTotalDmg(0);
-    setTickDmg(null);
-    setDmgFloats([]);
-    goPhase('battle', 'forward');
-  };
-
-  useEffect(() => {
-    if (phase !== 'battle') { clearInterval(tickRef.current); return; }
-    tickRef.current = setInterval(() => {
-      const inst = selInstRef.current;
-      const def  = selDefRef.current;
-      if (!inst || !def) return;
-      const bDmg = bonusRef.current[inst.id]||0;
-      const dmg  = calcTickDmg(def.grade, inst.condition, inst.enhanceLevel||0, bDmg);
-      setTickDmg(dmg);
-      setTotalDmg(p => p + dmg);
-      setHp(p => Math.max(0, p - dmg));
-      // 플로팅 데미지
-      const fid = ++floatIdRef.current;
-      setDmgFloats(prev => [...prev, { id: fid, dmg }]);
-      setTimeout(() => setDmgFloats(prev => prev.filter(f => f.id !== fid)), 1200);
-      // 보스 흔들기
-      setShaking(true);
-      setTimeout(() => setShaking(false), 550);
-    }, TICK_S * 1000);
-    return () => clearInterval(tickRef.current);
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase === 'battle' && hp === 0 && maxHp > 0 && !clearedRef.current) {
-      clearedRef.current = true;
-      clearInterval(tickRef.current);
-      handleClear();
-    }
-  }, [hp, phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleClear = async () => {
-    goPhase('clear', 'forward');
-    const inst = selInstRef.current;
-    if (!user || !inst) return;
-    setSaving(true);
-    const cardId   = inst.id;
-    const newCount = getAttempts(cardId) + 1;
-    const newBonus = (bonusDmg[cardId]||0) + 1;
-    setGs(prev => ({
+    const best = getBestCard(grade);
+    if (!best) { showToast(`${GRADE_LABEL[grade]} 등급 카드가 없어요!`); return; }
+    const att = getAttempts(best.inst.id);
+    if (att >= MAX_DAILY_GROWTH) { showToast('오늘 이 등급의 도전 횟수를 다 사용했어요!'); return; }
+    const maxHp = best.dmg * 1200;
+    setBattles(prev => ({
       ...prev,
-      cardBonusDmg:    { ...(prev.cardBonusDmg||{}),    [cardId]: newBonus },
-      dungeonAttempts: { ...(prev.dungeonAttempts||{}), [cardId]: { count: newCount, date: today } },
+      [grade]: { active: true, hp: maxHp, maxHp, cardInst: best.inst, cardDef: best.def, bDmg: best.bDmg, totalDmg: 0, lastDmg: null, shaking: false },
     }));
-    try {
-      await updateDoc(doc(db,'users',user.uid), {
-        [`cardBonusDmg.${cardId}`]:    newBonus,
-        [`dungeonAttempts.${cardId}`]: { count: newCount, date: today },
-      });
-    } catch(e) { console.error('[growth clear]', e); }
-    setSaving(false);
   };
 
-  const reset = () => {
-    clearInterval(tickRef.current);
-    clearedRef.current = false;
-    setExpandedId(null);
-    setSelInst(null); setSelDef(null);
-    setHp(0); setMaxHp(0); setTotalDmg(0); setTickDmg(null);
-    setDmgFloats([]); setShaking(false);
-    goPhase('grade', 'back');
-  };
+  // 단일 틱 인터벌 — 모든 활성 전투 처리
+  useEffect(() => {
+    tickRef.current = setInterval(async () => {
+      const current = battlesRef.current;
+      const updates = {};
+      const clears = [];
 
-  const gradeGroups = selGrade
-    ? groupByType(ownedCards.filter(oc => CARDS.find(c=>c.id===oc.id)?.grade===selGrade), bonusDmg)
-    : [];
+      for (const [grade, b] of Object.entries(current)) {
+        if (!b?.active || clearingRef.current.has(grade)) continue;
+        const dmg = calcTickDmg(b.cardDef.grade, b.cardInst.condition, b.cardInst.enhanceLevel||0, b.bDmg);
+        const newHp = Math.max(0, b.hp - dmg);
+        updates[grade] = { ...b, hp: newHp, totalDmg: b.totalDmg + dmg, lastDmg: dmg, shaking: true };
+        if (newHp === 0) {
+          updates[grade].active = false;
+          clears.push({ grade, battle: b });
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        setBattles(prev => ({ ...prev, ...updates }));
+        // 흔들림 해제
+        setTimeout(() => {
+          setBattles(prev => {
+            const reset = {};
+            for (const g of Object.keys(updates)) reset[g] = prev[g] ? { ...prev[g], shaking: false } : prev[g];
+            return { ...prev, ...reset };
+          });
+        }, 500);
+      }
+
+      // 클리어 처리
+      for (const { grade, battle } of clears) {
+        clearingRef.current.add(grade);
+        const currentGs  = gsRef.current;
+        const currentUser = userRef.current;
+        const t = todayKST();
+        const cardId = battle.cardInst.id;
+        const a = currentGs?.dungeonAttempts?.[cardId];
+        const att = (!a || a.date !== t) ? 0 : (a.count||0);
+        const newCount = att + 1;
+        const oldBonus = currentGs?.cardBonusDmg?.[cardId] || 0;
+        const newBonus = oldBonus + 1;
+
+        setGs(prev => ({
+          ...prev,
+          cardBonusDmg:    { ...(prev.cardBonusDmg||{}),    [cardId]: newBonus },
+          dungeonAttempts: { ...(prev.dungeonAttempts||{}), [cardId]: { count: newCount, date: t } },
+        }));
+
+        if (currentUser) {
+          try {
+            await updateDoc(doc(db,'users',currentUser.uid), {
+              [`cardBonusDmg.${cardId}`]:    newBonus,
+              [`dungeonAttempts.${cardId}`]: { count: newCount, date: t },
+            });
+          } catch(e) { console.error('[growth clear]', e); }
+        }
+
+        if (newCount < MAX_DAILY_GROWTH) {
+          const avg = calcAvgDmg(grade, battle.cardInst.condition, battle.cardInst.enhanceLevel||0, newBonus);
+          const maxHp = avg * 1200;
+          setBattles(prev => ({
+            ...prev,
+            [grade]: { ...prev[grade], active: true, hp: maxHp, maxHp, bDmg: newBonus, totalDmg: 0, lastDmg: null },
+          }));
+        }
+        clearingRef.current.delete(grade);
+      }
+    }, TICK_S * 1000);
+
+    return () => clearInterval(tickRef.current);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="dungeon-sub-wrap">
@@ -240,182 +223,81 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         </div>
       )}
 
-      <div className={`dungeon-sub-content${slideClass}`}>
+      <div className="dungeon-section-header">
+        <div className="dungeon-section-title">성장 던전</div>
+        <button className="dungeon-info-btn" onClick={() => setGrowthInfoOpen(true)}>설명</button>
+      </div>
 
-        {/* ── 등급 선택 ── */}
-        {phase === 'grade' && (
-          <>
-            <div className="dungeon-section-header">
-              <div className="dungeon-section-title">성장 던전</div>
-              <button className="dungeon-info-btn" onClick={() => setGrowthInfoOpen(true)}>설명</button>
-            </div>
-            <div className="growth-grade-grid">
-              {GRADES_ALL.map(grade => {
-                const hasCards = !isGuest && ownedCards.some(oc=>CARDS.find(c=>c.id===oc.id)?.grade===grade);
-                return (
-                  <div key={grade} className={`growth-boss-card${hasCards?'':' locked'}`} onClick={() => handleGradeClick(grade)}>
-                    <div className="growth-boss-img-wrap">
-                      <img src={GROWTH_BOSS_IMG[grade]} alt={GRADE_LABEL[grade]} />
-                    </div>
-                    <div className="growth-boss-grade-tag" style={{ background: GRADE_BG[grade] }}>
-                      {GRADE_LABEL[grade]}
-                    </div>
-                    {!hasCards && <div className="growth-boss-lock">카드 없음</div>}
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+      <div className="growth-grade-grid">
+        {GRADES_ALL.map(grade => {
+          const hasCards = !isGuest && ownedCards.some(oc=>CARDS.find(c=>c.id===oc.id)?.grade===grade);
+          const battle   = battles[grade];
+          const bestCard = hasCards ? getBestCard(grade) : null;
+          const att      = bestCard ? getAttempts(bestCard.inst.id) : 0;
+          const allDone  = hasCards && att >= MAX_DAILY_GROWTH;
+          const isActive = battle?.active;
+          const hpPct    = battle ? (battle.hp / battle.maxHp) * 100 : 100;
+          const gc       = GRADE_COLOR[grade];
 
-        {/* ── 카드 선택 ── */}
-        {phase === 'card' && (
-          <>
-            <div className="dungeon-nav-row">
-              <button className="dungeon-back-btn" onClick={() => { setExpandedId(null); goPhase('grade','back'); }}>← 뒤로</button>
-              <span className="dungeon-nav-title">{GRADE_LABEL[selGrade]} 등급 카드 선택</span>
-            </div>
-            <div className="dungeon-card-group-list">
-              {gradeGroups.map(({ def, instances, bestDmg }) => {
-                const bDmg    = bonusDmg[def.id]||0;
-                const att     = getAttempts(def.id);
-                const left    = MAX_DAILY_GROWTH - att;
-                const allDone = left <= 0;
-                const isExpanded = expandedId === def.id;
-                return (
-                  <div key={def.id} className={`dungeon-card-group${allDone?' exhausted':''}`}>
-                    <div className="dungeon-card-group-header" onClick={() => !allDone && handleCardTypeClick(def.id)}>
-                      <div className={`dungeon-card-thumb grade-${def.grade}`}>
-                        <img src={`/${def.img}`} alt={def.name} />
-                        {instances.length > 1 && <div className="dup">×{instances.length}</div>}
-                        {(instances[0].enhanceLevel||0) > 0 && <div className="enhance-badge-card">+{instances[0].enhanceLevel}</div>}
-                      </div>
-                      <div className="dungeon-card-group-info">
-                        <div className="dungeon-card-group-name">{def.name}</div>
-                        <div className="dungeon-card-group-dmg">
-                          평균 데미지 <strong>{bestDmg}</strong>
-                          {bDmg > 0 && <span className="growth-bonus-tag" style={{marginLeft:5}}>성장 +{bDmg}</span>}
-                        </div>
-                        <div className="growth-attempts-row" style={{marginTop:3}}>
-                          {[...Array(MAX_DAILY_GROWTH)].map((_,i)=>(
-                            <span key={i} className={`growth-dot${i<att?' used':''}`} />
-                          ))}
-                          <span className="growth-att-label">{allDone?'오늘 완료':`${left}번 남음`}</span>
-                        </div>
-                      </div>
-                      <div className={`dungeon-expand-arrow${isExpanded?' open':''}`}>›</div>
-                      {allDone && <div className="growth-exhausted-badge">완료</div>}
-                    </div>
-                    {isExpanded && (
-                      <div className="dungeon-inst-row">
-                        {instances.map((inst, i) => {
-                          const cond = inst.condition||1;
-                          const enh  = inst.enhanceLevel||0;
-                          const cc   = cond>=9?'#d97706':cond>=6?'#7c3aed':'#888';
-                          const dmg  = calcAvgDmg(def.grade, cond, enh, bDmg);
-                          return (
-                            <div key={inst.uid} className="dungeon-inst-item" style={{animationDelay:`${i*50}ms`}}
-                              onClick={() => handleInstSelect(inst)}>
-                              <div className="dungeon-inst-img">
-                                <img src={`/${def.img}`} alt={def.name} />
-                                {enh > 0 && <div className="inst-item-badge">+{enh}</div>}
-                              </div>
-                              <div className="dungeon-inst-cond" style={{color:cc}}>컨디션 {cond}</div>
-                              <div className="dungeon-inst-dmg">평균 {dmg}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* ── 전투 (레이드 스타일) ── */}
-        {phase === 'battle' && selDef && selInst && (() => {
-          const bDmg  = bonusDmg[selInst.id]||0;
-          const hpPct = maxHp > 0 ? (hp/maxHp)*100 : 0;
-          const gc    = GRADE_COLOR[selDef.grade];
           return (
-            <div className="dg-battle-wrap">
-              {/* 보스 섹션 */}
-              <div className="dg-boss-section" style={{ borderColor: gc + '55', boxShadow: `0 4px 28px ${gc}22` }}>
-                <div className="dg-boss-img-wrap">
-                  <img
-                    src={GROWTH_BOSS_IMG[selDef.grade]}
-                    className={`dg-boss-img${shaking?' dg-boss-shaking':''}`}
-                    alt="boss"
-                  />
-                  <div className="dg-boss-vignette" />
-                  {dmgFloats.map(f => (
-                    <div key={f.id} className="dg-dmg-float" style={{ color: gc }}>
-                      -{f.dmg.toLocaleString()}
-                    </div>
+            <div
+              key={grade}
+              className={`growth-boss-card${hasCards&&!allDone?'':' locked'}${isActive?' gbc-active':''}`}
+              onClick={() => !allDone && startBattle(grade)}
+            >
+              <div className="growth-boss-img-wrap">
+                <img
+                  src={GROWTH_BOSS_IMG[grade]}
+                  alt={GRADE_LABEL[grade]}
+                  className={battle?.shaking ? 'gbc-shaking' : ''}
+                />
+              </div>
+
+              {/* HP 진행 바 */}
+              {battle && (
+                <div className="gbc-hp-wrap">
+                  <div className="gbc-hp-bar">
+                    <div className="gbc-hp-fill" style={{ width:`${hpPct}%`, background: gc }} />
+                  </div>
+                </div>
+              )}
+
+              <div className="growth-boss-grade-tag" style={{ background: GRADE_BG[grade] }}>
+                {GRADE_LABEL[grade]}
+              </div>
+
+              {/* 도전 횟수 도트 */}
+              {hasCards && (
+                <div className="gbc-attempts">
+                  {[...Array(MAX_DAILY_GROWTH)].map((_,i) => (
+                    <span key={i} className={`gbc-dot${i<att?' used':''}`} />
                   ))}
                 </div>
-                <div className="dg-boss-info">
-                  <div className="dg-boss-name" style={{ color: gc }}>
-                    {GRADE_LABEL[selDef.grade]} 보스
-                  </div>
-                  <div className="dg-hp-row">
-                    <span className="dg-hp-label">HP</span>
-                    <span className="dg-hp-num">{hp.toLocaleString()} / {maxHp.toLocaleString()}</span>
-                  </div>
-                  <div className="dg-hp-bar">
-                    <div className="dg-hp-fill" style={{ width:`${hpPct}%`, background: gc, boxShadow: `0 0 8px ${gc}` }} />
-                  </div>
-                </div>
-              </div>
+              )}
 
-              {/* 내 카드 */}
-              <div className="dg-my-card" style={{ borderColor: gc + '44' }}>
-                <div className="dg-my-label">
-                  <span className="dg-tick-dot" style={{ background: gc, boxShadow: `0 0 6px ${gc}` }} />
-                  출격 카드
+              {/* 상태 배지 */}
+              {isActive && (
+                <div className="gbc-status-badge gbc-fighting">전투 중</div>
+              )}
+              {allDone && (
+                <div className="gbc-status-badge gbc-done">완료</div>
+              )}
+              {!hasCards && (
+                <div className="growth-boss-lock">카드 없음</div>
+              )}
+
+              {/* 마지막 데미지 */}
+              {isActive && battle.lastDmg != null && (
+                <div className="gbc-last-dmg" key={battle.totalDmg} style={{ color: gc }}>
+                  -{battle.lastDmg.toLocaleString()}
                 </div>
-                <div className="dg-my-row">
-                  <div className={`dg-my-img grade-${selDef.grade}`}>
-                    <img src={`/${selDef.img}`} alt={selDef.name} />
-                    {(selInst.enhanceLevel||0) > 0 && <div className="enhance-badge-card">+{selInst.enhanceLevel}</div>}
-                  </div>
-                  <div className="dg-my-details">
-                    <div className="dg-my-name">{selDef.name}</div>
-                    <div className="dg-my-stat">컨디션 <strong style={{color:gc}}>{selInst.condition}</strong></div>
-                    <div className="dg-my-stat">데미지/틱 <strong style={{color:gc}}>{dmgRangeStr(selDef.grade,selInst.condition,selInst.enhanceLevel||0,bDmg)}</strong></div>
-                    {bDmg > 0 && <div className="dg-my-bonus">성장 보너스 +{bDmg}</div>}
-                    <div className="dg-my-total">누적 데미지 <strong style={{color:'#fbbf24'}}>{totalDmg.toLocaleString()}</strong></div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           );
-        })()}
-
-        {/* ── 클리어 ── */}
-        {phase === 'clear' && selDef && selInst && (
-          <div className="growth-clear-wrap">
-            <div className="growth-clear-glow" />
-            <div className="growth-clear-title">던전 클리어!</div>
-            <div className={`growth-clear-card-img grade-${selDef.grade}`}>
-              <img src={`/${selDef.img}`} alt={selDef.name} />
-            </div>
-            <div className="growth-clear-reward-box">
-              <div className="growth-clear-card-name">{selDef.name}</div>
-              <div className="growth-clear-reward-text">기본 데미지 <span className="growth-clear-plus">+1</span> 영구 상승!</div>
-              <div className="growth-clear-bonus-now">
-                현재 성장 보너스&nbsp;
-                <strong style={{color:'#fbbf24'}}>+{(gs?.cardBonusDmg||{})[selInst.id]||0}</strong>
-              </div>
-            </div>
-            {saving && <div className="growth-saving">저장 중...</div>}
-            <button className="dungeon-primary-btn" onClick={reset}>다른 던전 도전하기</button>
-          </div>
-        )}
-
+        })}
       </div>
+
+      <div className="gbc-hint">보스를 눌러 자동 전투 시작 · 등급별 동시 진행 가능</div>
     </div>
   );
 }
@@ -459,7 +341,6 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
   const ownedCards = (gs?.ownedCards||[]).filter(c => c.uid !== lockedUid);
 
   const selectedSlots = Object.values(slots).filter(Boolean);
-  const canStart = selectedSlots.length >= 5 && !doneToday && !isGuest;
 
   const handleSlotClick = (grade) => {
     if (isGuest) { showToast('로그인이 필요합니다'); return; }
@@ -485,7 +366,9 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
   };
 
   const handleStart = () => {
-    if (!canStart) return;
+    if (isGuest) { showToast('로그인이 필요합니다'); return; }
+    if (doneToday) { showToast('오늘은 이미 파밍 던전을 완료했어요'); return; }
+    if (selectedSlots.length === 0) { showToast('카드를 선택해주세요'); return; }
     battleRef.current = { slots: { ...slots }, bonusDmg: { ...bonusDmg } };
     setElapsed(0); setTotalDmg(0); setTickDmg(null); setDmgFloats([]);
     goPhase('battle', 'forward');
@@ -506,7 +389,6 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
             });
             setTickDmg(dmg);
             setTotalDmg(d => d + dmg);
-            // 플로팅 데미지
             const fid = ++floatIdRef.current;
             setDmgFloats(prev => [...prev, { id: fid, dmg }]);
             setTimeout(() => setDmgFloats(prev => prev.filter(f => f.id !== fid)), 1200);
@@ -548,7 +430,6 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
     ? groupByType(ownedCards.filter(oc => CARDS.find(c=>c.id===oc.id)?.grade===pickGrade), bonusDmg)
     : [];
 
-  // 현재 보상 티어
   const currentTier = FARM_REWARDS.find(r => totalDmg >= r.min) || FARM_REWARDS[FARM_REWARDS.length-1];
   const nextTier    = totalDmg < FARM_REWARDS[0].min
     ? FARM_REWARDS.slice().reverse().find(r => r.min > totalDmg)
@@ -562,7 +443,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
         <div className="card-zoom-overlay" onClick={() => setFarmInfoOpen(false)}>
           <div className="dungeon-info-sheet" onClick={e => e.stopPropagation()}>
             <div className="dungeon-info-title">파밍 던전 안내</div>
-            <p className="dungeon-info-body">6가지 등급 중 각 등급별 1장씩 총 5장의 카드를 선택해 10분간 자동 전투를 진행합니다. 10분 후 누적 데미지에 따라 뽑기권을 획득할 수 있습니다.</p>
+            <p className="dungeon-info-body">등급별로 카드를 선택해 10분간 자동 전투를 진행합니다. 10분 후 누적 데미지에 따라 뽑기권을 획득할 수 있습니다.</p>
             <div className="dungeon-info-rewards">
               <div className="dungeon-info-reward-title">보상 기준</div>
               <div className="dungeon-info-reward-row"><span>0 ~ 1만 데미지</span><span>뽑기권 20장</span></div>
@@ -654,7 +535,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
               <img src={FARMING_BOSS_IMG} alt="파밍 던전 보스" />
             </div>
             <div className="farming-slots-title">
-              참여 카드 선택 <span className="farming-slots-count">{selectedSlots.length}/5</span>
+              참여 카드 선택 <span className="farming-slots-count">{selectedSlots.length}/6</span>
             </div>
             <div className="farming-slots">
               {GRADES_ALL.map(grade => {
@@ -668,8 +549,6 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
                     <div className="farming-slot-inner">
                       <div className="farming-slot-back">
                         <div className="farming-slot-back-inner">
-                          <div className="farming-slot-back-logo">CW</div>
-                          <div className="farming-slot-grade-label" style={{color:GRADE_COLOR[grade]}}>{GRADE_LABEL[grade]}</div>
                           <div className="farming-slot-plus">{hasCards?'+':'—'}</div>
                         </div>
                       </div>
@@ -686,9 +565,13 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
                 );
               })}
             </div>
-            <button className="dungeon-primary-btn" onClick={handleStart} disabled={!canStart}
-              style={!canStart?{opacity:0.45,cursor:'not-allowed'}:{}}>
-              {isGuest?'로그인이 필요합니다':doneToday?'오늘 완료':selectedSlots.length<5?`카드 ${5-selectedSlots.length}장 더 선택`:'입장하기'}
+            <button
+              className="dungeon-primary-btn"
+              onClick={handleStart}
+              disabled={doneToday}
+              style={doneToday?{opacity:0.45,cursor:'not-allowed'}:{}}
+            >
+              {isGuest ? '로그인이 필요합니다' : doneToday ? '오늘 완료' : '시작하기'}
             </button>
           </>
         )}
@@ -696,7 +579,6 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
         {/* ── 전투 (레이드 스타일) ── */}
         {phase === 'battle' && (
           <div className="dg-farm-battle-wrap">
-            {/* 보스 섹션 */}
             <div className="dg-boss-section dg-farm-boss-section">
               <div className="dg-boss-img-wrap dg-farm-img-wrap">
                 <img src={FARMING_BOSS_IMG} className="dg-boss-img" alt="boss" />
@@ -726,10 +608,9 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
               </div>
             </div>
 
-            {/* 참여 카드 */}
             <div className="dg-farm-cards-section">
               <div className="dg-my-label">
-                <span className="dg-tick-dot" style={{background:'#4a9eff', boxShadow:'0 0 6px #4a9eff'}} />
+                <span className="dg-tick-dot" style={{background:'#4a9eff',boxShadow:'0 0 6px #4a9eff'}} />
                 출격 카드
               </div>
               <div className="dg-farm-cards">
@@ -834,10 +715,9 @@ export default function DungeonTab({ gs, setGs, user, isGuest, musicOn }) {
         <button className={`subtab-btn${subTab==='growth'?' active':''}`} onClick={()=>switchSubTab('growth')}>성장 던전</button>
         <button className={`subtab-btn${subTab==='farming'?' active':''}`} onClick={()=>switchSubTab('farming')}>파밍 던전</button>
       </div>
-      {/* 두 컴포넌트 항상 마운트 유지 → 탭 전환해도 상태 초기화 안됨 */}
       <div className={`subtab-content${slideClass}`}>
         <div style={{display: subTab==='growth' ? 'block' : 'none'}}>
-          <GrowthDungeon  gs={gs} setGs={setGs} user={user} isGuest={isGuest} />
+          <GrowthDungeon gs={gs} setGs={setGs} user={user} isGuest={isGuest} />
         </div>
         <div style={{display: subTab==='farming' ? 'block' : 'none'}}>
           <FarmingDungeon gs={gs} setGs={setGs} user={user} isGuest={isGuest} />
