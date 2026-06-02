@@ -51,7 +51,6 @@ function fmtTime(s) {
   return `${m}:${String(sec).padStart(2,'0')}`;
 }
 
-// 카드를 종류별로 묶고, 최종 데미지 높은 순 정렬
 function groupByType(cards, bonusDmg) {
   const map = {};
   for (const inst of cards) {
@@ -79,25 +78,28 @@ function groupByType(cards, bonusDmg) {
 // 성장 던전
 // ══════════════════════════════════════
 function GrowthDungeon({ gs, setGs, user, isGuest }) {
-  const [phase, setPhase]           = useState('grade');
-  const [slideClass, setSlideClass] = useState('');
+  const [phase, setPhase]               = useState('grade');
+  const [slideClass, setSlideClass]     = useState('');
   const [growthInfoOpen, setGrowthInfoOpen] = useState(false);
-  const [selGrade, setSelGrade] = useState(null);
-  const [expandedId, setExpandedId] = useState(null); // 펼쳐진 카드 타입 id
-  const [selInst, setSelInst]   = useState(null);
-  const [selDef,  setSelDef]    = useState(null);
-  const [hp,      setHp]        = useState(0);
-  const [maxHp,   setMaxHp]     = useState(0);
-  const [totalDmg,setTotalDmg]  = useState(0);
-  const [tickDmg, setTickDmg]   = useState(null);
-  const [toast,   setToast]     = useState(null);
-  const [saving,  setSaving]    = useState(false);
+  const [selGrade, setSelGrade]         = useState(null);
+  const [expandedId, setExpandedId]     = useState(null);
+  const [selInst, setSelInst]           = useState(null);
+  const [selDef,  setSelDef]            = useState(null);
+  const [hp,      setHp]                = useState(0);
+  const [maxHp,   setMaxHp]             = useState(0);
+  const [totalDmg,setTotalDmg]          = useState(0);
+  const [tickDmg, setTickDmg]           = useState(null);
+  const [dmgFloats, setDmgFloats]       = useState([]);
+  const [shaking,   setShaking]         = useState(false);
+  const [toast,   setToast]             = useState(null);
+  const [saving,  setSaving]            = useState(false);
   const tickRef    = useRef(null);
   const toastRef   = useRef(null);
   const clearedRef = useRef(false);
   const selInstRef = useRef(null);
   const selDefRef  = useRef(null);
   const bonusRef   = useRef({});
+  const floatIdRef = useRef(0);
 
   useEffect(() => { selInstRef.current = selInst; }, [selInst]);
   useEffect(() => { selDefRef.current  = selDef;  }, [selDef]);
@@ -154,10 +156,10 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
     setMaxHp(avg * 1200);
     setTotalDmg(0);
     setTickDmg(null);
+    setDmgFloats([]);
     goPhase('battle', 'forward');
   };
 
-  // 전투 틱
   useEffect(() => {
     if (phase !== 'battle') { clearInterval(tickRef.current); return; }
     tickRef.current = setInterval(() => {
@@ -169,6 +171,13 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
       setTickDmg(dmg);
       setTotalDmg(p => p + dmg);
       setHp(p => Math.max(0, p - dmg));
+      // 플로팅 데미지
+      const fid = ++floatIdRef.current;
+      setDmgFloats(prev => [...prev, { id: fid, dmg }]);
+      setTimeout(() => setDmgFloats(prev => prev.filter(f => f.id !== fid)), 1200);
+      // 보스 흔들기
+      setShaking(true);
+      setTimeout(() => setShaking(false), 550);
     }, TICK_S * 1000);
     return () => clearInterval(tickRef.current);
   }, [phase]);
@@ -179,7 +188,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
       clearInterval(tickRef.current);
       handleClear();
     }
-  }, [hp, phase]);
+  }, [hp, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClear = async () => {
     goPhase('clear', 'forward');
@@ -209,10 +218,10 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
     setExpandedId(null);
     setSelInst(null); setSelDef(null);
     setHp(0); setMaxHp(0); setTotalDmg(0); setTickDmg(null);
+    setDmgFloats([]); setShaking(false);
     goPhase('grade', 'back');
   };
 
-  // 현재 등급 카드 그룹
   const gradeGroups = selGrade
     ? groupByType(ownedCards.filter(oc => CARDS.find(c=>c.id===oc.id)?.grade===selGrade), bonusDmg)
     : [];
@@ -233,7 +242,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
 
       <div className={`dungeon-sub-content${slideClass}`}>
 
-        {/* 등급 선택 */}
+        {/* ── 등급 선택 ── */}
         {phase === 'grade' && (
           <>
             <div className="dungeon-section-header">
@@ -259,7 +268,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
           </>
         )}
 
-        {/* 카드 선택 (그룹형) */}
+        {/* ── 카드 선택 ── */}
         {phase === 'card' && (
           <>
             <div className="dungeon-nav-row">
@@ -275,7 +284,6 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
                 const isExpanded = expandedId === def.id;
                 return (
                   <div key={def.id} className={`dungeon-card-group${allDone?' exhausted':''}`}>
-                    {/* 카드 타입 헤더 */}
                     <div className="dungeon-card-group-header" onClick={() => !allDone && handleCardTypeClick(def.id)}>
                       <div className={`dungeon-card-thumb grade-${def.grade}`}>
                         <img src={`/${def.img}`} alt={def.name} />
@@ -298,8 +306,6 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
                       <div className={`dungeon-expand-arrow${isExpanded?' open':''}`}>›</div>
                       {allDone && <div className="growth-exhausted-badge">완료</div>}
                     </div>
-
-                    {/* 인스턴스 펼치기 */}
                     {isExpanded && (
                       <div className="dungeon-inst-row">
                         {instances.map((inst, i) => {
@@ -328,42 +334,67 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
           </>
         )}
 
-        {/* 전투 */}
+        {/* ── 전투 (레이드 스타일) ── */}
         {phase === 'battle' && selDef && selInst && (() => {
-          const bDmg = bonusDmg[selInst.id]||0;
+          const bDmg  = bonusDmg[selInst.id]||0;
           const hpPct = maxHp > 0 ? (hp/maxHp)*100 : 0;
+          const gc    = GRADE_COLOR[selDef.grade];
           return (
-            <div className="growth-battle-wrap">
-              <div className="growth-battle-boss">
-                <img src={GROWTH_BOSS_IMG[selDef.grade]} className="growth-battle-boss-img" alt="boss" />
-                <div className="growth-hp-bar-wrap">
-                  <div className="growth-hp-label">
-                    <span>보스 HP</span>
-                    <span>{hp.toLocaleString()} / {maxHp.toLocaleString()}</span>
+            <div className="dg-battle-wrap">
+              {/* 보스 섹션 */}
+              <div className="dg-boss-section" style={{ borderColor: gc + '55', boxShadow: `0 4px 28px ${gc}22` }}>
+                <div className="dg-boss-img-wrap">
+                  <img
+                    src={GROWTH_BOSS_IMG[selDef.grade]}
+                    className={`dg-boss-img${shaking?' dg-boss-shaking':''}`}
+                    alt="boss"
+                  />
+                  <div className="dg-boss-vignette" />
+                  {dmgFloats.map(f => (
+                    <div key={f.id} className="dg-dmg-float" style={{ color: gc }}>
+                      -{f.dmg.toLocaleString()}
+                    </div>
+                  ))}
+                </div>
+                <div className="dg-boss-info">
+                  <div className="dg-boss-name" style={{ color: gc }}>
+                    {GRADE_LABEL[selDef.grade]} 보스
                   </div>
-                  <div className="growth-hp-track">
-                    <div className="growth-hp-fill" style={{ width:`${hpPct}%`, background: GRADE_COLOR[selDef.grade] }} />
+                  <div className="dg-hp-row">
+                    <span className="dg-hp-label">HP</span>
+                    <span className="dg-hp-num">{hp.toLocaleString()} / {maxHp.toLocaleString()}</span>
+                  </div>
+                  <div className="dg-hp-bar">
+                    <div className="dg-hp-fill" style={{ width:`${hpPct}%`, background: gc, boxShadow: `0 0 8px ${gc}` }} />
                   </div>
                 </div>
-                {tickDmg != null && <div className="growth-tick-dmg" key={totalDmg}>-{tickDmg.toLocaleString()}</div>}
               </div>
-              <div className="growth-battle-card-row">
-                <div className={`growth-battle-card-img grade-${selDef.grade}`}>
-                  <img src={`/${selDef.img}`} alt={selDef.name} />
-                  {(selInst.enhanceLevel||0)>0 && <div className="enhance-badge-card">+{selInst.enhanceLevel}</div>}
+
+              {/* 내 카드 */}
+              <div className="dg-my-card" style={{ borderColor: gc + '44' }}>
+                <div className="dg-my-label">
+                  <span className="dg-tick-dot" style={{ background: gc, boxShadow: `0 0 6px ${gc}` }} />
+                  출격 카드
                 </div>
-                <div className="growth-battle-card-info">
-                  <div className="growth-battle-card-name">{selDef.name}</div>
-                  <div className="growth-battle-stat">컨디션 {selInst.condition}</div>
-                  <div className="growth-battle-stat">데미지 {dmgRangeStr(selDef.grade,selInst.condition,selInst.enhanceLevel||0,bDmg)} / 틱</div>
-                  <div className="growth-battle-total">누적: {totalDmg.toLocaleString()}</div>
+                <div className="dg-my-row">
+                  <div className={`dg-my-img grade-${selDef.grade}`}>
+                    <img src={`/${selDef.img}`} alt={selDef.name} />
+                    {(selInst.enhanceLevel||0) > 0 && <div className="enhance-badge-card">+{selInst.enhanceLevel}</div>}
+                  </div>
+                  <div className="dg-my-details">
+                    <div className="dg-my-name">{selDef.name}</div>
+                    <div className="dg-my-stat">컨디션 <strong style={{color:gc}}>{selInst.condition}</strong></div>
+                    <div className="dg-my-stat">데미지/틱 <strong style={{color:gc}}>{dmgRangeStr(selDef.grade,selInst.condition,selInst.enhanceLevel||0,bDmg)}</strong></div>
+                    {bDmg > 0 && <div className="dg-my-bonus">성장 보너스 +{bDmg}</div>}
+                    <div className="dg-my-total">누적 데미지 <strong style={{color:'#fbbf24'}}>{totalDmg.toLocaleString()}</strong></div>
+                  </div>
                 </div>
               </div>
             </div>
           );
         })()}
 
-        {/* 클리어 */}
+        {/* ── 클리어 ── */}
         {phase === 'clear' && selDef && selInst && (
           <div className="growth-clear-wrap">
             <div className="growth-clear-glow" />
@@ -393,20 +424,22 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
 // 파밍 던전
 // ══════════════════════════════════════
 function FarmingDungeon({ gs, setGs, user, isGuest }) {
-  const [phase, setPhase]           = useState('select');
-  const [phaseDir, setPhaseDir]     = useState('forward');
+  const [phase, setPhase]               = useState('select');
+  const [phaseDir, setPhaseDir]         = useState('forward');
   const [farmInfoOpen, setFarmInfoOpen] = useState(false);
-  const [slots, setSlots]           = useState({});
-  const [pickGrade, setPickGrade]   = useState(null);
-  const [pickExpanded, setPickExpanded] = useState(null); // 피커 내 펼쳐진 카드 타입 id
-  const [elapsed, setElapsed]       = useState(0);
-  const [totalDmg, setTotalDmg]     = useState(0);
-  const [tickDmg, setTickDmg]       = useState(null);
-  const [reward, setReward]         = useState(null);
-  const [toast, setToast]           = useState(null);
-  const toastRef  = useRef(null);
-  const timerRef  = useRef(null);
-  const battleRef = useRef(null);
+  const [slots, setSlots]               = useState({});
+  const [pickGrade, setPickGrade]       = useState(null);
+  const [pickExpanded, setPickExpanded] = useState(null);
+  const [elapsed, setElapsed]           = useState(0);
+  const [totalDmg, setTotalDmg]         = useState(0);
+  const [tickDmg, setTickDmg]           = useState(null);
+  const [dmgFloats, setDmgFloats]       = useState([]);
+  const [reward, setReward]             = useState(null);
+  const [toast, setToast]               = useState(null);
+  const toastRef   = useRef(null);
+  const timerRef   = useRef(null);
+  const battleRef  = useRef(null);
+  const floatIdRef = useRef(0);
 
   const showToast = (msg) => {
     clearTimeout(toastRef.current);
@@ -454,7 +487,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
   const handleStart = () => {
     if (!canStart) return;
     battleRef.current = { slots: { ...slots }, bonusDmg: { ...bonusDmg } };
-    setElapsed(0); setTotalDmg(0); setTickDmg(null);
+    setElapsed(0); setTotalDmg(0); setTickDmg(null); setDmgFloats([]);
     goPhase('battle', 'forward');
   };
 
@@ -473,6 +506,10 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
             });
             setTickDmg(dmg);
             setTotalDmg(d => d + dmg);
+            // 플로팅 데미지
+            const fid = ++floatIdRef.current;
+            setDmgFloats(prev => [...prev, { id: fid, dmg }]);
+            setTimeout(() => setDmgFloats(prev => prev.filter(f => f.id !== fid)), 1200);
           }
         }
         if (next >= FARMING_DURATION) { clearInterval(timerRef.current); return FARMING_DURATION; }
@@ -484,7 +521,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
 
   useEffect(() => {
     if (phase === 'battle' && elapsed >= FARMING_DURATION) handleDone();
-  }, [elapsed, phase]);
+  }, [elapsed, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDone = async () => {
     goPhase('done', 'forward');
@@ -503,14 +540,19 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
 
   const resetFarming = () => {
     clearInterval(timerRef.current);
-    setSlots({}); setElapsed(0); setTotalDmg(0); setTickDmg(null); setReward(null);
+    setSlots({}); setElapsed(0); setTotalDmg(0); setTickDmg(null); setDmgFloats([]); setReward(null);
     goPhase('select', 'back');
   };
 
-  // 피커용 그룹
   const pickerGroups = pickGrade
     ? groupByType(ownedCards.filter(oc => CARDS.find(c=>c.id===oc.id)?.grade===pickGrade), bonusDmg)
     : [];
+
+  // 현재 보상 티어
+  const currentTier = FARM_REWARDS.find(r => totalDmg >= r.min) || FARM_REWARDS[FARM_REWARDS.length-1];
+  const nextTier    = totalDmg < FARM_REWARDS[0].min
+    ? FARM_REWARDS.slice().reverse().find(r => r.min > totalDmg)
+    : null;
 
   return (
     <div className="dungeon-sub-wrap">
@@ -598,7 +640,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
 
       <div key={phase} className={`dungeon-phase-${phaseDir}`}>
 
-        {/* 카드 선택 화면 */}
+        {/* ── 카드 선택 화면 ── */}
         {phase === 'select' && (
           <>
             <div className="dungeon-section-header">
@@ -651,39 +693,65 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
           </>
         )}
 
-        {/* 전투 화면 */}
+        {/* ── 전투 (레이드 스타일) ── */}
         {phase === 'battle' && (
-          <div className="farming-battle-wrap">
-            <div className="farming-battle-boss">
-              <img src={FARMING_BOSS_IMG} className="farming-boss-img" alt="boss" />
-              <div className="farming-timer-row">
-                <div className="farming-timer">{fmtTime(FARMING_DURATION - elapsed)}</div>
-                <div className="farming-progress-track">
-                  <div className="farming-progress-fill" style={{width:`${(elapsed/FARMING_DURATION)*100}%`}} />
+          <div className="dg-farm-battle-wrap">
+            {/* 보스 섹션 */}
+            <div className="dg-boss-section dg-farm-boss-section">
+              <div className="dg-boss-img-wrap dg-farm-img-wrap">
+                <img src={FARMING_BOSS_IMG} className="dg-boss-img" alt="boss" />
+                <div className="dg-boss-vignette" />
+                {dmgFloats.map(f => (
+                  <div key={f.id} className="dg-dmg-float">-{f.dmg.toLocaleString()}</div>
+                ))}
+              </div>
+              <div className="dg-farm-info">
+                <div className="dg-farm-info-row">
+                  <div>
+                    <div className="dg-farm-timer-label">남은 시간</div>
+                    <div className="dg-farm-timer">{fmtTime(FARMING_DURATION - elapsed)}</div>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div className="dg-farm-timer-label">누적 데미지</div>
+                    <div className="dg-farm-total-dmg">{totalDmg.toLocaleString()}</div>
+                  </div>
+                </div>
+                <div className="dg-farm-progress-bar">
+                  <div className="dg-farm-progress-fill" style={{width:`${(elapsed/FARMING_DURATION)*100}%`}} />
+                </div>
+                <div className="dg-farm-reward-hint">
+                  현재 예상 보상: <strong style={{color:'#4a9eff'}}>{currentTier.tickets}장</strong>
+                  {nextTier && <span style={{color:'var(--muted)',fontSize:'0.72rem'}}> · {nextTier.min.toLocaleString()} 달성 시 {nextTier.tickets}장</span>}
                 </div>
               </div>
             </div>
-            {tickDmg!=null && <div className="farming-tick-dmg" key={elapsed}>-{tickDmg.toLocaleString()}</div>}
-            <div className="farming-total-dmg">
-              <span className="farming-total-label">누적 데미지</span>
-              <span className="farming-total-val">{totalDmg.toLocaleString()}</span>
-            </div>
-            <div className="farming-battle-cards">
-              {Object.values(slots).filter(Boolean).map(({cardDef,inst}) => {
-                const bDmg = bonusDmg[inst.id]||0;
-                return (
-                  <div key={inst.uid} className={`farming-battle-card grade-${cardDef.grade}`}>
-                    <img src={`/${cardDef.img}`} alt={cardDef.name} />
-                    <div className="farming-battle-card-grade" style={{background:GRADE_BG[cardDef.grade]}}>{GRADE_LABEL[cardDef.grade]}</div>
-                    <div className="farming-battle-card-dmg">{dmgRangeStr(cardDef.grade,inst.condition,inst.enhanceLevel||0,bDmg)}</div>
-                  </div>
-                );
-              })}
+
+            {/* 참여 카드 */}
+            <div className="dg-farm-cards-section">
+              <div className="dg-my-label">
+                <span className="dg-tick-dot" style={{background:'#4a9eff', boxShadow:'0 0 6px #4a9eff'}} />
+                출격 카드
+              </div>
+              <div className="dg-farm-cards">
+                {Object.values(slots).filter(Boolean).map(({cardDef, inst}) => {
+                  const bDmg = bonusDmg[inst.id]||0;
+                  return (
+                    <div key={inst.uid} className={`dg-farm-card grade-${cardDef.grade}`}>
+                      <div className="dg-farm-card-img">
+                        <img src={`/${cardDef.img}`} alt={cardDef.name} />
+                        <div className="dg-farm-card-grade-tag" style={{background:GRADE_BG[cardDef.grade]}}>{GRADE_LABEL[cardDef.grade]}</div>
+                      </div>
+                      <div className="dg-farm-card-name">{cardDef.name}</div>
+                      <div className="dg-farm-card-dmg">{dmgRangeStr(cardDef.grade,inst.condition,inst.enhanceLevel||0,bDmg)}</div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
 
-        {/* 완료 화면 */}
+        {/* ── 완료 화면 ── */}
         {phase === 'done' && (
           <div className="farming-done-wrap">
             <div className="farming-done-title">파밍 완료!</div>
@@ -766,9 +834,14 @@ export default function DungeonTab({ gs, setGs, user, isGuest, musicOn }) {
         <button className={`subtab-btn${subTab==='growth'?' active':''}`} onClick={()=>switchSubTab('growth')}>성장 던전</button>
         <button className={`subtab-btn${subTab==='farming'?' active':''}`} onClick={()=>switchSubTab('farming')}>파밍 던전</button>
       </div>
+      {/* 두 컴포넌트 항상 마운트 유지 → 탭 전환해도 상태 초기화 안됨 */}
       <div className={`subtab-content${slideClass}`}>
-        {subTab==='growth'  && <GrowthDungeon  gs={gs} setGs={setGs} user={user} isGuest={isGuest} />}
-        {subTab==='farming' && <FarmingDungeon gs={gs} setGs={setGs} user={user} isGuest={isGuest} />}
+        <div style={{display: subTab==='growth' ? 'block' : 'none'}}>
+          <GrowthDungeon  gs={gs} setGs={setGs} user={user} isGuest={isGuest} />
+        </div>
+        <div style={{display: subTab==='farming' ? 'block' : 'none'}}>
+          <FarmingDungeon gs={gs} setGs={setGs} user={user} isGuest={isGuest} />
+        </div>
       </div>
     </>
   );
