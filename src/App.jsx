@@ -200,6 +200,10 @@ export default function App() {
     if (activeTab === 'raid') {
       home.pause();
       raid.play().catch(() => {});
+    } else if (activeTab === 'dungeon') {
+      // 던전 탭: 홈/레이드 음악 끄고, 던전 음악은 DungeonTab이 자체 관리
+      home.pause();
+      raid.pause();
     } else {
       raid.pause();
       home.play().catch(() => {});
@@ -439,7 +443,7 @@ export default function App() {
   const TABS = {
     gacha:   <GachaTab {...tabProps} isGuest={isGuest} />,
     synth:   <SynthTab {...tabProps} isGuest={isGuest} />,
-    dungeon: <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} />,
+    dungeon: <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} musicOn={musicOn} />,
     shop:    <ShopTab {...tabProps} />,
     dex:     <DexTab gs={gs} />,
     board:   <BoardTab gs={gs} user={user} />,

@@ -653,9 +653,48 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
 // ══════════════════════════════════════
 const TAB_ORDER = ['growth', 'farming'];
 
-export default function DungeonTab({ gs, setGs, user, isGuest }) {
-  const [subTab, setSubTab]     = useState('growth');
+export default function DungeonTab({ gs, setGs, user, isGuest, musicOn }) {
+  const [subTab, setSubTab]         = useState('growth');
   const [slideClass, setSlideClass] = useState('');
+  const growthAudio  = useRef(null);
+  const farmingAudio = useRef(null);
+
+  // 오디오 초기화 + 탭 떠날 때 정리
+  useEffect(() => {
+    const g = new Audio('/성장던전노래.mp3');
+    const f = new Audio('/파밍던전노래.mp3');
+    g.loop = true; g.volume = 0.4;
+    f.loop = true; f.volume = 0.4;
+    growthAudio.current  = g;
+    farmingAudio.current = f;
+    return () => { g.pause(); g.src = ''; f.pause(); f.src = ''; };
+  }, []);
+
+  // 서브탭 전환 시 음악 교체
+  useEffect(() => {
+    const g = growthAudio.current;
+    const f = farmingAudio.current;
+    if (!g || !f) return;
+    if (!musicOn) { g.pause(); f.pause(); return; }
+    if (subTab === 'growth') {
+      f.pause();
+      g.play().catch(() => {});
+    } else {
+      g.pause();
+      f.play().catch(() => {});
+    }
+  }, [subTab, musicOn]);
+
+  // musicOn 토글 시 즉시 반영
+  useEffect(() => {
+    if (!musicOn) {
+      growthAudio.current?.pause();
+      farmingAudio.current?.pause();
+    } else {
+      if (subTab === 'growth') growthAudio.current?.play().catch(() => {});
+      else farmingAudio.current?.play().catch(() => {});
+    }
+  }, [musicOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchSubTab = (t) => {
     if (t === subTab) return;
