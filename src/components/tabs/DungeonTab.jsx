@@ -267,63 +267,87 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
             {/* 카드 선택 팝업 */}
             {showGrowthPicker && (
               <div className="growth-picker-overlay" onClick={() => { setShowGrowthPicker(false); setGrowthPickExp(null); }}>
-                <div className="inst-sheet" onClick={e => e.stopPropagation()}>
-                  <div className="inst-sheet-title">
-                    {GRADE_LABEL[selGrade]} 카드 선택
+                <div className="inst-sheet picker-sheet" onClick={e => e.stopPropagation()}>
+                  <div className="picker-sheet-header">
+                    {growthPickExp && (
+                      <button className="picker-back-btn" onClick={e => { e.stopPropagation(); setGrowthPickExp(null); }}>←</button>
+                    )}
+                    <span className="picker-sheet-title">
+                      <span style={{color: GRADE_COLOR[selGrade], fontFamily:'Nunito', fontWeight:900}}>{GRADE_LABEL[selGrade]}</span>
+                      {growthPickExp ? ' 중복 카드 선택' : ' 카드 선택'}
+                    </span>
                     <span className="inst-sheet-count">{selGradeCards.length}종</span>
                   </div>
-                  <div style={{overflowY:'auto', maxHeight:'52vh', padding:'0 4px'}}>
+
+                  <div className="picker-scroll-area">
                     {selGradeCards.length === 0 ? (
-                      <div style={{color:'var(--muted)',padding:'20px',textAlign:'center'}}>카드가 없어요</div>
-                    ) : selGradeCards.map(({ def, instances, bestDmg }) => {
-                      const bDmg = bonusDmg[def.id]||0;
-                      const isExp = growthPickExp === def.id;
-                      const pickOne = (inst) => {
-                        setDetailCardPick({ inst, def, bDmg: gsRef.current?.cardBonusDmg?.[def.id]||0 });
-                        setShowGrowthPicker(false);
-                        setGrowthPickExp(null);
-                      };
-                      return (
-                        <div key={def.id} className="dungeon-picker-group">
-                          <div className="dungeon-picker-group-row"
-                            onClick={() => instances.length > 1 ? setGrowthPickExp(p => p===def.id?null:def.id) : pickOne(instances[0])}>
-                            <div className="dungeon-picker-thumb">
-                              <img src={`/${def.img}`} alt={def.name} />
-                              {instances.length > 1 && <div className="dup">×{instances.length}</div>}
-                            </div>
-                            <div className="dungeon-picker-info">
-                              <div className="dungeon-picker-name">{def.name}</div>
-                              <div className="dungeon-picker-dmg">
-                                평균 {bestDmg}
-                                {bDmg>0 && <span className="growth-bonus-tag" style={{marginLeft:5}}>+{bDmg}</span>}
+                      <div className="picker-empty">카드가 없어요</div>
+                    ) : growthPickExp ? (
+                      (() => {
+                        const grp = selGradeCards.find(g => g.def.id === growthPickExp);
+                        if (!grp) return null;
+                        const { def, instances } = grp;
+                        const bDmg = bonusDmg[def.id]||0;
+                        return (
+                          <div className="card-picker-grid">
+                            {instances.map((inst, i) => {
+                              const cond = inst.condition||1;
+                              const enh  = inst.enhanceLevel||0;
+                              const cc   = cond>=9?'#d97706':cond>=6?'#7c3aed':'#888';
+                              const pickOne = () => {
+                                setDetailCardPick({ inst, def, bDmg: gsRef.current?.cardBonusDmg?.[def.id]||0 });
+                                setShowGrowthPicker(false);
+                                setGrowthPickExp(null);
+                              };
+                              return (
+                                <div key={inst.uid} className={`card-picker-item grade-${def.grade}`}
+                                  style={{animationDelay:`${i*60}ms`}}
+                                  onClick={pickOne}>
+                                  <div className="card-picker-img">
+                                    <img src={`/${def.img}`} alt={def.name} />
+                                    {enh > 0 && <div className="card-picker-enhance">+{enh}</div>}
+                                  </div>
+                                  <div className="card-picker-info">
+                                    <div className="card-picker-name">{def.name}</div>
+                                    <div className="card-picker-sub" style={{color:cc}}>컨디션 {cond}</div>
+                                    <div className="card-picker-dmg">평균 {calcAvgDmg(def.grade,cond,enh,bDmg)}</div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div className="card-picker-grid">
+                        {selGradeCards.map(({ def, instances, bestDmg }) => {
+                          const bDmg = bonusDmg[def.id]||0;
+                          const pickOne = (inst) => {
+                            setDetailCardPick({ inst, def, bDmg: gsRef.current?.cardBonusDmg?.[def.id]||0 });
+                            setShowGrowthPicker(false);
+                            setGrowthPickExp(null);
+                          };
+                          return (
+                            <div key={def.id} className={`card-picker-item grade-${def.grade}`}
+                              onClick={() => instances.length > 1 ? setGrowthPickExp(def.id) : pickOne(instances[0])}>
+                              <div className="card-picker-img">
+                                <img src={`/${def.img}`} alt={def.name} />
+                                {instances.length > 1 && <div className="card-picker-dup">×{instances.length}</div>}
+                              </div>
+                              <div className="card-picker-info">
+                                <div className="card-picker-name">{def.name}</div>
+                                <div className="card-picker-dmg">
+                                  평균 {bestDmg}
+                                  {bDmg > 0 && <span className="growth-bonus-tag" style={{marginLeft:3}}>+{bDmg}</span>}
+                                </div>
                               </div>
                             </div>
-                            {instances.length > 1 && <div className={`dungeon-expand-arrow${isExp?' open':''}`}>›</div>}
-                          </div>
-                          {isExp && (
-                            <div className="dungeon-inst-row">
-                              {instances.map((inst, i) => {
-                                const cond = inst.condition||1;
-                                const enh  = inst.enhanceLevel||0;
-                                const cc   = cond>=9?'#d97706':cond>=6?'#7c3aed':'#888';
-                                return (
-                                  <div key={inst.uid} className="dungeon-inst-item" style={{animationDelay:`${i*50}ms`}}
-                                    onClick={() => pickOne(inst)}>
-                                    <div className="dungeon-inst-img">
-                                      <img src={`/${def.img}`} alt={def.name} />
-                                      {enh>0 && <div className="inst-item-badge">+{enh}</div>}
-                                    </div>
-                                    <div className="dungeon-inst-cond" style={{color:cc}}>컨디션 {cond}</div>
-                                    <div className="dungeon-inst-dmg">평균 {calcAvgDmg(def.grade,cond,enh,bDmg)}</div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
+
                   <button className="zoom-close" onClick={() => { setShowGrowthPicker(false); setGrowthPickExp(null); }}>닫기 ✕</button>
                 </div>
               </div>
@@ -729,67 +753,79 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
       {/* 등급별 카드 픽커 팝업 */}
       {pickGrade && (
         <div className="card-zoom-overlay" onClick={() => { setPickGrade(null); setPickExpanded(null); }}>
-          <div className="inst-sheet" onClick={e => e.stopPropagation()}>
-            <div className="inst-sheet-title">
-              <span style={{color: GRADE_COLOR[pickGrade], fontFamily:'Nunito', fontWeight:900}}>{GRADE_LABEL[pickGrade]}</span>
-              &nbsp;등급 카드 선택
+          <div className="inst-sheet picker-sheet" onClick={e => e.stopPropagation()}>
+            <div className="picker-sheet-header">
+              {pickExpanded && (
+                <button className="picker-back-btn" onClick={e => { e.stopPropagation(); setPickExpanded(null); }}>←</button>
+              )}
+              <span className="picker-sheet-title">
+                <span style={{color: GRADE_COLOR[pickGrade], fontFamily:'Nunito', fontWeight:900}}>{GRADE_LABEL[pickGrade]}</span>
+                {pickExpanded ? ' 중복 카드 선택' : ' 등급 카드 선택'}
+              </span>
               <span className="inst-sheet-count">{pickerGroups.length}종</span>
             </div>
-            <div style={{overflowY:'auto', maxHeight:'55vh', padding:'0 4px'}}>
+
+            <div className="picker-scroll-area">
               {pickerGroups.length === 0 ? (
-                <div style={{color:'var(--muted)',padding:'20px',textAlign:'center'}}>
-                  {GRADE_LABEL[pickGrade]} 등급 카드가 없어요
-                </div>
-              ) : pickerGroups.map(({ def, instances, bestDmg }) => {
-                const bDmg = bonusDmg[def.id]||0;
-                const isExp = pickExpanded === def.id;
-                return (
-                  <div key={def.id} className="dungeon-picker-group">
-                    <div className="dungeon-picker-group-row"
-                      onClick={() => instances.length > 1
-                        ? setPickExpanded(p => p === def.id ? null : def.id)
-                        : handlePickInst(instances[0])
-                      }>
-                      <div className="dungeon-picker-thumb">
-                        <img src={`/${def.img}`} alt={def.name} />
-                        {instances.length > 1 && <div className="dup">×{instances.length}</div>}
-                      </div>
-                      <div className="dungeon-picker-info">
-                        <div className="dungeon-picker-name">{def.name}</div>
-                        <div className="dungeon-picker-dmg">
-                          최대 평균 {bestDmg}
-                          {bDmg > 0 && <span className="growth-bonus-tag" style={{marginLeft:5}}>성장 +{bDmg}</span>}
+                <div className="picker-empty">{GRADE_LABEL[pickGrade]} 등급 카드가 없어요</div>
+              ) : pickExpanded ? (
+                /* 중복 인스턴스 서브픽커 */
+                (() => {
+                  const grp = pickerGroups.find(g => g.def.id === pickExpanded);
+                  if (!grp) return null;
+                  const { def, instances } = grp;
+                  const bDmg = bonusDmg[def.id]||0;
+                  return (
+                    <div className="card-picker-grid">
+                      {instances.map((inst, i) => {
+                        const cond = inst.condition||1;
+                        const enh  = inst.enhanceLevel||0;
+                        const cc   = cond>=9?'#d97706':cond>=6?'#7c3aed':'#888';
+                        return (
+                          <div key={inst.uid} className={`card-picker-item grade-${def.grade}`}
+                            style={{animationDelay:`${i*60}ms`}}
+                            onClick={() => handlePickInst(inst)}>
+                            <div className="card-picker-img">
+                              <img src={`/${def.img}`} alt={def.name} />
+                              {enh > 0 && <div className="card-picker-enhance">+{enh}</div>}
+                            </div>
+                            <div className="card-picker-info">
+                              <div className="card-picker-name">{def.name}</div>
+                              <div className="card-picker-sub" style={{color:cc}}>컨디션 {cond}</div>
+                              <div className="card-picker-dmg">평균 {calcAvgDmg(def.grade,cond,enh,bDmg)}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              ) : (
+                /* 메인 카드 그리드 */
+                <div className="card-picker-grid">
+                  {pickerGroups.map(({ def, instances, bestDmg }) => {
+                    const bDmg = bonusDmg[def.id]||0;
+                    return (
+                      <div key={def.id} className={`card-picker-item grade-${def.grade}`}
+                        onClick={() => instances.length > 1 ? setPickExpanded(def.id) : handlePickInst(instances[0])}>
+                        <div className="card-picker-img">
+                          <img src={`/${def.img}`} alt={def.name} />
+                          {instances.length > 1 && <div className="card-picker-dup">×{instances.length}</div>}
+                        </div>
+                        <div className="card-picker-info">
+                          <div className="card-picker-name">{def.name}</div>
+                          <div className="card-picker-dmg">
+                            평균 {bestDmg}
+                            {bDmg > 0 && <span className="growth-bonus-tag" style={{marginLeft:3}}>+{bDmg}</span>}
+                          </div>
                         </div>
                       </div>
-                      {instances.length > 1 && (
-                        <div className={`dungeon-expand-arrow${isExp?' open':''}`}>›</div>
-                      )}
-                    </div>
-                    {isExp && (
-                      <div className="dungeon-inst-row">
-                        {instances.map((inst, i) => {
-                          const cond = inst.condition||1;
-                          const enh  = inst.enhanceLevel||0;
-                          const cc   = cond>=9?'#d97706':cond>=6?'#7c3aed':'#888';
-                          return (
-                            <div key={inst.uid} className="dungeon-inst-item"
-                              style={{animationDelay:`${i*50}ms`}}
-                              onClick={() => handlePickInst(inst)}>
-                              <div className="dungeon-inst-img">
-                                <img src={`/${def.img}`} alt={def.name} />
-                                {enh > 0 && <div className="inst-item-badge">+{enh}</div>}
-                              </div>
-                              <div className="dungeon-inst-cond" style={{color:cc}}>컨디션 {cond}</div>
-                              <div className="dungeon-inst-dmg">평균 {calcAvgDmg(def.grade,cond,enh,bDmg)}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
             <button className="zoom-close" onClick={() => { setPickGrade(null); setPickExpanded(null); }}>닫기 ✕</button>
           </div>
         </div>
