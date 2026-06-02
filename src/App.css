@@ -3661,9 +3661,32 @@ body.raid-theme .music-toggle-btn {
 
 /* 공통 */
 .dungeon-sub-wrap { display: flex; flex-direction: column; gap: 16px; min-height: 300px; }
-.dungeon-section-header { display: flex; flex-direction: column; gap: 4px; }
+.dungeon-sub-content { display: flex; flex-direction: column; gap: 16px; }
+.dungeon-slide-right { animation: subtabSlideRight 0.32s cubic-bezier(.25,.8,.25,1); }
+.dungeon-slide-left  { animation: subtabSlideLeft  0.32s cubic-bezier(.25,.8,.25,1); }
+.dungeon-section-header { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
 .dungeon-section-title { font-size: 1.05rem; font-weight: 900; color: var(--text); letter-spacing: 0.3px; }
-.dungeon-section-desc  { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.dungeon-info-btn {
+  font-size: 0.72rem; font-weight: 700; color: var(--muted);
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px; padding: 4px 11px; cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif; transition: all 0.15s; flex-shrink: 0;
+}
+.dungeon-info-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+.dungeon-info-sheet {
+  background: var(--card-bg); border-radius: 18px; padding: 22px 20px 14px;
+  width: min(360px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 14px;
+}
+.dungeon-info-title { font-size: 1rem; font-weight: 900; color: var(--text); }
+.dungeon-info-body { font-size: 0.85rem; color: var(--muted); line-height: 1.75; margin: 0; }
+.dungeon-info-rewards { display: flex; flex-direction: column; gap: 5px; }
+.dungeon-info-reward-title { font-size: 0.8rem; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+.dungeon-info-reward-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.8rem; color: var(--muted); padding: 7px 11px;
+  background: rgba(255,255,255,0.04); border-radius: 8px;
+}
+.dungeon-info-reward-row span:last-child { color: #4a9eff; font-weight: 700; font-family: 'Nunito', sans-serif; }
 .dungeon-nav-row { display: flex; align-items: center; gap: 10px; }
 .dungeon-nav-title { font-size: 0.92rem; font-weight: 700; color: var(--text); }
 .dungeon-back-btn {
@@ -3689,11 +3712,11 @@ body.raid-theme .music-toggle-btn {
 }
 .growth-boss-card {
   position: relative; border-radius: 14px; overflow: hidden;
-  background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.2);
   cursor: pointer; transition: all 0.2s; aspect-ratio: 3/4;
   display: flex; flex-direction: column; align-items: center;
 }
-.growth-boss-card:hover:not(.locked) { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(109,40,217,0.3); border-color: rgba(109,40,217,0.5); }
+.growth-boss-card:hover:not(.locked) { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(109,40,217,0.4); border-color: rgba(109,40,217,0.7); }
 .growth-boss-card.locked { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6); }
 .growth-boss-img-wrap { width: 100%; flex: 1; overflow: hidden; }
 .growth-boss-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
@@ -3713,10 +3736,10 @@ body.raid-theme .music-toggle-btn {
 .growth-card-item {
   display: flex; gap: 12px; align-items: center;
   padding: 12px; border-radius: 12px; cursor: pointer;
-  background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.18);
   transition: all 0.18s; position: relative;
 }
-.growth-card-item:hover:not(.exhausted) { background: rgba(109,40,217,0.1); border-color: rgba(109,40,217,0.3); }
+.growth-card-item:hover:not(.exhausted) { background: rgba(109,40,217,0.1); border-color: rgba(109,40,217,0.6); box-shadow: 0 0 10px rgba(109,40,217,0.2); }
 .growth-card-item.exhausted { opacity: 0.5; cursor: not-allowed; }
 .growth-card-img-wrap { width: 56px; height: 74px; border-radius: 8px; overflow: hidden; flex-shrink: 0; position: relative; }
 .growth-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
@@ -3784,10 +3807,9 @@ body.raid-theme .music-toggle-btn {
 
 /* ── 파밍 던전 ── */
 .farming-boss-preview {
-  text-align: center; border-radius: 14px; overflow: hidden;
-  max-height: 180px;
+  text-align: center; border-radius: 14px;
 }
-.farming-boss-preview img { width: 100%; max-height: 180px; object-fit: cover; object-position: center 30%; border-radius: 14px; }
+.farming-boss-preview img { width: 100%; object-fit: contain; border-radius: 14px; display: block; }
 .farming-done-today {
   background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
   border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; color: #f87171; text-align: center;
@@ -3801,34 +3823,35 @@ body.raid-theme .music-toggle-btn {
 .farming-reward-label { color: var(--muted); }
 .farming-reward-val { font-weight: 700; color: #4a9eff; font-family: 'Nunito', sans-serif; }
 
-.farming-slots-title { font-size: 0.8rem; font-weight: 700; color: var(--muted); }
-.farming-slots-count { color: #6d28d9; font-weight: 900; }
+.farming-slots-title { font-size: 0.85rem; font-weight: 800; color: var(--text); }
+.farming-slots-count { color: #7c3aed; font-weight: 900; font-size: 0.9rem; }
 .farming-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .farming-slot {
   aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; position: relative;
-  border: 2px dashed rgba(255,255,255,0.12); cursor: pointer; transition: all 0.18s;
-  background: rgba(255,255,255,0.03);
+  border: 2px dashed rgba(255,255,255,0.35); cursor: pointer; transition: all 0.18s;
+  background: rgba(255,255,255,0.05);
 }
-.farming-slot:hover { border-color: rgba(109,40,217,0.4); background: rgba(109,40,217,0.07); }
-.farming-slot.filled { border-style: solid; border-color: rgba(255,255,255,0.15); }
+.farming-slot:hover { border-color: rgba(109,40,217,0.7); background: rgba(109,40,217,0.1); box-shadow: 0 0 10px rgba(109,40,217,0.2); }
+.farming-slot.filled { border-style: solid; border-color: rgba(109,40,217,0.65); box-shadow: 0 0 8px rgba(109,40,217,0.25); }
+.farming-slot.filled:hover { border-color: rgba(239,68,68,0.65); box-shadow: 0 0 8px rgba(239,68,68,0.2); }
 .farming-slot.no-card { opacity: 0.4; cursor: not-allowed; }
 .farming-slot img { width: 100%; height: 100%; object-fit: cover; }
-.farming-slot-grade { position: absolute; bottom: 0; left: 0; right: 0; padding: 4px; text-align: center; font-size: 0.62rem; font-weight: 900; color: white; }
+.farming-slot-grade { position: absolute; bottom: 0; left: 0; right: 0; padding: 4px; text-align: center; font-size: 0.65rem; font-weight: 900; color: white; }
 .farming-slot-remove {
-  position: absolute; top: 4px; right: 4px; width: 18px; height: 18px;
-  border-radius: 50%; background: rgba(0,0,0,0.7); border: none; color: white;
-  font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  position: absolute; top: 4px; right: 4px; width: 20px; height: 20px;
+  border-radius: 50%; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.3); color: white;
+  font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
   line-height: 1;
 }
-.farming-slot-empty { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-.farming-slot-grade-label { font-size: 0.65rem; font-weight: 700; }
-.farming-slot-plus { font-size: 1.4rem; color: rgba(255,255,255,0.2); line-height: 1; }
+.farming-slot-empty { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.farming-slot-grade-label { font-size: 0.75rem; font-weight: 800; }
+.farming-slot-plus { font-size: 1.6rem; color: rgba(255,255,255,0.45); line-height: 1; }
 .farming-slot.filled .farming-slot-plus { display: none; }
 
 /* 파밍 전투 */
 .farming-battle-wrap { display: flex; flex-direction: column; gap: 14px; align-items: center; }
 .farming-battle-boss { width: 100%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
-.farming-boss-img { width: 180px; height: 140px; object-fit: cover; border-radius: 14px; border: 2px solid rgba(255,255,255,0.1); }
+.farming-boss-img { width: 200px; object-fit: contain; border-radius: 14px; border: 2px solid rgba(255,255,255,0.15); display: block; }
 .farming-timer-row { width: 100%; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .farming-timer { font-size: 2rem; font-weight: 900; font-family: 'Nunito', sans-serif; color: var(--text); letter-spacing: 2px; }
 .farming-progress-track { width: 100%; height: 10px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; }
@@ -3849,8 +3872,8 @@ body.raid-theme .music-toggle-btn {
 /* 파밍 완료 */
 .farming-done-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 10px 0; }
 .farming-done-title { font-size: 1.5rem; font-weight: 900; color: #fbbf24; text-shadow: 0 0 16px rgba(251,191,36,0.4); }
-.farming-done-boss { width: 140px; height: 110px; border-radius: 12px; overflow: hidden; }
-.farming-done-boss img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.farming-done-boss { width: 160px; border-radius: 12px; overflow: hidden; }
+.farming-done-boss img { width: 100%; object-fit: contain; display: block; }
 .farming-done-stats { width: 100%; display: flex; flex-direction: column; gap: 8px; }
 .farming-done-stat { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.04); border-radius: 10px; }
 .farming-done-stat.highlight { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25); }
@@ -3877,10 +3900,10 @@ body.raid-theme .music-toggle-btn {
 .dungeon-card-group-list { display: flex; flex-direction: column; gap: 8px; }
 .dungeon-card-group {
   border-radius: 12px; overflow: hidden;
-  background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.07);
-  transition: border-color 0.18s;
+  background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.18);
+  transition: border-color 0.18s, box-shadow 0.18s;
 }
-.dungeon-card-group:not(.exhausted):hover { border-color: rgba(109,40,217,0.35); }
+.dungeon-card-group:not(.exhausted):hover { border-color: rgba(109,40,217,0.65); box-shadow: 0 0 10px rgba(109,40,217,0.2); }
 .dungeon-card-group.exhausted { opacity: 0.5; }
 .dungeon-card-group-header {
   display: flex; align-items: center; gap: 12px; padding: 10px 12px;

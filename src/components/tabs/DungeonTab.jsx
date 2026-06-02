@@ -79,8 +79,9 @@ function groupByType(cards, bonusDmg) {
 // 성장 던전
 // ══════════════════════════════════════
 function GrowthDungeon({ gs, setGs, user, isGuest }) {
-  const [phase, setPhase]       = useState('grade');
-  const [phaseDir, setPhaseDir] = useState('forward');
+  const [phase, setPhase]           = useState('grade');
+  const [slideClass, setSlideClass] = useState('');
+  const [growthInfoOpen, setGrowthInfoOpen] = useState(false);
   const [selGrade, setSelGrade] = useState(null);
   const [expandedId, setExpandedId] = useState(null); // 펼쳐진 카드 타입 id
   const [selInst, setSelInst]   = useState(null);
@@ -109,8 +110,10 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
   };
 
   const goPhase = (next, dir = 'forward') => {
-    setPhaseDir(dir);
     setPhase(next);
+    const cls = dir === 'forward' ? ' dungeon-slide-right' : ' dungeon-slide-left';
+    setSlideClass(cls);
+    setTimeout(() => setSlideClass(''), 320);
   };
 
   const today    = todayKST();
@@ -218,14 +221,24 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
     <div className="dungeon-sub-wrap">
       {toast && <div className="cw-toast">{toast}</div>}
 
-      <div key={phase} className={`dungeon-phase-${phaseDir}`}>
+      {growthInfoOpen && (
+        <div className="card-zoom-overlay" onClick={() => setGrowthInfoOpen(false)}>
+          <div className="dungeon-info-sheet" onClick={e => e.stopPropagation()}>
+            <div className="dungeon-info-title">성장 던전 안내</div>
+            <p className="dungeon-info-body">카드 1장을 선택해 보스에게 도전하세요. 클리어하면 해당 카드의 기본 데미지가 영구적으로 +1 상승합니다. 카드 1장당 하루 3번 성장 가능합니다.</p>
+            <button className="zoom-close" onClick={() => setGrowthInfoOpen(false)}>닫기 ✕</button>
+          </div>
+        </div>
+      )}
+
+      <div className={`dungeon-sub-content${slideClass}`}>
 
         {/* 등급 선택 */}
         {phase === 'grade' && (
           <>
             <div className="dungeon-section-header">
               <div className="dungeon-section-title">성장 던전</div>
-              <div className="dungeon-section-desc">카드를 클리어해 데미지를 영구 성장시키세요! 카드 1장당 하루 3번 도전 가능</div>
+              <button className="dungeon-info-btn" onClick={() => setGrowthInfoOpen(true)}>설명</button>
             </div>
             <div className="growth-grade-grid">
               {GRADES_ALL.map(grade => {
@@ -382,6 +395,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
 function FarmingDungeon({ gs, setGs, user, isGuest }) {
   const [phase, setPhase]           = useState('select');
   const [phaseDir, setPhaseDir]     = useState('forward');
+  const [farmInfoOpen, setFarmInfoOpen] = useState(false);
   const [slots, setSlots]           = useState({});
   const [pickGrade, setPickGrade]   = useState(null);
   const [pickExpanded, setPickExpanded] = useState(null); // 피커 내 펼쳐진 카드 타입 id
@@ -502,6 +516,23 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
     <div className="dungeon-sub-wrap">
       {toast && <div className="cw-toast">{toast}</div>}
 
+      {farmInfoOpen && (
+        <div className="card-zoom-overlay" onClick={() => setFarmInfoOpen(false)}>
+          <div className="dungeon-info-sheet" onClick={e => e.stopPropagation()}>
+            <div className="dungeon-info-title">파밍 던전 안내</div>
+            <p className="dungeon-info-body">6가지 등급 중 각 등급별 1장씩 총 5장의 카드를 선택해 10분간 자동 전투를 진행합니다. 10분 후 누적 데미지에 따라 뽑기권을 획득할 수 있습니다.</p>
+            <div className="dungeon-info-rewards">
+              <div className="dungeon-info-reward-title">보상 기준</div>
+              <div className="dungeon-info-reward-row"><span>0 ~ 1만 데미지</span><span>뽑기권 20장</span></div>
+              <div className="dungeon-info-reward-row"><span>1만 ~ 5만 데미지</span><span>뽑기권 50장</span></div>
+              <div className="dungeon-info-reward-row"><span>5만 ~ 10만 데미지</span><span>뽑기권 100장</span></div>
+              <div className="dungeon-info-reward-row"><span>10만 이상 데미지</span><span>뽑기권 200장</span></div>
+            </div>
+            <button className="zoom-close" onClick={() => setFarmInfoOpen(false)}>닫기 ✕</button>
+          </div>
+        </div>
+      )}
+
       {/* 카드 타입 피커 */}
       {pickGrade && (
         <div className="card-zoom-overlay" onClick={() => { setPickGrade(null); setPickExpanded(null); }}>
@@ -572,21 +603,13 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
           <>
             <div className="dungeon-section-header">
               <div className="dungeon-section-title">파밍 던전</div>
-              <div className="dungeon-section-desc">6개 등급 중 5장 선택해 10분 자동 전투! 하루 1번 입장 가능</div>
+              <button className="dungeon-info-btn" onClick={() => setFarmInfoOpen(true)}>설명</button>
             </div>
             {doneToday && (
               <div className="farming-done-today">오늘 이미 파밍 던전을 완료했어요. 내일 다시 도전하세요!</div>
             )}
             <div className="farming-boss-preview">
               <img src={FARMING_BOSS_IMG} alt="파밍 던전 보스" />
-            </div>
-            <div className="farming-reward-table">
-              {FARM_REWARDS.slice().reverse().map(r => (
-                <div key={r.min} className="farming-reward-row">
-                  <span className="farming-reward-label">{r.label}</span>
-                  <span className="farming-reward-val">뽑기권 {r.tickets}장</span>
-                </div>
-              ))}
             </div>
             <div className="farming-slots-title">
               참여 카드 선택 <span className="farming-slots-count">{selectedSlots.length}/5</span>
