@@ -542,8 +542,9 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
   const [phaseDir, setPhaseDir]         = useState('forward');
   const [farmInfoOpen, setFarmInfoOpen] = useState(false);
   const [selectedCards, setSelectedCards] = useState([]); // [{ cardDef, inst }]
-  const [expandedGroup, setExpandedGroup] = useState(null);
-  const [elapsed, setElapsed]           = useState(0);
+  const [pickGrade, setPickGrade]         = useState(null);
+  const [pickExpanded, setPickExpanded]   = useState(null);
+  const [elapsed, setElapsed]             = useState(0);
   const [totalDmg, setTotalDmg]         = useState(0);
   const [dmgFloats, setDmgFloats]       = useState([]);
   const [reward, setReward]             = useState(null);
@@ -596,22 +597,30 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
     goPhase('battle', 'forward');
   }, [user, gs?.ownedCards?.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSelectCard = (inst) => {
+  const handleSlotClick = (grade) => {
     if (isGuest) { showToast('로그인이 필요합니다'); return; }
     if (doneToday) return;
+    const sel = selectedCards.find(s => s.cardDef.grade === grade);
+    if (sel) {
+      // 이미 선택됨 → 해제
+      setSelectedCards(prev => prev.filter(s => s.inst.uid !== sel.inst.uid));
+    } else {
+      const hasCards = ownedCards.some(oc => CARDS.find(c => c.id === oc.id)?.grade === grade);
+      if (!hasCards) { showToast(`${GRADE_LABEL[grade]} 등급 카드가 없어요`); return; }
+      setPickGrade(grade);
+      setPickExpanded(null);
+    }
+  };
+
+  const handlePickInst = (inst) => {
     const def = CARDS.find(c => c.id === inst.id);
     if (!def) return;
-    const alreadyIdx = selectedCards.findIndex(s => s.inst.uid === inst.uid);
-    if (alreadyIdx >= 0) {
-      setSelectedCards(prev => prev.filter((_, i) => i !== alreadyIdx));
-      return;
-    }
-    const sameGradeIdx = selectedCards.findIndex(s => s.cardDef.grade === def.grade);
-    if (sameGradeIdx >= 0) {
-      showToast(`${GRADE_LABEL[def.grade]} 등급은 이미 선택됐어요`);
-      return;
-    }
-    setSelectedCards(prev => [...prev, { cardDef: def, inst }]);
+    setSelectedCards(prev => {
+      const filtered = prev.filter(s => s.cardDef.grade !== def.grade);
+      return [...filtered, { cardDef: def, inst }];
+    });
+    setPickGrade(null);
+    setPickExpanded(null);
   };
 
   const handleStart = async () => {
@@ -687,10 +696,14 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
     goPhase('select', 'back');
   };
 
-  const allGroups   = groupByType(ownedCards, bonusDmg);
   const currentTier = FARM_REWARDS.find(r => totalDmg >= r.min) || FARM_REWARDS[FARM_REWARDS.length-1];
   const nextTier    = totalDmg < FARM_REWARDS[0].min
     ? FARM_REWARDS.slice().reverse().find(r => r.min > totalDmg) : null;
+
+  // 픽커용: 선택된 등급의 카드 그룹
+  const pickerGroups = pickGrade
+    ? groupByType(ownedCards.filter(oc => CARDS.find(c => c.id === oc.id)?.grade === pickGrade), bonusDmg)
+    : [];
 
   return (
     <div className="dungeon-sub-wrap">
@@ -700,7 +713,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
         <div className="card-zoom-overlay" onClick={() => setFarmInfoOpen(false)}>
           <div className="dungeon-info-sheet" onClick={e => e.stopPropagation()}>
             <div className="dungeon-info-title">파밍 던전 안내</div>
-            <p className="dungeon-info-body">카드를 선택해 10분간 자동 전투를 진행합니다. 등급당 1장, 최대 6장 선택 가능. 10분 후 누적 데미지에 따라 뽑기권을 획득합니다.</p>
+            <p className="dungeon-info-body">등급별 슬롯을 눌러 카드를 선택하세요. 10분간 자동 전투 후 누적 데미지에 따라 뽑기권을 획득합니다.</p>
             <div className="dungeon-info-rewards">
               <div className="dungeon-info-reward-title">보상 기준</div>
               <div className="dungeon-info-reward-row"><span>0 ~ 1만 데미지</span><span>뽑기권 20장</span></div>
@@ -709,6 +722,75 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
               <div className="dungeon-info-reward-row"><span>10만 이상 데미지</span><span>뽑기권 200장</span></div>
             </div>
             <button className="zoom-close" onClick={() => setFarmInfoOpen(false)}>닫기 ✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* 등급별 카드 픽커 팝업 */}
+      {pickGrade && (
+        <div className="card-zoom-overlay" onClick={() => { setPickGrade(null); setPickExpanded(null); }}>
+          <div className="inst-sheet" onClick={e => e.stopPropagation()}>
+            <div className="inst-sheet-title">
+              <span style={{color: GRADE_COLOR[pickGrade], fontFamily:'Nunito', fontWeight:900}}>{GRADE_LABEL[pickGrade]}</span>
+              &nbsp;등급 카드 선택
+              <span className="inst-sheet-count">{pickerGroups.length}종</span>
+            </div>
+            <div style={{overflowY:'auto', maxHeight:'55vh', padding:'0 4px'}}>
+              {pickerGroups.length === 0 ? (
+                <div style={{color:'var(--muted)',padding:'20px',textAlign:'center'}}>
+                  {GRADE_LABEL[pickGrade]} 등급 카드가 없어요
+                </div>
+              ) : pickerGroups.map(({ def, instances, bestDmg }) => {
+                const bDmg = bonusDmg[def.id]||0;
+                const isExp = pickExpanded === def.id;
+                return (
+                  <div key={def.id} className="dungeon-picker-group">
+                    <div className="dungeon-picker-group-row"
+                      onClick={() => instances.length > 1
+                        ? setPickExpanded(p => p === def.id ? null : def.id)
+                        : handlePickInst(instances[0])
+                      }>
+                      <div className="dungeon-picker-thumb">
+                        <img src={`/${def.img}`} alt={def.name} />
+                        {instances.length > 1 && <div className="dup">×{instances.length}</div>}
+                      </div>
+                      <div className="dungeon-picker-info">
+                        <div className="dungeon-picker-name">{def.name}</div>
+                        <div className="dungeon-picker-dmg">
+                          최대 평균 {bestDmg}
+                          {bDmg > 0 && <span className="growth-bonus-tag" style={{marginLeft:5}}>성장 +{bDmg}</span>}
+                        </div>
+                      </div>
+                      {instances.length > 1 && (
+                        <div className={`dungeon-expand-arrow${isExp?' open':''}`}>›</div>
+                      )}
+                    </div>
+                    {isExp && (
+                      <div className="dungeon-inst-row">
+                        {instances.map((inst, i) => {
+                          const cond = inst.condition||1;
+                          const enh  = inst.enhanceLevel||0;
+                          const cc   = cond>=9?'#d97706':cond>=6?'#7c3aed':'#888';
+                          return (
+                            <div key={inst.uid} className="dungeon-inst-item"
+                              style={{animationDelay:`${i*50}ms`}}
+                              onClick={() => handlePickInst(inst)}>
+                              <div className="dungeon-inst-img">
+                                <img src={`/${def.img}`} alt={def.name} />
+                                {enh > 0 && <div className="inst-item-badge">+{enh}</div>}
+                              </div>
+                              <div className="dungeon-inst-cond" style={{color:cc}}>컨디션 {cond}</div>
+                              <div className="dungeon-inst-dmg">평균 {calcAvgDmg(def.grade,cond,enh,bDmg)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <button className="zoom-close" onClick={() => { setPickGrade(null); setPickExpanded(null); }}>닫기 ✕</button>
           </div>
         </div>
       )}
@@ -730,16 +812,19 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
               <img src={FARMING_BOSS_IMG} alt="파밍 던전 보스" />
             </div>
 
-            {/* 선택된 카드 슬롯 */}
             <div className="farm-sel-header">
-              선택된 카드 <span className="farming-slots-count">{selectedCards.length}/6</span>
-              <span className="farm-sel-hint">등급당 1장 · 탭해서 선택</span>
+              참여 카드 선택 <span className="farming-slots-count">{selectedCards.length}/6</span>
             </div>
             <div className="farm-sel-slots">
               {GRADES_ALL.map(grade => {
                 const sel = selectedCards.find(s => s.cardDef.grade === grade);
+                const hasCards = ownedCards.some(oc => CARDS.find(c => c.id === oc.id)?.grade === grade);
                 return (
-                  <div key={grade} className={`farm-sel-slot${sel?' filled':''}`}>
+                  <div
+                    key={grade}
+                    className={`farm-sel-slot${sel?' filled':''}${!hasCards&&!sel?' no-card':''}`}
+                    onClick={() => handleSlotClick(grade)}
+                  >
                     {sel ? (
                       <>
                         <img src={`/${sel.cardDef.img}`} alt={sel.cardDef.name} />
@@ -749,72 +834,8 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
                       </>
                     ) : (
                       <div className="farm-sel-empty">
-                        <div className="farm-sel-empty-grade" style={{color:GRADE_COLOR[grade]}}>{GRADE_LABEL[grade]}</div>
-                        <div style={{fontSize:'1rem', opacity:0.25}}>+</div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* 전체 카드 목록 */}
-            <div className="farm-card-list-title">보유 카드</div>
-            <div className="farm-card-list">
-              {allGroups.length === 0 ? (
-                <div style={{color:'var(--muted)',padding:'20px',textAlign:'center'}}>보유 카드가 없어요</div>
-              ) : allGroups.map(({ def, instances, bestDmg }) => {
-                const bDmg = bonusDmg[def.id]||0;
-                const isExp = expandedGroup === def.id;
-                const selInType = instances.find(i => selectedCards.some(s => s.inst.uid === i.uid));
-                const gradeTaken = !selInType && selectedCards.some(s => s.cardDef.grade === def.grade);
-                return (
-                  <div key={def.id} className="farm-card-group">
-                    <div
-                      className={`farm-card-row${selInType?' farm-selected':''}${gradeTaken?' farm-grade-taken':''}`}
-                      onClick={() => instances.length > 1
-                        ? setExpandedGroup(p => p===def.id?null:def.id)
-                        : handleSelectCard(instances[0])
-                      }
-                    >
-                      <div className="farm-card-thumb">
-                        <img src={`/${def.img}`} alt={def.name} />
-                        {selInType && <div className="farm-sel-check">✓</div>}
-                        {!selInType && instances.length > 1 && <div className="dup">×{instances.length}</div>}
-                      </div>
-                      <div className="farm-card-info">
-                        <div className="farm-card-name">{def.name}</div>
-                        <div className="farm-card-grade-row">
-                          <span className="farm-card-grade" style={{color:GRADE_COLOR[def.grade]}}>{GRADE_LABEL[def.grade]}</span>
-                          <span className="farm-card-dmg">평균 {bestDmg}
-                            {bDmg>0 && <span className="growth-bonus-tag" style={{marginLeft:4}}>+{bDmg}</span>}
-                          </span>
-                        </div>
-                      </div>
-                      {instances.length > 1 && <div className={`dungeon-expand-arrow${isExp?' open':''}`}>›</div>}
-                    </div>
-                    {isExp && (
-                      <div className="dungeon-inst-row">
-                        {instances.map((inst, i) => {
-                          const cond = inst.condition||1;
-                          const enh  = inst.enhanceLevel||0;
-                          const cc   = cond>=9?'#d97706':cond>=6?'#7c3aed':'#888';
-                          const isInstSel = selectedCards.some(s => s.inst.uid === inst.uid);
-                          return (
-                            <div key={inst.uid}
-                              className={`dungeon-inst-item${isInstSel?' inst-selected':''}`}
-                              style={{animationDelay:`${i*50}ms`}}
-                              onClick={() => handleSelectCard(inst)}>
-                              <div className="dungeon-inst-img">
-                                <img src={`/${def.img}`} alt={def.name} />
-                                {enh>0 && <div className="inst-item-badge">+{enh}</div>}
-                                {isInstSel && <div className="farm-sel-check" style={{fontSize:'0.7rem'}}>✓</div>}
-                              </div>
-                              <div className="dungeon-inst-cond" style={{color:cc}}>컨디션 {cond}</div>
-                              <div className="dungeon-inst-dmg">평균 {calcAvgDmg(def.grade,cond,enh,bDmg)}</div>
-                            </div>
-                          );
-                        })}
+                        <div className="farm-sel-empty-grade" style={{color: hasCards ? GRADE_COLOR[grade] : 'rgba(255,255,255,0.25)'}}>{GRADE_LABEL[grade]}</div>
+                        <div style={{fontSize:'1.2rem', opacity: hasCards ? 0.5 : 0.2, lineHeight:1}}>+</div>
                       </div>
                     )}
                   </div>
