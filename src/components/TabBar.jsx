@@ -1,11 +1,12 @@
 const MAIN_TABS = [
-  { id: 'gacha', label: '뽑기' },
-  { id: 'synth', label: '공방' },
-  { id: 'dex',   label: '도감' },
-  { id: 'raid',  label: '레이드' },
+  { id: 'gacha',   label: '뽑기' },
+  { id: 'synth',   label: '공방' },
+  { id: 'dungeon', label: '던전' },
+  { id: 'raid',    label: '레이드' },
 ];
 
 const MORE_TABS = [
+  { id: 'dex',     label: '도감' },
   { id: 'shop',    label: '상점' },
   { id: 'board',   label: '게시판' },
   { id: 'trade',   label: '거래소' },
@@ -29,7 +30,7 @@ export default function TabBar({ activeTab, onTabChange, moreOpen, onMoreToggle,
         {MAIN_TABS.map(tab => (
           <button
             key={tab.id}
-            className={`page-tab${activeTab === tab.id ? ' active' : ''}${tab.id === 'raid' ? ' raid-tab' : ''}`}
+            className={`page-tab${activeTab === tab.id ? ' active' : ''}${tab.id === 'raid' ? ' raid-tab' : ''}${tab.id === 'dungeon' ? ' dungeon-tab' : ''}`}
             onClick={() => onTabChange(tab.id)}
           >
             {tab.label}

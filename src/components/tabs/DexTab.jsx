@@ -20,7 +20,10 @@ const GRADE_RANGE  = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], 
 const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
 function calcBonus(ownedCards) {
   let b = 0;
+  const seen = new Set();
   for (const o of ownedCards) {
+    if (seen.has(o.id)) continue;
+    seen.add(o.id);
     const c = CARDS.find(x => x.id === o.id);
     if (c) b += BONUS_MULT[c.grade] || 0;
   }

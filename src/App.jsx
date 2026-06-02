@@ -12,6 +12,7 @@ import GachaTab from './components/tabs/GachaTab.jsx';
 import SynthTab from './components/tabs/SynthTab.jsx';
 import ShopTab from './components/tabs/ShopTab.jsx';
 import DexTab from './components/tabs/DexTab.jsx';
+import DungeonTab from './components/tabs/DungeonTab.jsx';
 import BoardTab from './components/tabs/BoardTab.jsx';
 import TradeTab from './components/tabs/TradeTab.jsx';
 import RaidTab from './components/tabs/RaidTab.jsx';
@@ -21,7 +22,7 @@ import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import './App.css';
 
-const TAB_ORDER = ['gacha', 'synth', 'dex', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking'];
+const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking', 'dex'];
 
 
 export const BASE_STATE = {
@@ -35,6 +36,9 @@ export const BASE_STATE = {
   claimedMails: {},
   nickname: null,
   referredBy: null,
+  cardBonusDmg: {},
+  dungeonAttempts: {},
+  farmingAttempt: null,
 };
 
 function applyDailyReset(state) {
@@ -377,7 +381,7 @@ export default function App() {
     return unsub;
   }, [user]);
 
-  const GUEST_BLOCKED = new Set(['raid', 'board', 'trade', 'mailbox']);
+  const GUEST_BLOCKED = new Set(['raid', 'board', 'trade', 'mailbox', 'dungeon']);
 
   const handleTabChange = (newTab) => {
     if (isGuest && GUEST_BLOCKED.has(newTab)) {
@@ -435,6 +439,7 @@ export default function App() {
   const TABS = {
     gacha:   <GachaTab {...tabProps} isGuest={isGuest} />,
     synth:   <SynthTab {...tabProps} isGuest={isGuest} />,
+    dungeon: <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} />,
     shop:    <ShopTab {...tabProps} />,
     dex:     <DexTab gs={gs} />,
     board:   <BoardTab gs={gs} user={user} />,
@@ -455,6 +460,8 @@ export default function App() {
   }
 
   // ── 로그인 유도 화면 ──
+  const isKakaoInApp = /KAKAOTALK/i.test(navigator.userAgent);
+
   if (!user && !isGuest) {
     return (
       <Routes>
@@ -466,6 +473,12 @@ export default function App() {
               <img src="/fox_sleep.png" alt="fox" className="login-mascot" />
               <div className="login-logo">CREATURE WORLD</div>
               <p className="login-desc">카드를 수집하고 도감을 완성해보세요!</p>
+              {isKakaoInApp && (
+                <div className="login-inapp-notice">
+                  카카오톡 내에서는 Google 로그인이 원활하지 않을 수 있어요.<br />
+                  우측 하단 <strong>···</strong> → <strong>다른 브라우저로 열기</strong>를 눌러주세요.
+                </div>
+              )}
               <button className="login-google-btn" onClick={handleLogin}>
                 <svg className="google-icon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                   <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
@@ -701,7 +714,7 @@ export default function App() {
             <div className="modal" onClick={e => e.stopPropagation()}>
               <div className="modal-title">레이드 보너스 데미지</div>
               <div style={{ fontSize: '0.85rem', color: '#444', lineHeight: 1.9 }}>
-                보유 카드 수에 따라 레이드 보너스 데미지가 적용됩니다.
+                보유 카드 종류에 따라 레이드 보너스 데미지가 적용됩니다. (중복 카드는 1종으로 계산)
               </div>
               <div className="bonus-info-table">
                 {[
@@ -714,7 +727,7 @@ export default function App() {
                 ].map(([grade, val, color]) => (
                   <div key={grade} className="bonus-info-row">
                     <span className="bonus-info-grade" style={{ color }}>{grade}</span>
-                    <span className="bonus-info-desc">카드 1장당</span>
+                    <span className="bonus-info-desc">종류 1종 보유 시</span>
                     <span className="bonus-info-val">+{val} 데미지/틱</span>
                   </div>
                 ))}

@@ -62,7 +62,10 @@ function nextOpenKST() {
 // ── 유틸 ──
 function calcBonus(ownedCards) {
   let b = 0;
+  const seen = new Set();
   for (const o of ownedCards) {
+    if (seen.has(o.id)) continue;
+    seen.add(o.id);
     const c = CARDS.find(x => x.id === o.id);
     if (c) b += BONUS_MULT[c.grade] || 0;
   }

@@ -954,6 +954,43 @@
   padding-top:8px; border-top:1px solid #f0f7ff; text-align:center;
 }
 
+/* ── RAID 카드 교환 섹션 ── */
+.exsub-raid-section {
+  margin: 14px 0 8px;
+  background: linear-gradient(135deg, rgba(184,134,11,0.08), rgba(255,215,0,0.05));
+  border: 1px solid rgba(255,215,0,0.25);
+  border-radius: 12px;
+  padding: 14px;
+}
+.exsub-raid-section-title {
+  font-size: 0.85rem; font-weight: 900; color: #ffd700;
+  margin-bottom: 5px; letter-spacing: 0.04em;
+}
+.exsub-raid-hint {
+  font-size: 0.72rem; color: var(--muted); margin-bottom: 12px; line-height: 1.4;
+}
+.exsub-raid-list { display: flex; flex-direction: column; gap: 10px; }
+.exsub-raid-item {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(0,0,0,0.18); border-radius: 10px; padding: 10px 12px;
+}
+.exsub-raid-img {
+  width: 52px; height: 72px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+}
+.exsub-raid-img img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.exsub-raid-info { flex: 1; min-width: 0; }
+.exsub-raid-name { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.exsub-raid-cond { font-size: 0.75rem; color: #fbbf24; margin-bottom: 2px; }
+.exsub-raid-rate { font-size: 0.72rem; color: var(--muted); }
+.exsub-raid-btn {
+  padding: 7px 16px; border-radius: 20px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #b8860b, #ffd700); color: #1a1a1a;
+  font-size: 0.8rem; font-weight: 900; transition: transform 0.15s, box-shadow 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.exsub-raid-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,215,0,0.4); }
+.exsub-raid-empty { font-size: 0.8rem; color: var(--muted); text-align: center; padding: 14px 0; }
+
 /* 등급 필터 */
 .exsub-grade-filter {
   display:flex; gap:7px; margin-bottom:12px; overflow-x:auto;
@@ -1414,6 +1451,11 @@
   font-size: 0.88rem; color: var(--muted); line-height: 1.7;
   margin: 0 0 32px;
 }
+.login-inapp-notice {
+  background: #fff8e1; border: 1.5px solid #f6c700; border-radius: 10px;
+  padding: 10px 14px; font-size: 0.78rem; color: #7a5a00; line-height: 1.6;
+  margin-bottom: 16px; text-align: left;
+}
 .login-google-btn {
   display: flex; align-items: center; gap: 10px;
   background: white; border: 1.5px solid #dadce0; border-radius: 99px;
@@ -1653,8 +1695,50 @@
 
 /* ── TRADE ── */
 .trade-wrap { display: flex; flex-direction: column; gap: 14px; }
+
+/* 팝니다 / 삽니다 메인 탭 */
+.trade-main-tabs {
+  display: flex; border-radius: 12px; overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.1); flex-shrink: 0;
+}
+.trade-main-tab-btn {
+  flex: 1; padding: 10px 0; border: none; background: rgba(255,255,255,0.04);
+  color: var(--muted); font-size: 0.9rem; font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: all 0.18s;
+}
+.trade-main-tab-btn.active {
+  background: #1976d2; color: white;
+}
+.trade-main-tab-btn.active.buy {
+  background: #388e3c;
+}
+.trade-main-tab-btn:not(.active):hover { background: rgba(255,255,255,0.08); }
+
 .trade-header { display: flex; align-items: center; justify-content: space-between; }
 .trade-header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* 삽니다 버튼 (초록) */
+.trade-buy-order-btn { background: #388e3c !important; }
+.trade-buy-order-btn:hover:not(:disabled) { background: #2e7d32 !important; }
+
+/* 판매하기 버튼 */
+.trade-sell-btn {
+  flex-shrink: 0; padding: 8px 16px; border: none; border-radius: 8px;
+  background: #388e3c; color: white; font-size: 0.82rem; font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: all 0.18s;
+}
+.trade-sell-btn:hover:not(:disabled):not(.disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(56,142,60,0.4); }
+.trade-sell-btn.disabled, .trade-sell-btn:disabled { background: #555; color: #888; cursor: not-allowed; }
+
+/* 구매 요청 안내 문구 */
+.trade-buy-form-hint {
+  font-size: 0.76rem; color: var(--muted); line-height: 1.5;
+  background: rgba(56,142,60,0.08); border-radius: 8px;
+  padding: 8px 10px; border-left: 3px solid #388e3c;
+}
+
+/* 구매 요청 가격 색상 */
+.trade-buy-order-price { color: #4caf50 !important; }
 
 .trade-reward-btn {
   background: linear-gradient(135deg, #ffd93d, #ff6b6b); color: white;
@@ -3565,4 +3649,220 @@ body.raid-theme .music-toggle-btn {
 .ranking-score {
   font-family: 'Nunito', sans-serif; font-weight: 900;
   font-size: 1.05rem; color: #fbbf24; min-width: 38px; text-align: right;
+}
+
+/* ══════════════════════════════════════════════════
+   DUNGEON TAB
+══════════════════════════════════════════════════ */
+
+/* 던전 탭 버튼 색상 */
+.page-tab.dungeon-tab.active { background: linear-gradient(135deg, #6d28d9, #4c1d95); color: white; }
+.page-tab.dungeon-tab:not(.active):hover { background: rgba(109,40,217,0.12); }
+
+/* 공통 */
+.dungeon-sub-wrap { display: flex; flex-direction: column; gap: 16px; min-height: 300px; }
+.dungeon-section-header { display: flex; flex-direction: column; gap: 4px; }
+.dungeon-section-title { font-size: 1.05rem; font-weight: 900; color: var(--text); letter-spacing: 0.3px; }
+.dungeon-section-desc  { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.dungeon-nav-row { display: flex; align-items: center; gap: 10px; }
+.dungeon-nav-title { font-size: 0.92rem; font-weight: 700; color: var(--text); }
+.dungeon-back-btn {
+  border: none; background: rgba(255,255,255,0.08); color: var(--muted);
+  border-radius: 8px; padding: 5px 10px; font-size: 0.78rem; font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+  transition: background 0.15s;
+}
+.dungeon-back-btn:hover { background: rgba(255,255,255,0.14); }
+.dungeon-primary-btn {
+  width: 100%; padding: 13px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, #6d28d9, #4c1d95); color: white;
+  font-size: 0.95rem; font-weight: 900; font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer; transition: all 0.18s; letter-spacing: 0.3px;
+}
+.dungeon-primary-btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(109,40,217,0.4); }
+.dungeon-primary-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.dungeon-guest-msg { text-align: center; padding: 48px 0; color: var(--muted); font-size: 0.9rem; }
+
+/* ── 성장 던전 ── */
+.growth-grade-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.growth-boss-card {
+  position: relative; border-radius: 14px; overflow: hidden;
+  background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.08);
+  cursor: pointer; transition: all 0.2s; aspect-ratio: 3/4;
+  display: flex; flex-direction: column; align-items: center;
+}
+.growth-boss-card:hover:not(.locked) { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(109,40,217,0.3); border-color: rgba(109,40,217,0.5); }
+.growth-boss-card.locked { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6); }
+.growth-boss-img-wrap { width: 100%; flex: 1; overflow: hidden; }
+.growth-boss-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+.growth-boss-grade-tag {
+  width: 100%; padding: 5px 0; text-align: center;
+  font-size: 0.72rem; font-weight: 900; color: white;
+  font-family: 'Nunito', sans-serif; letter-spacing: 0.5px;
+}
+.growth-boss-lock {
+  position: absolute; top: 6px; right: 6px;
+  background: rgba(0,0,0,0.65); color: #888; font-size: 0.62rem; font-weight: 700;
+  padding: 2px 6px; border-radius: 99px;
+}
+
+/* 성장 카드 선택 */
+.growth-card-list { display: flex; flex-direction: column; gap: 10px; }
+.growth-card-item {
+  display: flex; gap: 12px; align-items: center;
+  padding: 12px; border-radius: 12px; cursor: pointer;
+  background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.07);
+  transition: all 0.18s; position: relative;
+}
+.growth-card-item:hover:not(.exhausted) { background: rgba(109,40,217,0.1); border-color: rgba(109,40,217,0.3); }
+.growth-card-item.exhausted { opacity: 0.5; cursor: not-allowed; }
+.growth-card-img-wrap { width: 56px; height: 74px; border-radius: 8px; overflow: hidden; flex-shrink: 0; position: relative; }
+.growth-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.growth-card-info { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.growth-card-name { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.growth-card-stat { font-size: 0.72rem; color: var(--muted); }
+.growth-bonus-tag {
+  display: inline-block; font-size: 0.65rem; font-weight: 700;
+  color: #fbbf24; background: rgba(251,191,36,0.12); border-radius: 99px;
+  padding: 1px 7px; width: fit-content;
+}
+.growth-attempts-row { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+.growth-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.2);
+  transition: all 0.2s;
+}
+.growth-dot.used { background: #6d28d9; border-color: #6d28d9; }
+.growth-att-label { font-size: 0.65rem; color: var(--muted); }
+.growth-attempts-row.zero .growth-att-label { color: #ef4444; }
+.growth-exhausted-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: rgba(239,68,68,0.85); color: white; font-size: 0.65rem; font-weight: 700;
+  padding: 2px 7px; border-radius: 99px;
+}
+
+/* 성장 전투 */
+.growth-battle-wrap { display: flex; flex-direction: column; gap: 14px; }
+.growth-battle-boss { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.growth-battle-boss-img { width: 160px; height: 160px; object-fit: cover; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1); }
+.growth-hp-bar-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.growth-hp-label { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); font-family: 'Nunito', sans-serif; }
+.growth-hp-track { height: 14px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.growth-hp-fill { height: 100%; border-radius: 99px; background: #6d28d9; transition: width 0.4s ease; }
+.growth-tick-dmg {
+  text-align: center; font-size: 1.3rem; font-weight: 900;
+  color: #ef4444; font-family: 'Nunito', sans-serif;
+  animation: tickPop 0.4s ease;
+}
+@keyframes tickPop { 0%{transform:scale(1.3);opacity:1} 100%{transform:scale(1);opacity:1} }
+.growth-battle-card-row { display: flex; gap: 12px; align-items: center; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 12px; }
+.growth-battle-card-img { width: 60px; height: 80px; border-radius: 10px; overflow: hidden; flex-shrink: 0; position: relative; }
+.growth-battle-card-img img { width: 100%; height: 100%; object-fit: cover; }
+.growth-battle-card-name { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.growth-battle-stat { font-size: 0.72rem; color: var(--muted); }
+.growth-battle-total { font-size: 0.78rem; color: #6d28d9; font-weight: 700; margin-top: 2px; }
+
+/* 성장 클리어 */
+.growth-clear-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 20px 0; position: relative; }
+.growth-clear-glow {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(251,191,36,0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+.growth-clear-title { font-size: 1.6rem; font-weight: 900; color: #fbbf24; letter-spacing: 1px; text-shadow: 0 0 20px rgba(251,191,36,0.5); }
+.growth-clear-card-img { width: 100px; height: 134px; border-radius: 12px; overflow: hidden; border: 2px solid rgba(251,191,36,0.5); box-shadow: 0 0 20px rgba(251,191,36,0.3); }
+.growth-clear-card-img img { width: 100%; height: 100%; object-fit: cover; }
+.growth-clear-reward-box { text-align: center; display: flex; flex-direction: column; gap: 6px; }
+.growth-clear-card-name { font-size: 1rem; font-weight: 700; color: var(--text); }
+.growth-clear-reward-text { font-size: 0.88rem; color: var(--muted); }
+.growth-clear-plus { color: #fbbf24; font-weight: 900; font-size: 1rem; }
+.growth-clear-bonus-now { font-size: 0.8rem; color: var(--muted); }
+.growth-saving { font-size: 0.75rem; color: var(--muted); }
+
+/* ── 파밍 던전 ── */
+.farming-boss-preview {
+  text-align: center; border-radius: 14px; overflow: hidden;
+  max-height: 180px;
+}
+.farming-boss-preview img { width: 100%; max-height: 180px; object-fit: cover; object-position: center 30%; border-radius: 14px; }
+.farming-done-today {
+  background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; color: #f87171; text-align: center;
+}
+.farming-reward-table { display: flex; flex-direction: column; gap: 4px; }
+.farming-reward-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 12px; border-radius: 8px; background: rgba(255,255,255,0.04);
+  font-size: 0.78rem;
+}
+.farming-reward-label { color: var(--muted); }
+.farming-reward-val { font-weight: 700; color: #4a9eff; font-family: 'Nunito', sans-serif; }
+
+.farming-slots-title { font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+.farming-slots-count { color: #6d28d9; font-weight: 900; }
+.farming-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.farming-slot {
+  aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; position: relative;
+  border: 2px dashed rgba(255,255,255,0.12); cursor: pointer; transition: all 0.18s;
+  background: rgba(255,255,255,0.03);
+}
+.farming-slot:hover { border-color: rgba(109,40,217,0.4); background: rgba(109,40,217,0.07); }
+.farming-slot.filled { border-style: solid; border-color: rgba(255,255,255,0.15); }
+.farming-slot.no-card { opacity: 0.4; cursor: not-allowed; }
+.farming-slot img { width: 100%; height: 100%; object-fit: cover; }
+.farming-slot-grade { position: absolute; bottom: 0; left: 0; right: 0; padding: 4px; text-align: center; font-size: 0.62rem; font-weight: 900; color: white; }
+.farming-slot-remove {
+  position: absolute; top: 4px; right: 4px; width: 18px; height: 18px;
+  border-radius: 50%; background: rgba(0,0,0,0.7); border: none; color: white;
+  font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.farming-slot-empty { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.farming-slot-grade-label { font-size: 0.65rem; font-weight: 700; }
+.farming-slot-plus { font-size: 1.4rem; color: rgba(255,255,255,0.2); line-height: 1; }
+.farming-slot.filled .farming-slot-plus { display: none; }
+
+/* 파밍 전투 */
+.farming-battle-wrap { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.farming-battle-boss { width: 100%; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.farming-boss-img { width: 180px; height: 140px; object-fit: cover; border-radius: 14px; border: 2px solid rgba(255,255,255,0.1); }
+.farming-timer-row { width: 100%; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.farming-timer { font-size: 2rem; font-weight: 900; font-family: 'Nunito', sans-serif; color: var(--text); letter-spacing: 2px; }
+.farming-progress-track { width: 100%; height: 10px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.farming-progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #6d28d9, #4a9eff); transition: width 1s linear; }
+.farming-tick-dmg { font-size: 1.4rem; font-weight: 900; color: #ef4444; font-family: 'Nunito', sans-serif; animation: tickPop 0.4s ease; }
+.farming-total-dmg { display: flex; align-items: baseline; gap: 8px; }
+.farming-total-label { font-size: 0.78rem; color: var(--muted); }
+.farming-total-val { font-size: 1.3rem; font-weight: 900; font-family: 'Nunito', sans-serif; color: #fbbf24; }
+.farming-battle-cards { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: 100%; }
+.farming-battle-card {
+  width: 58px; position: relative; border-radius: 8px; overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.1);
+}
+.farming-battle-card img { width: 100%; aspect-ratio: 3/4; object-fit: cover; }
+.farming-battle-card-grade { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 0.55rem; font-weight: 900; color: white; padding: 2px; }
+.farming-battle-card-dmg { font-size: 0.58rem; color: var(--muted); text-align: center; padding: 2px 2px 3px; font-family: 'Nunito', sans-serif; }
+
+/* 파밍 완료 */
+.farming-done-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 10px 0; }
+.farming-done-title { font-size: 1.5rem; font-weight: 900; color: #fbbf24; text-shadow: 0 0 16px rgba(251,191,36,0.4); }
+.farming-done-boss { width: 140px; height: 110px; border-radius: 12px; overflow: hidden; }
+.farming-done-boss img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.farming-done-stats { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.farming-done-stat { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.04); border-radius: 10px; }
+.farming-done-stat.highlight { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25); }
+.farming-done-stat-label { font-size: 0.8rem; color: var(--muted); }
+.farming-done-stat-val { font-size: 1rem; font-weight: 900; font-family: 'Nunito', sans-serif; color: var(--text); }
+.farming-done-stat.highlight .farming-done-stat-val { color: #fbbf24; }
+.farming-reward-tier { width: 100%; display: flex; flex-direction: column; gap: 3px; }
+.farming-reward-tier-row { display: flex; justify-content: space-between; padding: 5px 12px; border-radius: 7px; font-size: 0.75rem; color: var(--muted); }
+.farming-reward-tier-row.current { background: rgba(109,40,217,0.2); color: white; font-weight: 700; }
+
+/* 반응형 */
+@media (max-width: 400px) {
+  .growth-grade-grid { grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .farming-slots { grid-template-columns: repeat(3, 1fr); gap: 6px; }
 }
