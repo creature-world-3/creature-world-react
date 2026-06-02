@@ -3756,6 +3756,186 @@ body.raid-theme .music-toggle-btn {
 /* 힌트 */
 .gbc-hint { font-size: 0.72rem; color: var(--muted); text-align: center; padding: 4px 0; }
 .growth-boss-card.locked { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6); }
+.growth-boss-card.gbc-done-card { opacity: 0.6; }
+
+/* ── 성장 던전 상세 모달 ── */
+.growth-detail-sheet {
+  background: var(--card-bg); border-radius: 20px;
+  padding: 20px 18px 16px; width: min(340px, 92vw); max-height: 88vh;
+  overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+  position: relative;
+}
+.growth-detail-header {
+  display: flex; align-items: center; gap: 10px;
+}
+.growth-detail-grade-tag {
+  font-size: 0.72rem; font-weight: 900; font-family: 'Nunito', sans-serif;
+  padding: 3px 10px; border-radius: 99px; letter-spacing: 0.5px;
+}
+.growth-detail-title {
+  font-size: 1rem; font-weight: 700; color: var(--text);
+}
+.growth-detail-boss-wrap {
+  position: relative; border-radius: 14px; overflow: hidden;
+  background: rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center;
+}
+.growth-detail-boss-wrap img {
+  width: 100%; height: auto; max-height: 180px; object-fit: contain; display: block;
+}
+.gbc-detail-dmg-float {
+  position: absolute; top: 35%; left: 50%; transform: translateX(-50%); z-index: 5;
+  font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.5rem;
+  text-shadow: 0 0 8px currentColor, 0 1px 4px rgba(0,0,0,0.9);
+  white-space: nowrap; pointer-events: none;
+  animation: dgDmgFloat 1.2s cubic-bezier(.2,.8,.3,1) forwards;
+}
+.growth-detail-hp-wrap {
+  display: flex; flex-direction: column; gap: 5px;
+}
+.growth-detail-hp-label {
+  display: flex; justify-content: space-between;
+  font-size: 0.78rem; color: var(--muted);
+}
+.growth-detail-hp-bar {
+  height: 8px; background: rgba(0,0,0,0.4); border-radius: 99px; overflow: hidden;
+}
+.growth-detail-hp-fill {
+  height: 100%; border-radius: 99px; transition: width 0.5s ease;
+}
+.growth-detail-total-dmg {
+  font-size: 0.78rem; color: var(--muted); text-align: right;
+}
+.growth-detail-card-wrap {
+  background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px;
+}
+.growth-detail-card-label {
+  font-size: 0.72rem; color: var(--muted); margin-bottom: 8px;
+}
+.growth-detail-card-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.growth-detail-card-img {
+  position: relative; width: 52px; height: 52px; border-radius: 10px; overflow: hidden;
+  flex-shrink: 0;
+}
+.growth-detail-card-img img { width: 100%; height: 100%; object-fit: cover; }
+.growth-detail-card-info { display: flex; flex-direction: column; gap: 3px; }
+.growth-detail-card-name { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.growth-detail-card-dmg { font-size: 0.78rem; color: var(--muted); }
+.growth-detail-no-card {
+  text-align: center; color: var(--muted); font-size: 0.85rem; padding: 8px 0;
+}
+.growth-detail-attempts {
+  display: flex; align-items: center; font-size: 0.82rem; color: var(--muted);
+}
+.growth-detail-btns {
+  display: flex; flex-direction: column; gap: 8px; align-items: stretch;
+}
+.growth-detail-fighting-badge {
+  text-align: center; font-size: 0.9rem; font-weight: 700;
+  color: #ff6b6b; padding: 10px; background: rgba(255,107,107,0.12);
+  border-radius: 10px; border: 1px solid rgba(255,107,107,0.3);
+  animation: gfightPulse 1s ease-in-out infinite;
+}
+.growth-detail-done-badge {
+  text-align: center; font-size: 0.9rem; font-weight: 700;
+  color: #4ade80; padding: 10px; background: rgba(74,222,128,0.1);
+  border-radius: 10px; border: 1px solid rgba(74,222,128,0.25);
+}
+.growth-detail-pick-btn {
+  width: 100%; padding: 11px; border-radius: 10px;
+  background: rgba(109,40,217,0.25); border: 1.5px dashed rgba(109,40,217,0.6);
+  color: #c084fc; font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  transition: all 0.2s;
+}
+.growth-detail-pick-btn:hover { background: rgba(109,40,217,0.4); }
+.growth-detail-change-btn {
+  margin-left: auto; flex-shrink: 0;
+  padding: 5px 12px; border-radius: 8px;
+  background: rgba(109,40,217,0.25); border: 1px solid rgba(109,40,217,0.5);
+  color: #c084fc; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+}
+.growth-picker-overlay {
+  position: absolute; inset: 0; z-index: 10;
+  background: rgba(0,0,0,0.6); border-radius: 20px;
+  display: flex; align-items: flex-end; padding-bottom: 0;
+}
+.growth-picker-overlay .inst-sheet {
+  width: 100%; border-radius: 16px 16px 20px 20px; max-height: 80%;
+}
+
+/* ── 파밍 던전 새 카드 선택 UI ── */
+.farm-sel-header {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.85rem; font-weight: 700; color: var(--text);
+  margin-bottom: 8px;
+}
+.farm-sel-hint { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+.farm-sel-slots {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px;
+  margin-bottom: 14px;
+}
+.farm-sel-slot {
+  position: relative; border-radius: 10px; overflow: hidden;
+  aspect-ratio: 3/4; border: 1.5px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+}
+.farm-sel-slot.filled { border-color: rgba(109,40,217,0.6); }
+.farm-sel-slot img { width: 100%; height: 100%; object-fit: cover; }
+.farm-sel-grade-tag {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  font-size: 0.48rem; font-weight: 900; color: white; text-align: center;
+  padding: 2px 0; font-family: 'Nunito', sans-serif;
+}
+.farm-sel-remove {
+  position: absolute; top: 2px; right: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(0,0,0,0.7); border: none; color: white;
+  font-size: 0.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.farm-sel-empty {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+}
+.farm-sel-empty-grade {
+  font-size: 0.55rem; font-weight: 900; font-family: 'Nunito', sans-serif; opacity: 0.5;
+}
+.farm-card-list-title {
+  font-size: 0.8rem; color: var(--muted); margin-bottom: 6px;
+}
+.farm-card-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 320px; overflow-y: auto; padding-right: 2px;
+  margin-bottom: 12px;
+}
+.farm-card-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer; transition: all 0.15s;
+}
+.farm-card-row:hover { background: rgba(255,255,255,0.08); }
+.farm-card-row.farm-selected {
+  background: rgba(109,40,217,0.2); border-color: rgba(109,40,217,0.5);
+}
+.farm-card-row.farm-grade-taken { opacity: 0.4; cursor: not-allowed; }
+.farm-card-thumb {
+  position: relative; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+}
+.farm-card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.farm-sel-check {
+  position: absolute; inset: 0; background: rgba(109,40,217,0.6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; color: white; font-weight: 900;
+}
+.farm-card-info { flex: 1; min-width: 0; }
+.farm-card-name { font-size: 0.85rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.farm-card-grade-row { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.farm-card-grade { font-size: 0.72rem; font-weight: 700; font-family: 'Nunito', sans-serif; }
+.farm-card-dmg { font-size: 0.72rem; color: var(--muted); }
+.dungeon-inst-item.inst-selected {
+  border-color: rgba(109,40,217,0.6); background: rgba(109,40,217,0.15);
+}
 .growth-boss-img-wrap { width: 100%; flex: 1; overflow: hidden; }
 .growth-boss-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
 .growth-boss-grade-tag {
