@@ -59,7 +59,7 @@ export const CARDS = [
   { id: 'totori_sr2',   name: '서부햄스터',  grade: 'sr', img: '서부햄스터.png',   slogan: '"이 땅은 내가 지킨다!"',    special: 'western' },
   { id: 'pinchoco_sr2', name: '서부펭귄',    grade: 'sr', img: '서부펭귄.png',     slogan: '"빵야! 빵야!"',             special: 'western' },
   { id: 'lukanyong_sr2',name: '서부공룡',    grade: 'sr', img: '서부공룡.png',     slogan: '"으아아 먼지가 날린다!"',   special: 'western' },
-  { id: 'misty_sr2',    name: '서부유령',    grade: 'sr', img: '서부유령.png',     slogan: '"유령 마을에 오신 걸 환영해요..."', special: 'western' },
+  { id: 'misti_sr2',    name: '서부유령',    grade: 'sr', img: '서부유령.png',     slogan: '"유령 마을에 오신 걸 환영해요..."', special: 'western' },
   { id: 'daitron_sr2',  name: '서부악마기사', grade: 'sr', img: '서부악마기사.png', slogan: '"서부엔 법이 없다."',       special: 'western' },
 
   // ── RAID 한정 카드 (일반 뽑기/합성 제외) ──

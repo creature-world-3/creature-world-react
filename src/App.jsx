@@ -20,8 +20,10 @@ import MailboxTab from './components/tabs/MailboxTab.jsx';
 import RankingTab from './components/tabs/RankingTab.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
+import { CARDS } from './data/cards.js';
 import './App.css';
 
+const COLLECTIBLE_CARD_COUNT = CARDS.filter(c => !c.raid && c.grade !== 'raid').length;
 const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking', 'dex'];
 
 
@@ -135,18 +137,18 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [mailboxDocs, setMailboxDocs] = useState([]);
   const [musicOn, setMusicOn]   = useState(() => localStorage.getItem('music_on') !== 'false');
-  const [interacted, setInteracted] = useState(false);
-  const homeAudioRef = useRef(null);
-  const raidAudioRef = useRef(null);
-  const musicOnRef   = useRef(musicOn);
-  const activeTabRef = useRef('gacha');
+  const homeAudioRef    = useRef(null);
+  const raidAudioRef    = useRef(null);
+  const growthAudioRef  = useRef(null);
+  const farmingAudioRef = useRef(null);
+  // 오디오 제어용 ref (이벤트 핸들러에서 동기 접근 — state 업데이트 지연과 무관)
+  const musicOnRef      = useRef(musicOn);
+  const activeTabRef    = useRef('gacha');
+  const dungeonSubRef   = useRef('growth');
+  const interactedRef   = useRef(false);
   const toastTimer  = useRef(null);
   const saveTimer   = useRef(null);
   const isFirstLoad = useRef(true);
-
-  // ref 동기화 (이벤트 핸들러 클로저에서 최신값 접근용)
-  useEffect(() => { musicOnRef.current = musicOn; }, [musicOn]);
-  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   // ── 레이드 탭 배경 테마 ──
   useEffect(() => {
@@ -164,51 +166,51 @@ export default function App() {
     }
   }, [user]);
 
-  // ── 배경음악 초기화 + 첫 인터랙션 자동재생 ──
+  // ── 오디오 헬퍼: 전체 정지 후 현재 탭 트랙만 재생 (이벤트 핸들러에서 직접 호출) ──
+  const applyAudio = (tab, sub) => {
+    const home   = homeAudioRef.current;
+    const raid   = raidAudioRef.current;
+    const growth = growthAudioRef.current;
+    const farm   = farmingAudioRef.current;
+    if (!home || !raid || !growth || !farm) return;
+    home.pause(); raid.pause(); growth.pause(); farm.pause();
+    if (!interactedRef.current || !musicOnRef.current) return;
+    if (tab === 'raid')         { raid.play().catch(() => {}); }
+    else if (tab === 'dungeon') { (sub === 'growth' ? growth : farm).play().catch(() => {}); }
+    else                        { home.play().catch(() => {}); }
+  };
+
+  // ── 던전 서브탭 변경 핸들러 ──
+  const handleDungeonSubTabChange = (newSub) => {
+    dungeonSubRef.current = newSub;
+    applyAudio(activeTabRef.current, newSub);
+  };
+
+  // ── 오디오 초기화 ──
   useEffect(() => {
-    const home = new Audio('/홈화면_노래.mp3');
-    const raid = new Audio('/레이드_노래.mp3');
-    home.loop = true; home.volume = 0.4;
-    raid.loop = true; raid.volume = 0.4;
-    homeAudioRef.current = home;
-    raidAudioRef.current = raid;
+    const home   = new Audio('/홈화면_노래.mp3');
+    const raid   = new Audio('/레이드_노래.mp3');
+    const growth = new Audio('/성장던전노래.mp3');
+    const farm   = new Audio('/파밍던전노래.mp3');
+    [home, raid, growth, farm].forEach(a => { a.loop = true; a.volume = 0.4; });
+    homeAudioRef.current    = home;
+    raidAudioRef.current    = raid;
+    growthAudioRef.current  = growth;
+    farmingAudioRef.current = farm;
 
     const onFirstInteraction = () => {
-      // 브라우저 autoplay 정책: 사용자 제스처 컨텍스트 안에서 직접 play() 호출
-      if (musicOnRef.current) {
-        const isRaid = activeTabRef.current === 'raid';
-        (isRaid ? raid : home).play().catch(() => {});
-      }
-      setInteracted(true);
+      interactedRef.current = true;
+      applyAudio(activeTabRef.current, dungeonSubRef.current);
     };
-    document.addEventListener('click', onFirstInteraction, { once: true });
+    document.addEventListener('click',      onFirstInteraction, { once: true });
     document.addEventListener('touchstart', onFirstInteraction, { once: true, passive: true });
 
     return () => {
-      home.pause(); raid.pause();
-      document.removeEventListener('click', onFirstInteraction);
+      home.pause(); raid.pause(); growth.pause(); farm.pause();
+      document.removeEventListener('click',      onFirstInteraction);
       document.removeEventListener('touchstart', onFirstInteraction);
     };
-  }, []);
-
-  // ── 탭/뮤직 전환 (첫 인터랙션 후 자동재생) ──
-  useEffect(() => {
-    const home = homeAudioRef.current;
-    const raid = raidAudioRef.current;
-    if (!home || !raid || !interacted) return;
-    if (!musicOn) { home.pause(); raid.pause(); return; }
-    if (activeTab === 'raid') {
-      home.pause();
-      raid.play().catch(() => {});
-    } else if (activeTab === 'dungeon') {
-      // 던전 탭: 홈/레이드 음악 끄고, 던전 음악은 DungeonTab이 자체 관리
-      home.pause();
-      raid.pause();
-    } else {
-      raid.pause();
-      home.play().catch(() => {});
-    }
-  }, [activeTab, musicOn, interacted]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── 공통: Firestore 유저 데이터 로드/생성 ──
   const loadUserData = async (uid, profileData = null) => {
@@ -398,8 +400,10 @@ export default function App() {
     const oldIdx = TAB_ORDER.indexOf(prevTabRef.current);
     const newIdx = TAB_ORDER.indexOf(newTab);
     setSlideDir(newIdx >= oldIdx ? 'right' : 'left');
-    prevTabRef.current = newTab;
+    prevTabRef.current  = newTab;
+    activeTabRef.current = newTab;           // ref 즉시 동기화
     setActiveTab(newTab);
+    applyAudio(newTab, dungeonSubRef.current); // 음악 즉시 전환
     setMoreOpen(false);
   };
 
@@ -443,7 +447,7 @@ export default function App() {
   const TABS = {
     gacha:   <GachaTab {...tabProps} isGuest={isGuest} />,
     synth:   <SynthTab {...tabProps} isGuest={isGuest} />,
-    dungeon: <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} musicOn={musicOn} />,
+    dungeon: <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} onSubTabChange={handleDungeonSubTabChange} />,
     shop:    <ShopTab {...tabProps} />,
     dex:     <DexTab gs={gs} />,
     board:   <BoardTab gs={gs} user={user} />,
@@ -545,7 +549,7 @@ export default function App() {
                 {uniqueOwned}
                 <button className="bonus-info-btn" onClick={() => setShowBonusInfo(true)} title="레이드 보너스 안내">ⓘ</button>
               </div>
-              <div className="status-sub">/ 31 종류</div>
+              <div className="status-sub">/ {COLLECTIBLE_CARD_COUNT} 종류</div>
             </div>
             <div className="status-card">
               <div className="status-label">접속 시간</div>
@@ -577,7 +581,7 @@ export default function App() {
           <div className="tab-slide-wrapper">
             {/* DungeonTab 항상 마운트 유지 → 탭 이동해도 자동사냥 상태 유지 */}
             <div style={{display: activeTab === 'dungeon' ? 'block' : 'none'}}>
-              <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} musicOn={musicOn} />
+              <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} onSubTabChange={handleDungeonSubTabChange} />
             </div>
             {activeTab !== 'dungeon' && (
               <div key={activeTab} className={slideDir ? `tab-slide-${slideDir}` : undefined}>
@@ -591,7 +595,13 @@ export default function App() {
         {toast && <div className="cw-toast">{toast}</div>}
         <button
           className="music-toggle-btn"
-          onClick={() => setMusicOn(prev => { const n = !prev; localStorage.setItem('music_on', n); return n; })}
+          onClick={() => {
+            const n = !musicOn;
+            musicOnRef.current = n;
+            localStorage.setItem('music_on', n);
+            setMusicOn(n);
+            applyAudio(activeTabRef.current, dungeonSubRef.current);
+          }}
           title={musicOn ? '음악 끄기' : '음악 켜기'}
         >{musicOn ? '🎵' : '🔇'}</button>
 

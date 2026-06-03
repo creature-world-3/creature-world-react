@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { CARDS, CHARACTERS } from '../../data/cards.js';
 
+const GRADE_ORDER = { n: 0, r: 1, sr: 2, ur: 3, lg: 4, raid: 5 };
 const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const GRADE_COLOR = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
 const RAID_CARDS   = CARDS.filter(c => c.raid === true || c.grade === 'raid' || c.grade === 'RAID');
@@ -72,6 +73,7 @@ function CardItem({ card, ownedCards, onSingle, onMulti }) {
       <img src={`/${card.img}`} alt={card.name} loading="lazy" />
       {owned && cs === 'gold' && <div className="cond-gold-overlay" />}
       {owned && cs === 'holo' && <div className="cond-holo-overlay" />}
+      {owned && card.grade === 'raid' && <div className="col-card-aurora" />}
       {owned && (
         <div className="col-card-footer">
           <div className="col-name">{card.name}</div>
@@ -211,7 +213,7 @@ export default function DexTab({ gs }) {
             <div key={char.id} className="dex-character-group">
               <div className="dex-char-name">{char.name}</div>
               <div className="card-grid">
-                {NORMAL_CARDS.filter(c => c.id.startsWith(char.id)).map(card => (
+                {NORMAL_CARDS.filter(c => c.id.startsWith(char.id)).sort((a, b) => (GRADE_ORDER[a.grade] ?? 99) - (GRADE_ORDER[b.grade] ?? 99)).map(card => (
                   <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
                 ))}
               </div>
@@ -281,10 +283,6 @@ export default function DexTab({ gs }) {
               </div>
               <div className="card-art">
                 <img src={`/${zoomCard.card.img}`} alt={zoomCard.card.name} />
-              </div>
-              <div className="card-footer-front">
-                <div className="card-sep" />
-                <div className="card-slogan">{zoomCard.card.slogan}</div>
               </div>
               <div className="card-aurora" />
               {zoomCs === 'gold' && <div className="cond-gold-overlay" />}
