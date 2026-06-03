@@ -1638,6 +1638,20 @@
 
 /* ── BOARD ── */
 .board-wrap { display: flex; flex-direction: column; gap: 14px; }
+.board-notices { display: flex; flex-direction: column; gap: 6px; }
+.board-notice-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(74,158,255,0.08); border: 1px solid rgba(74,158,255,0.2);
+  border-radius: 10px; padding: 10px 12px;
+}
+.board-notice-badge {
+  flex-shrink: 0; font-size: 0.65rem; font-weight: 900;
+  background: #2563eb; color: #fff; border-radius: 4px;
+  padding: 2px 6px; margin-top: 1px;
+}
+.board-notice-content { display: flex; flex-direction: column; gap: 2px; }
+.board-notice-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.board-notice-body { font-size: 0.74rem; color: var(--muted); line-height: 1.5; }
 .board-header { display: flex; align-items: center; justify-content: space-between; }
 .board-write-btn {
   background: var(--blue-dark); color: white; border: none; border-radius: 99px;

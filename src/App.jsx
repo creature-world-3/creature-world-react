@@ -140,7 +140,6 @@ export default function App() {
   const homeAudioRef    = useRef(null);
   const raidAudioRef    = useRef(null);
   const growthAudioRef  = useRef(null);
-  const farmingAudioRef = useRef(null);
   // 오디오 제어용 ref (이벤트 핸들러에서 동기 접근 — state 업데이트 지연과 무관)
   const musicOnRef      = useRef(musicOn);
   const activeTabRef    = useRef('gacha');
@@ -171,12 +170,11 @@ export default function App() {
     const home   = homeAudioRef.current;
     const raid   = raidAudioRef.current;
     const growth = growthAudioRef.current;
-    const farm   = farmingAudioRef.current;
-    if (!home || !raid || !growth || !farm) return;
-    home.pause(); raid.pause(); growth.pause(); farm.pause();
+    if (!home || !raid || !growth) return;
+    home.pause(); raid.pause(); growth.pause();
     if (!interactedRef.current || !musicOnRef.current) return;
     if (tab === 'raid')         { raid.play().catch(() => {}); }
-    else if (tab === 'dungeon') { (sub === 'growth' ? growth : farm).play().catch(() => {}); }
+    else if (tab === 'dungeon') { growth.play().catch(() => {}); }
     else                        { home.play().catch(() => {}); }
   };
 
@@ -191,12 +189,10 @@ export default function App() {
     const home   = new Audio('/홈화면_노래.mp3');
     const raid   = new Audio('/레이드_노래.mp3');
     const growth = new Audio('/성장던전노래.mp3');
-    const farm   = new Audio('/파밍던전노래.mp3');
-    [home, raid, growth, farm].forEach(a => { a.loop = true; a.volume = 0.4; });
+    [home, raid, growth].forEach(a => { a.loop = true; a.volume = 0.4; });
     homeAudioRef.current    = home;
     raidAudioRef.current    = raid;
     growthAudioRef.current  = growth;
-    farmingAudioRef.current = farm;
 
     const onFirstInteraction = () => {
       interactedRef.current = true;
@@ -206,7 +202,7 @@ export default function App() {
     document.addEventListener('touchstart', onFirstInteraction, { once: true, passive: true });
 
     return () => {
-      home.pause(); raid.pause(); growth.pause(); farm.pause();
+      home.pause(); raid.pause(); growth.pause();
       document.removeEventListener('click',      onFirstInteraction);
       document.removeEventListener('touchstart', onFirstInteraction);
     };

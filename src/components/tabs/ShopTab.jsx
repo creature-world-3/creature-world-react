@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { CARDS } from '../../data/cards.js';
 
 const WESTERN_POOL = CARDS.filter(c => c.special === 'western');
-const WESTERN_COST = 30;
+const WESTERN_COST = 50;
 
 function genUid() {
   return `card_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

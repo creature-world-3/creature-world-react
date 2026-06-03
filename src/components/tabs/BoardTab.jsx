@@ -11,6 +11,24 @@ const GRADE_BG    = { n: 'rgba(80,80,80,0.9)', r: '#1a3a6a', sr: '#2d1b4e', ur: 
 const GRADE_COLOR = { n: '#ccc', r: '#7eb8ff', sr: '#d4a8ff', ur: '#ffd97a', lg: '#fff', raid: '#1a0820' };
 const MAX_TEXT = 50;
 
+const NOTICES = [
+  {
+    id: 'notice_trade',
+    title: '거래소 오픈',
+    body: '카드를 사고팔 수 있는 거래소가 오픈됐어요! 팝니다 / 삽니다 탭을 이용해보세요.',
+  },
+  {
+    id: 'notice_farming',
+    title: '파밍 던전 오픈',
+    body: '10분 자동 전투! 등급별 카드를 슬롯에 배치하고 뽑기권을 획득하세요. 하루 1회 도전 가능.',
+  },
+  {
+    id: 'notice_growth',
+    title: '성장 던전 오픈',
+    body: '등급별 보스를 처치하면 카드 기본 데미지가 영구 +1 상승! 하루 3회, 동시 진행 가능.',
+  },
+];
+
 function condStyle(grade, cond) {
   if (grade === 'lg' || grade === 'raid') return 'gold';
   if (grade === 'ur') return 'holo';
@@ -130,6 +148,19 @@ export default function BoardTab({ gs, user }) {
 
   return (
     <div className="board-wrap">
+
+      {/* ── 공지 ── */}
+      <div className="board-notices">
+        {NOTICES.map(n => (
+          <div key={n.id} className="board-notice-item">
+            <span className="board-notice-badge">공지</span>
+            <div className="board-notice-content">
+              <div className="board-notice-title">{n.title}</div>
+              <div className="board-notice-body">{n.body}</div>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* ── 헤더 ── */}
       <div className="board-header">
