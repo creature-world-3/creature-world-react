@@ -54,6 +54,14 @@ export const CARDS = [
   { id: 'daitron_ur',  name: '다이트론', grade: 'ur',img: '울트라레어악마기사.png', slogan: '물..들어와..ㅅ..ㅏ.ㄹ..' },
   { id: 'daitron_lg',  name: '다이트론', grade: 'lg',img: '레전드악마기사.png',    slogan: '끝이다.' },
 
+  // ── 서부 시리즈 SR ──
+  { id: 'rumi_sr2',     name: '서부여우',    grade: 'sr', img: '서부여우.png',     slogan: '"서부의 바람이 불어온다!"' },
+  { id: 'totori_sr2',   name: '서부햄스터',  grade: 'sr', img: '서부햄스터.png',   slogan: '"이 땅은 내가 지킨다!"' },
+  { id: 'pinchoco_sr2', name: '서부펭귄',    grade: 'sr', img: '서부펭귄.png',     slogan: '"빵야! 빵야!"' },
+  { id: 'lukanyong_sr2',name: '서부공룡',    grade: 'sr', img: '서부공룡.png',     slogan: '"으아아 먼지가 날린다!"' },
+  { id: 'misty_sr2',    name: '서부유령',    grade: 'sr', img: '서부유령.png',     slogan: '"유령 마을에 오신 걸 환영해요..."' },
+  { id: 'daitron_sr2',  name: '서부악마기사', grade: 'sr', img: '서부악마기사.png', slogan: '"서부엔 법이 없다."' },
+
   // ── RAID 한정 카드 (일반 뽑기/합성 제외) ──
   { id: 'raid_cursed_doll', name: '저주받은 인형의 왕', grade: 'raid', img: 'boss_cursed_doll.png', slogan: '"공허의 심연에서 깨어났다"', raid: true },
 ];
