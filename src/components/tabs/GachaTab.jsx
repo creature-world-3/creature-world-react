@@ -51,14 +51,15 @@ function randomCard() {
   let r = Math.random() * total;
   let grade = 'n';
   for (const [g, w] of Object.entries(GRADE_WEIGHT)) { r -= w; if (r <= 0) { grade = g; break; } }
-  const pool = CARDS.filter(c => c.grade === grade && !c.raid);
+  const pool = CARDS.filter(c => c.grade === grade && !c.raid && !c.special);
   return pool[Math.floor(Math.random() * pool.length)] ?? CARDS[0];
 }
 
 const D10_AURORA = {
-  sr: 'repeating-linear-gradient(120deg,rgba(192,132,252,0.35) 0%,rgba(100,180,255,0.25) 25%,rgba(255,100,200,0.25) 50%,rgba(192,132,252,0.35) 75%)',
-  ur: 'repeating-linear-gradient(120deg,rgba(255,210,80,0.45) 0%,rgba(255,160,30,0.35) 25%,rgba(255,240,120,0.4) 50%,rgba(255,210,80,0.45) 75%)',
-  lg: 'repeating-linear-gradient(120deg,rgba(255,80,80,0.3) 0%,rgba(255,200,50,0.3) 15%,rgba(80,220,120,0.3) 30%,rgba(80,160,255,0.3) 45%,rgba(180,80,255,0.3) 60%,rgba(255,80,80,0.3) 75%)',
+  sr:   'repeating-linear-gradient(120deg,rgba(192,132,252,0.35) 0%,rgba(100,180,255,0.25) 25%,rgba(255,100,200,0.25) 50%,rgba(192,132,252,0.35) 75%)',
+  ur:   'repeating-linear-gradient(120deg,rgba(255,210,80,0.45) 0%,rgba(255,160,30,0.35) 25%,rgba(255,240,120,0.4) 50%,rgba(255,210,80,0.45) 75%)',
+  lg:   'repeating-linear-gradient(120deg,rgba(255,80,80,0.3) 0%,rgba(255,200,50,0.3) 15%,rgba(80,220,120,0.3) 30%,rgba(80,160,255,0.3) 45%,rgba(180,80,255,0.3) 60%,rgba(255,80,80,0.3) 75%)',
+  raid: 'repeating-linear-gradient(120deg,rgba(255,30,30,0.55) 0%,rgba(180,0,0,0.35) 20%,rgba(255,80,0,0.4) 40%,rgba(220,0,40,0.5) 60%,rgba(255,30,30,0.55) 80%)',
 };
 const D10_GRADE_BG  = { n:'rgba(80,80,80,0.9)', r:'#1a3a6a', sr:'#2d1b4e', ur:'#3a2800', lg:'linear-gradient(90deg,#ff6b6b,#4d96ff,#c77dff)' };
 const D10_GRADE_COL = { n:'#ccc', r:'#7eb8ff', sr:'#d4a8ff', ur:'#ffd97a', lg:'#fff' };
@@ -141,9 +142,9 @@ function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
 function CardDetailModal({ item, onClose }) {
   if (!item) return null;
   const { card, cond, count } = item;
-  const cs     = condStyle(card.grade, cond);
-  const enhLvl = item.enhanceLevel || 0;
-  const bonus  = item.bonus || 0;
+  const cs          = condStyle(card.grade, cond);
+  const enhLvl      = item.enhanceLevel || 0;
+  const growthBonus = item.growthBonus || 0;
   return (
     <div className="card-zoom-overlay card-detail-overlay" onClick={onClose}>
       <div className="card-zoom-inner" onClick={e => e.stopPropagation()}>
@@ -157,10 +158,6 @@ function CardDetailModal({ item, onClose }) {
             <div className="card-art">
               <img src={`/${card.img}`} alt={card.name} />
             </div>
-            <div className="card-footer-front">
-              <div className="card-sep" />
-              <div className="card-slogan">{card.slogan}</div>
-            </div>
             <div className="card-aurora" />
             <div className={`draw-cond-badge cond-badge-${cs}`}>{cond}</div>
           </div>
@@ -169,7 +166,7 @@ function CardDetailModal({ item, onClose }) {
             <div className="modal-stat-row">
               <span className="modal-stat-label">데미지</span>
               <span className="modal-stat-value modal-stat-dmg">
-                {dmgRange(card.grade, cond, enhLvl, bonus)}
+                {dmgRange(card.grade, cond, enhLvl, growthBonus)}
               </span>
             </div>
             {enhLvl > 0 && (
@@ -178,10 +175,10 @@ function CardDetailModal({ item, onClose }) {
                 <span className="modal-stat-value modal-stat-enhance">{enhLvl}단계</span>
               </div>
             )}
-            {bonus > 0 && (
+            {growthBonus > 0 && (
               <div className="modal-stat-row">
-                <span className="modal-stat-label">보너스</span>
-                <span className="modal-stat-value modal-stat-enhance">+{bonus}</span>
+                <span className="modal-stat-label">성장</span>
+                <span className="modal-stat-value modal-stat-enhance">+{growthBonus}</span>
               </div>
             )}
             <div className="modal-stat-row">
@@ -347,7 +344,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
           cardDef={pickerCard.card}
           instances={pickerCard.instances}
           onSelect={(inst) => {
-            setZoomItem({ card: pickerCard.card, cond: inst.condition, count: pickerCard.instances.length, enhanceLevel: inst.enhanceLevel || 0, bonus: calcBonus(gs.ownedCards) });
+            setZoomItem({ card: pickerCard.card, cond: inst.condition, count: pickerCard.instances.length, enhanceLevel: inst.enhanceLevel || 0, growthBonus: gs.cardBonusDmg?.[pickerCard.card.id] || 0 });
             setPickerCard(null);
           }}
           onClose={() => setPickerCard(null)}
@@ -372,7 +369,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
                     key={idx}
                     className={`draw10-card grade-${card.grade}`}
                     style={getBurstStyle(idx)}
-                    onClick={(e) => { e.stopPropagation(); setZoomItem({ card, cond, bonus: calcBonus(gs.ownedCards) }); }}
+                    onClick={(e) => { e.stopPropagation(); setZoomItem({ card, cond, growthBonus: gs.cardBonusDmg?.[card.id] || 0 }); }}
                   >
                     <img src={`/${card.img}`} alt={card.name} loading="lazy" />
                     <div className="d10-header">
@@ -447,10 +444,6 @@ export default function GachaTab({ gs, setGs, isGuest }) {
                     </div>
                     <div className="card-art">
                       <img src={`/${dc.img}`} alt={dc.name} />
-                    </div>
-                    <div className="card-footer-front">
-                      <div className="card-sep" />
-                      <div className="card-slogan">{dc.slogan}</div>
                     </div>
                     <div className="card-aurora" />
                     <div className={`draw-cond-badge cond-badge-${cs}`}>{drawn.cond}</div>
@@ -569,7 +562,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
                     if (myCards.length > 1) {
                       setPickerCard({ card, instances: myCards });
                     } else {
-                      setZoomItem({ card, cond: best.condition, count: 1, enhanceLevel: best.enhanceLevel || 0, bonus: calcBonus(gs.ownedCards) });
+                      setZoomItem({ card, cond: best.condition, count: 1, enhanceLevel: best.enhanceLevel || 0, growthBonus: gs.cardBonusDmg?.[card.id] || 0 });
                     }
                   }}
                 >
@@ -578,6 +571,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
                       <img src={`/${card.img}`} alt={card.name} loading="lazy" />
                       {cstyle === 'gold' && <div className="cond-gold-overlay" />}
                       {cstyle === 'holo' && <div className="cond-holo-overlay" />}
+                      {card.grade === 'raid' && <div className="col-card-aurora" />}
                       <div className="col-card-footer">
                         <div className="col-name">{card.name}</div>
                         <span className="col-grade">{GRADE_LABEL[card.grade]}</span>
