@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { doc, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, updateDoc, deleteField, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
 
@@ -113,8 +113,11 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
     restoredRef.current = true;
     const saved = gs?.growthBattles || {};
     if (!Object.keys(saved).length) return;
-    const now = Date.now();
-    const restored = {};
+    const now   = Date.now();
+    const today = todayKST();
+    const restored  = {};
+    const completed = []; // 앱 꺼진 사이 완료된 배틀
+
     for (const [grade, b] of Object.entries(saved)) {
       const inst = gs.ownedCards.find(c => c.uid === b.cardInstUid);
       const def  = CARDS.find(c => c.id === b.cardId);
@@ -124,8 +127,12 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
       const avgDmgTick = calcAvgDmg(grade, inst.condition, inst.enhanceLevel||0, b.bDmg);
       const dmgDealt   = ticksGone * avgDmgTick;
       const currentHp  = Math.max(0, (b.maxHp||0) - dmgDealt);
-      if (currentHp > 0) {
-        // 다음 틱까지 남은 시간 계산 → lastTickTime 역산
+      if (currentHp <= 0) {
+        // 앱 꺼진 사이 HP 0 → 날짜 무관하게 클리어 처리
+        // isToday: 오늘 배틀이면 dungeonAttempts도 카운트, 어제 배틀이면 cardBonusDmg만
+        completed.push({ grade, cardId: inst.id, isToday: !b.date || b.date === today });
+      } else if (!b.date || b.date === today) {
+        // 오늘 날짜 배틀이고 아직 진행 중 → 복원
         const lastTickTime = (b.startTime||now) + ticksGone * TICK_S * 1000;
         restored[grade] = {
           active: true, hp: currentHp, maxHp: b.maxHp,
@@ -134,26 +141,79 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
           lastTickTime,
         };
       }
+      // 이전 날짜 배틀이고 아직 HP > 0 → 낡은 데이터, 스킵
     }
     if (Object.keys(restored).length > 0) setBattles(restored);
+
+    if (completed.length > 0) {
+      setGs(prev => {
+        let next = { ...prev };
+        for (const { grade, cardId, isToday } of completed) {
+          const newBonus = (next.cardBonusDmg?.[cardId] || 0) + 1;
+          const nb = { ...(next.growthBattles||{}) }; delete nb[grade];
+          if (isToday) {
+            const a = next.dungeonAttempts?.[grade];
+            const att = (!a || a.date !== today) ? 0 : (a.count||0);
+            next = {
+              ...next,
+              cardBonusDmg:    { ...(next.cardBonusDmg||{}), [cardId]: newBonus },
+              dungeonAttempts: { ...(next.dungeonAttempts||{}), [grade]: { count: att + 1, date: today } },
+              growthBattles:   nb,
+            };
+          } else {
+            // 이전 날 배틀 클리어 → 오늘 시도 횟수는 건드리지 않고 보너스만
+            next = {
+              ...next,
+              cardBonusDmg:  { ...(next.cardBonusDmg||{}), [cardId]: newBonus },
+              growthBattles: nb,
+            };
+          }
+        }
+        return next;
+      });
+      const updates = {};
+      for (const { grade, cardId, isToday } of completed) {
+        updates[`cardBonusDmg.${cardId}`] = (gs?.cardBonusDmg?.[cardId] || 0) + 1;
+        updates[`growthBattles.${grade}`] = deleteField();
+        if (isToday) {
+          const a = gs?.dungeonAttempts?.[grade];
+          const att = (!a || a.date !== today) ? 0 : (a.count||0);
+          updates[`dungeonAttempts.${grade}`] = { count: att + 1, date: today };
+        }
+      }
+      updateDoc(doc(db,'users',user.uid), updates).catch(e => console.error('[growth restore-done]', e));
+      completed.forEach(({ grade }) => {
+        addDoc(collection(db,'mailbox'), {
+          title: '성장 던전 클리어 보상',
+          message: `${GRADE_LABEL[grade]} 등급 성장 던전 클리어! ${GRADE_LABEL[grade]} 강화석 1개를 드립니다.`,
+          targetUid: user.uid,
+          reward: { type: 'enhanceStone', grade, amount: 1 },
+          createdAt: serverTimestamp(),
+        }).catch(e => console.error('[growth restore stone mail]', e));
+      });
+    }
   }, [user, gs?.ownedCards?.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getAttempts = (cardId) => {
-    const a = gsRef.current?.dungeonAttempts?.[cardId];
+  // 렌더링용: gs prop에서 직접 읽어 즉시 반영
+  const getAttempts = (grade) => {
+    const a = gs?.dungeonAttempts?.[grade];
     return (!a || a.date !== todayKST()) ? 0 : (a.count||0);
   };
 
   const startBattle = async (grade, inst) => {
     if (isGuest) { showToast('로그인이 필요합니다'); return; }
+    if (battlesRef.current[grade]?.active) return; // 이미 전투 중
     const def  = CARDS.find(c => c.id === inst.id);
     if (!def) return;
-    const att  = getAttempts(inst.id);
+    // 시작 시점 실제 횟수는 gsRef로 확인 (최신값)
+    const a = gsRef.current?.dungeonAttempts?.[grade];
+    const att = (!a || a.date !== todayKST()) ? 0 : (a.count||0);
     if (att >= MAX_DAILY_GROWTH) { showToast('오늘 이 등급의 도전 횟수를 다 사용했어요!'); return; }
     const bDmg   = gsRef.current?.cardBonusDmg?.[inst.id] || 0;
     const avgDmg = calcAvgDmg(grade, inst.condition, inst.enhanceLevel||0, bDmg);
     const maxHp  = avgDmg * 1200;
     const now = Date.now();
-    const battleData = { cardInstUid: inst.uid, cardId: inst.id, bDmg, maxHp, startTime: now };
+    const battleData = { cardInstUid: inst.uid, cardId: inst.id, bDmg, maxHp, startTime: now, date: todayKST() };
     setBattles(prev => ({
       ...prev,
       [grade]: { active: true, hp: maxHp, maxHp, cardInst: inst, cardDef: def, bDmg, totalDmg: 0, lastDmg: null, shaking: false, lastTickTime: now },
@@ -176,7 +236,9 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         if (!b?.active || clearingRef.current.has(grade)) continue;
         const sinceLastTick = now - (b.lastTickTime || now);
         if (sinceLastTick < TICK_S * 1000) continue; // 아직 틱 타이밍 아님
-        const dmg   = calcTickDmg(b.cardDef.grade, b.cardInst.condition, b.cardInst.enhanceLevel||0, b.bDmg);
+        const liveInst = gsRef.current?.ownedCards?.find(c => c.uid === b.cardInst.uid) || b.cardInst;
+        const liveBDmg = gsRef.current?.cardBonusDmg?.[liveInst.id] ?? b.bDmg;
+        const dmg   = calcTickDmg(b.cardDef.grade, liveInst.condition, liveInst.enhanceLevel||0, liveBDmg);
         const newHp = Math.max(0, b.hp - dmg);
         updates[grade] = { ...b, hp: newHp, totalDmg: b.totalDmg + dmg, lastDmg: dmg, shaking: true, lastTickTime: now };
         if (newHp === 0) { updates[grade].active = false; clears.push({ grade, battle: b }); }
@@ -197,30 +259,38 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         const currentUser = userRef.current;
         const t      = todayKST();
         const cardId = battle.cardInst.id;
-        const a      = currentGs?.dungeonAttempts?.[cardId];
+        const a      = currentGs?.dungeonAttempts?.[grade];
         const att    = (!a || a.date !== t) ? 0 : (a.count||0);
         const newCount = att + 1;
         const newBonus = (currentGs?.cardBonusDmg?.[cardId] || 0) + 1;
         setGs(prev => ({
           ...prev,
           cardBonusDmg:    { ...(prev.cardBonusDmg||{}), [cardId]: newBonus },
-          dungeonAttempts: { ...(prev.dungeonAttempts||{}), [cardId]: { count: newCount, date: t } },
+          dungeonAttempts: { ...(prev.dungeonAttempts||{}), [grade]: { count: newCount, date: t } },
           growthBattles:   (() => { const nb={...(prev.growthBattles||{})}; delete nb[grade]; return nb; })(),
         }));
         if (currentUser) {
           try {
             await updateDoc(doc(db,'users',currentUser.uid), {
               [`cardBonusDmg.${cardId}`]:    newBonus,
-              [`dungeonAttempts.${cardId}`]: { count: newCount, date: t },
+              [`dungeonAttempts.${grade}`]:  { count: newCount, date: t },
               [`growthBattles.${grade}`]:    deleteField(),
             });
           } catch(e) { console.error('[growth clear]', e); }
+          addDoc(collection(db,'mailbox'), {
+            title: '성장 던전 클리어 보상',
+            message: `${GRADE_LABEL[grade]} 등급 성장 던전 클리어! ${GRADE_LABEL[grade]} 강화석 1개를 드립니다.`,
+            targetUid: currentUser.uid,
+            reward: { type: 'enhanceStone', grade, amount: 1 },
+            createdAt: serverTimestamp(),
+          }).catch(e => console.error('[growth stone mail]', e));
         }
         if (newCount < MAX_DAILY_GROWTH) {
-          const avg   = calcAvgDmg(grade, battle.cardInst.condition, battle.cardInst.enhanceLevel||0, newBonus);
+          const liveRestartInst = gsRef.current?.ownedCards?.find(c => c.uid === battle.cardInst.uid) || battle.cardInst;
+          const avg   = calcAvgDmg(grade, liveRestartInst.condition, liveRestartInst.enhanceLevel||0, newBonus);
           const maxHp = avg * 1200;
           const restartNow = Date.now();
-          const newBD = { cardInstUid: battle.cardInst.uid, cardId: battle.cardInst.id, bDmg: newBonus, maxHp, startTime: restartNow };
+          const newBD = { cardInstUid: battle.cardInst.uid, cardId: battle.cardInst.id, bDmg: newBonus, maxHp, startTime: restartNow, date: todayKST() };
           setBattles(prev => ({
             ...prev,
             [grade]: { ...prev[grade], active: true, hp: maxHp, maxHp, bDmg: newBonus, totalDmg: 0, lastDmg: null, lastTickTime: restartNow },
@@ -248,11 +318,14 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
   const selBattle   = selGrade ? battles[selGrade] : null;
   const selHasCards = selGrade && !isGuest && ownedCards.some(oc => CARDS.find(c=>c.id===oc.id)?.grade===selGrade);
   const selGradeCards = selGrade ? groupByType(ownedCards.filter(oc => CARDS.find(c=>c.id===oc.id)?.grade===selGrade), bonusDmg) : [];
-  const selAtt      = selBattle?.active
-    ? getAttempts(selBattle.cardInst.id)
-    : detailCardPick ? getAttempts(detailCardPick.inst.id) : 0;
+  const selAtt      = selGrade ? getAttempts(selGrade) : 0;
   const selAllDone  = selHasCards && selAtt >= MAX_DAILY_GROWTH && !selBattle?.active;
   const selHpPct    = selBattle ? (selBattle.hp / selBattle.maxHp) * 100 : 100;
+  // 활성 배틀 카드의 실시간 능력치 (강화 반영)
+  const selLiveInst = selBattle?.active
+    ? ((gs?.ownedCards||[]).find(c => c.uid === selBattle.cardInst.uid) || selBattle.cardInst)
+    : null;
+  const selLiveBDmg = selLiveInst ? (gs?.cardBonusDmg?.[selLiveInst.id] ?? selBattle?.bDmg ?? 0) : 0;
 
   return (
     <div className="dungeon-sub-wrap">
@@ -262,7 +335,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         <div className="card-zoom-overlay" onClick={() => setGrowthInfoOpen(false)}>
           <div className="dungeon-info-sheet" onClick={e => e.stopPropagation()}>
             <div className="dungeon-info-title">성장 던전 안내</div>
-            <p className="dungeon-info-body">카드 1장을 선택해 보스에게 도전하세요. 클리어하면 해당 카드의 기본 데미지가 영구적으로 +1 상승합니다. 카드 1장당 하루 3번 성장 가능합니다.</p>
+            <p className="dungeon-info-body">등급별 보스에게 도전하세요. 클리어하면 출격 카드의 기본 데미지가 영구적으로 +1 상승합니다. 등급별 하루에 3번까지 도전 가능합니다.</p>
             <button className="zoom-close" onClick={() => setGrowthInfoOpen(false)}>닫기 ✕</button>
           </div>
         </div>
@@ -427,23 +500,23 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
               </div>
             )}
 
-            {/* 전투 중일 때 출격 카드 표시 */}
-            {selBattle?.active && (
+            {/* 전투 중일 때 출격 카드 표시 (강화 실시간 반영) */}
+            {selBattle?.active && selLiveInst && (
               <div className="growth-detail-card-wrap">
                 <div className="growth-detail-card-label">출격 중인 카드</div>
                 <div className="growth-detail-card-row">
                   <div className="growth-detail-card-img">
                     <img src={`/${selBattle.cardDef.img}`} alt={selBattle.cardDef.name} />
-                    {(selBattle.cardInst.enhanceLevel||0) > 0 && (
-                      <div className="inst-item-badge">+{selBattle.cardInst.enhanceLevel}</div>
+                    {(selLiveInst.enhanceLevel||0) > 0 && (
+                      <div className="inst-item-badge">+{selLiveInst.enhanceLevel}</div>
                     )}
                   </div>
                   <div className="growth-detail-card-info">
                     <div className="growth-detail-card-name">{selBattle.cardDef.name}</div>
                     <div className="growth-detail-card-dmg">
-                      {dmgRangeStr(selBattle.cardDef.grade, selBattle.cardInst.condition, selBattle.cardInst.enhanceLevel||0, selBattle.bDmg)}
+                      {dmgRangeStr(selBattle.cardDef.grade, selLiveInst.condition, selLiveInst.enhanceLevel||0, selLiveBDmg)}
                     </div>
-                    {selBattle.bDmg > 0 && <div className="growth-bonus-tag">성장 +{selBattle.bDmg}</div>}
+                    {selLiveBDmg > 0 && <div className="growth-bonus-tag">성장 +{selLiveBDmg}</div>}
                   </div>
                 </div>
               </div>
@@ -513,7 +586,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
               return (!best || dmg > best.dmg) ? { inst: oc, def, dmg, bDmg: b } : best;
             }, null);
           })() : null;
-          const att     = bestCard ? getAttempts(bestCard.inst.id) : 0;
+          const att     = getAttempts(grade);
           const allDone = hasCards && att >= MAX_DAILY_GROWTH;
           const isActive = battle?.active;
           const hpPct    = battle ? (battle.hp / battle.maxHp) * 100 : 100;
@@ -588,6 +661,8 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
   const battleRef   = useRef(null);
   const floatIdRef  = useRef(0);
   const restoredRef = useRef(false);
+  const gsRef       = useRef(gs);
+  useEffect(() => { gsRef.current = gs; }, [gs]);
 
   const showToast = (msg) => {
     clearTimeout(toastRef.current);
@@ -610,7 +685,8 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
     const fb = gs?.farmingBattle;
     if (!fb || fb.date !== today) return;
     const elapsedSec = Math.floor((Date.now() - fb.startTime) / 1000);
-    if (elapsedSec >= FARMING_DURATION) return;
+
+    // 카드 복원
     const restoredCards = [];
     for (const s of (fb.slots||[])) {
       const inst = gs.ownedCards.find(c => c.uid === s.cardInstUid);
@@ -618,10 +694,31 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
       if (inst && def) restoredCards.push({ cardDef: def, inst });
     }
     if (!restoredCards.length) return;
+
     const avgTickDmg = restoredCards.reduce((sum, s) => {
       const bDmg = (fb.bonusDmg||{})[s.inst.id]||0;
       return sum + calcAvgDmg(s.cardDef.grade, s.inst.condition, s.inst.enhanceLevel||0, bDmg);
     }, 0);
+
+    // 앱이 꺼진 사이 이미 배틀이 끝난 경우 → 보상 지급 후 완료 화면
+    if (elapsedSec >= FARMING_DURATION) {
+      const estimatedDmg = Math.floor(FARMING_DURATION / TICK_S) * avgTickDmg;
+      const tier = FARM_REWARDS.find(r => estimatedDmg >= r.min) || FARM_REWARDS[FARM_REWARDS.length-1];
+      setSelectedCards(restoredCards);
+      setTotalDmg(estimatedDmg);
+      setElapsed(FARMING_DURATION);
+      setReward(tier.tickets);
+      setGs(prev => ({ ...prev, tickets: prev.tickets + tier.tickets, farmingAttempt: { date: fb.date }, farmingBattle: null }));
+      if (user) {
+        updateDoc(doc(db,'users',user.uid), {
+          farmingAttempt: { date: fb.date },
+          farmingBattle: deleteField(),
+        }).catch(e => console.error('[farming restore-done]', e));
+      }
+      goPhase('done', 'forward');
+      return;
+    }
+
     const estimatedDmg = Math.floor(elapsedSec / TICK_S) * avgTickDmg;
     const slotsObj = Object.fromEntries(restoredCards.map(s => [s.cardDef.grade, s]));
     setSelectedCards(restoredCards);
@@ -689,7 +786,9 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
             let dmg = 0;
             Object.values(p.slots).forEach(slot => {
               if (!slot) return;
-              dmg += calcTickDmg(slot.cardDef.grade, slot.inst.condition, slot.inst.enhanceLevel||0, p.bonusDmg[slot.inst.id]||0);
+              const liveInst = gsRef.current?.ownedCards?.find(c => c.uid === slot.inst.uid) || slot.inst;
+              const liveBDmg = gsRef.current?.cardBonusDmg?.[liveInst.id] ?? 0;
+              dmg += calcTickDmg(slot.cardDef.grade, liveInst.condition, liveInst.enhanceLevel||0, liveBDmg);
             });
             setTotalDmg(d => d + dmg);
             setBossShaking(true);
@@ -710,19 +809,17 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
     if (phase === 'battle' && elapsed >= FARMING_DURATION) handleDone();
   }, [elapsed, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleDone = async () => {
+  const handleDone = () => {
     goPhase('done', 'forward');
     const tier = FARM_REWARDS.find(r => totalDmg >= r.min) || FARM_REWARDS[FARM_REWARDS.length-1];
     setReward(tier.tickets);
     setGs(prev => ({ ...prev, tickets: prev.tickets + tier.tickets, farmingAttempt: { date: today }, farmingBattle: null }));
+    // fire-and-forget: 앱 종료 전에도 완료 기록이 Firestore에 즉시 반영되도록
     if (user) {
-      try {
-        await updateDoc(doc(db,'users',user.uid), {
-          tickets: (gs.tickets||0) + tier.tickets,
-          farmingAttempt: { date: today },
-          farmingBattle: deleteField(),
-        });
-      } catch(e) { console.error('[farming done]', e); }
+      updateDoc(doc(db,'users',user.uid), {
+        farmingAttempt: { date: today },
+        farmingBattle: deleteField(),
+      }).catch(e => console.error('[farming done]', e));
     }
   };
 
@@ -939,10 +1036,11 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
                 출격 카드
               </div>
               <div className="dg-farm-cards">
-                {selectedCards.map(({cardDef, inst}) => {
-                  const bDmg = bonusDmg[inst.id]||0;
+                {selectedCards.map(({cardDef, inst: savedInst}) => {
+                  const inst = (gs?.ownedCards||[]).find(c => c.uid === savedInst.uid) || savedInst;
+                  const bDmg = (gs?.cardBonusDmg?.[inst.id]) ?? 0;
                   return (
-                    <div key={inst.uid} className={`dg-farm-card grade-${cardDef.grade}`}>
+                    <div key={savedInst.uid} className={`dg-farm-card grade-${cardDef.grade}`}>
                       <div className="dg-farm-card-img">
                         <img src={`/${cardDef.img}`} alt={cardDef.name} />
                         <div className="dg-farm-card-grade-tag" style={{background:GRADE_BG[cardDef.grade]}}>{GRADE_LABEL[cardDef.grade]}</div>
@@ -992,43 +1090,15 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
 // ══════════════════════════════════════
 const TAB_ORDER_DG = ['growth', 'farming'];
 
-export default function DungeonTab({ gs, setGs, user, isGuest, musicOn }) {
+export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange }) {
   const [subTab, setSubTab]         = useState('growth');
   const [slideClass, setSlideClass] = useState('');
-  const growthAudio  = useRef(null);
-  const farmingAudio = useRef(null);
-
-  useEffect(() => {
-    const g = new Audio('/성장던전노래.mp3');
-    const f = new Audio('/파밍던전노래.mp3');
-    g.loop = true; g.volume = 0.4;
-    f.loop = true; f.volume = 0.4;
-    growthAudio.current  = g;
-    farmingAudio.current = f;
-    return () => { g.pause(); g.src=''; f.pause(); f.src=''; };
-  }, []);
-
-  useEffect(() => {
-    const g = growthAudio.current;
-    const f = farmingAudio.current;
-    if (!g || !f) return;
-    if (!musicOn) { g.pause(); f.pause(); return; }
-    if (subTab === 'growth') { f.pause(); g.play().catch(()=>{}); }
-    else                     { g.pause(); f.play().catch(()=>{}); }
-  }, [subTab, musicOn]);
-
-  useEffect(() => {
-    if (!musicOn) { growthAudio.current?.pause(); farmingAudio.current?.pause(); }
-    else {
-      if (subTab === 'growth') growthAudio.current?.play().catch(()=>{});
-      else farmingAudio.current?.play().catch(()=>{});
-    }
-  }, [musicOn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchSubTab = (t) => {
     if (t === subTab) return;
     const dir = TAB_ORDER_DG.indexOf(t) > TAB_ORDER_DG.indexOf(subTab) ? 'right' : 'left';
     setSubTab(t);
+    onSubTabChange?.(t);
     setSlideClass(` subtab-slide-${dir}`);
     setTimeout(() => setSlideClass(''), 300);
   };

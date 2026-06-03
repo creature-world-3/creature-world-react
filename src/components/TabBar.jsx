@@ -6,6 +6,7 @@ const MAIN_TABS = [
 ];
 
 const MORE_TABS = [
+  { id: 'bag',     label: '가방' },
   { id: 'dex',     label: '도감' },
   { id: 'shop',    label: '상점' },
   { id: 'board',   label: '게시판' },

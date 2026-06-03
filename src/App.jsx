@@ -18,13 +18,14 @@ import TradeTab from './components/tabs/TradeTab.jsx';
 import RaidTab from './components/tabs/RaidTab.jsx';
 import MailboxTab from './components/tabs/MailboxTab.jsx';
 import RankingTab from './components/tabs/RankingTab.jsx';
+import BagTab from './components/tabs/BagTab.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import { CARDS } from './data/cards.js';
 import './App.css';
 
 const COLLECTIBLE_CARD_COUNT = CARDS.filter(c => !c.raid && c.grade !== 'raid').length;
-const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking', 'dex'];
+const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking', 'dex', 'bag'];
 
 
 export const BASE_STATE = {
@@ -41,6 +42,7 @@ export const BASE_STATE = {
   cardBonusDmg: {},
   dungeonAttempts: {},
   farmingAttempt: null,
+  enhanceStones: {},
 };
 
 function applyDailyReset(state) {
@@ -460,6 +462,7 @@ export default function App() {
     raid:    <RaidTab gs={gs} setGs={setGs} user={user} />,
     mailbox: <MailboxTab gs={gs} setGs={setGs} user={user} />,
     ranking: <RankingTab />,
+    bag:     <BagTab gs={gs} />,
   };
 
   // ── 로딩 화면 ──

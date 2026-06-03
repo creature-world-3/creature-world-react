@@ -423,6 +423,8 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
   const toastRef    = useRef(null);
   const tickRef     = useRef(null);
   const raidDataRef = useRef(null);
+  const gsRef       = useRef(gs);
+  useEffect(() => { gsRef.current = gs; }, [gs]);
 
   const bossConfig  = BOSS_CONFIGS.find(b => b.id === bossId);
   const channelRef  = doc(db, 'raids', bossId, 'channels', channelId);
@@ -513,7 +515,10 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
     if (!myPart || raid?.status !== 'active' || !user) { setTicking(false); return; }
     setTicking(true);
     tickRef.current = setInterval(async () => {
-      const dmg = calcDmg(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus || 0, myPart.cardEnhanceLevel || 0);
+      const liveRaidInst = gsRef.current?.ownedCards?.find(c => c.uid === myPart.cardUid);
+      const liveEnhLvl  = liveRaidInst?.enhanceLevel ?? myPart.cardEnhanceLevel ?? 0;
+      const liveCond     = liveRaidInst?.condition ?? myPart.cardCondition;
+      const dmg = calcDmg(myPart.cardGrade, liveCond, myPart.cardBonus || 0, liveEnhLvl);
       const fid = Date.now() + Math.random();
       setShaking(true); setHpFlash(true);
       setDmgFloats(prev => [...prev, { id: fid, value: dmg, x: 25 + Math.random() * 50, y: 28 + Math.random() * 28 }]);
@@ -788,9 +793,11 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
             )}
           </div>
           <div className="raid-my-row">
-            <div className={`raid-my-img grade-${myPart.cardGrade}${ticking && raid.status === 'active' ? ' raid-card-pulse' : ''}`}>
-              <img src={`/${myPart.cardImg}`} alt={myPart.cardName} />
-              <div className="raid-lock-tag">레이드</div>
+            <div className={`raid-card-aura-wrap${ticking && raid.status === 'active' ? ' raid-card-pulse' : ''}`}>
+              <div className={`raid-my-img grade-${myPart.cardGrade}`}>
+                <img src={`/${myPart.cardImg}`} alt={myPart.cardName} />
+                <div className="raid-lock-tag">레이드</div>
+              </div>
             </div>
             <div className="raid-my-details">
               <div className="raid-my-name">
@@ -798,10 +805,17 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
                 <span className="raid-my-grade" style={{ color: GRADE_COLOR[myPart.cardGrade] }}>&nbsp;{GRADE_LABEL[myPart.cardGrade]}</span>
               </div>
               <div className="raid-my-stat">내 데미지 <strong>{myDmg.toLocaleString()}</strong></div>
-              <div className="raid-my-tick">
-                {dmgRange(myPart.cardGrade, myPart.cardCondition, myPart.cardBonus||0, myPart.cardEnhanceLevel||0)}dmg / 3초
-                {(myPart.cardEnhanceLevel||0) > 0 && <span className="raid-enhance-tag">+{myPart.cardEnhanceLevel}</span>}
-              </div>
+              {(() => {
+                const liveMyInst = (gs?.ownedCards||[]).find(c => c.uid === myPart.cardUid);
+                const liveMyEnhLvl = liveMyInst?.enhanceLevel ?? myPart.cardEnhanceLevel ?? 0;
+                const liveMyCond   = liveMyInst?.condition ?? myPart.cardCondition;
+                return (
+                  <div className="raid-my-tick">
+                    {dmgRange(myPart.cardGrade, liveMyCond, myPart.cardBonus||0, liveMyEnhLvl)}dmg / 3초
+                    {liveMyEnhLvl > 0 && <span className="raid-enhance-tag">+{liveMyEnhLvl}</span>}
+                  </div>
+                );
+              })()}
               {(myPart.cardBonus||0) > 0 && <div className="raid-my-bonus">보너스 데미지 +{myPart.cardBonus}</div>}
               {myDmg >= MIN_REWARD_DMG
                 ? <div className="raid-reward-qualify">✓ 보상 수령 가능!</div>
@@ -904,9 +918,11 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
               return (
                 <div key={p.uid} className={`raid-part-item${isMe?' raid-part-me':''}`}>
                   <div className="raid-part-rank-badge">#{i+1}</div>
-                  <div className={`raid-part-card-img grade-${p.cardGrade}${isMe&&ticking&&raid.status==='active'?' raid-card-pulse':''}`}>
-                    <img src={`/${p.cardImg}`} alt={p.cardName} />
-                    {qualified && <div className="raid-part-qualify-mark">✓</div>}
+                  <div className={`raid-card-aura-wrap${isMe&&ticking&&raid.status==='active'?' raid-card-pulse':''}`}>
+                    <div className={`raid-part-card-img grade-${p.cardGrade}`}>
+                      <img src={`/${p.cardImg}`} alt={p.cardName} />
+                      {qualified && <div className="raid-part-qualify-mark">✓</div>}
+                    </div>
                   </div>
                   <div className="raid-part-meta">
                     <div className="raid-part-player-row">

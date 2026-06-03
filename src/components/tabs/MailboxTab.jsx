@@ -62,6 +62,15 @@ export default function MailboxTab({ gs, setGs, user }) {
           } else {
             showToast('우편을 수령했습니다!');
           }
+        } else if (r?.type === 'enhanceStone') {
+          const grade = r.grade;
+          const amount = r.amount || 1;
+          next.enhanceStones = {
+            ...(prev.enhanceStones || {}),
+            [grade]: (prev.enhanceStones?.[grade] || 0) + amount,
+          };
+          const gl = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND' }[grade] || grade.toUpperCase();
+          showToast(`${gl} 강화석 ${amount}개 수령 완료!`);
         } else {
           showToast('우편을 수령했습니다!');
         }
@@ -92,6 +101,10 @@ export default function MailboxTab({ gs, setGs, user }) {
       const cardId  = r.cardData?.id || r.cardId;
       const cardDef = CARDS.find(c => c.id === cardId);
       return cardDef ? `${cardDef.name} 카드` : '카드';
+    }
+    if (r.type === 'enhanceStone') {
+      const gl = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND' }[r.grade] || (r.grade || '').toUpperCase();
+      return `${gl} 강화석 ${r.amount || 1}개`;
     }
     return null;
   };

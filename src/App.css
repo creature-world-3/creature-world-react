@@ -3590,6 +3590,33 @@ body.raid-theme .music-toggle-btn {
 }
 
 /* ── MAILBOX ── */
+/* ── 가방 ── */
+.bag-wrap { display: flex; flex-direction: column; gap: 16px; padding-bottom: 40px; }
+.bag-header { display: flex; align-items: center; justify-content: space-between; }
+.bag-section { background: var(--card-bg); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.bag-section-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.bag-section-hint { font-size: 0.72rem; color: var(--muted); }
+.bag-stones-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.bag-stone-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.bag-stone-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.bag-stone-gem {
+  width: 20px; height: 20px; border-radius: 4px;
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+}
+.bag-stone-grade { font-size: 0.65rem; font-weight: 900; }
+.bag-stone-count { font-size: 1rem; font-weight: 900; color: var(--text); font-family: 'Nunito', sans-serif; }
+.bag-stone-unit { font-size: 0.65rem; color: var(--muted); margin-left: 1px; }
+
+/* 상점 결과 레이드 보너스 */
+.shop-result-raid-bonus {
+  font-size: 0.8rem; font-weight: 700; color: #fbbf24;
+  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3);
+  border-radius: 8px; padding: 4px 12px;
+}
+
 .mailbox-wrap { padding: 0 0 40px; }
 .mailbox-header { margin-bottom: 20px; }
 .mailbox-title { font-size: 1.3rem; font-weight: 900; color: var(--blue-dark); margin-bottom: 4px; }

@@ -1,6 +1,19 @@
 import { useState, useRef } from 'react';
 import { CARDS } from '../../data/cards.js';
 
+const BONUS_MULT = { n: 0.5, r: 1, sr: 2, ur: 3, lg: 5, raid: 10 };
+function calcRaidBonus(ownedCards) {
+  let b = 0;
+  const seen = new Set();
+  for (const o of ownedCards) {
+    if (seen.has(o.id)) continue;
+    seen.add(o.id);
+    const c = CARDS.find(x => x.id === o.id);
+    if (c) b += BONUS_MULT[c.grade] || 0;
+  }
+  return Math.floor(b);
+}
+
 const WESTERN_POOL = CARDS.filter(c => c.special === 'western');
 const WESTERN_COST = 50;
 
@@ -9,8 +22,8 @@ function genUid() {
 }
 
 export default function ShopTab({ gs, setGs }) {
-  const [toast, setToast]           = useState(null);
-  const [westernResult, setWesternResult] = useState(null); // 뽑기 결과 카드
+  const [toast, setToast]                 = useState(null);
+  const [westernResult, setWesternResult] = useState(null); // { card, condition, raidBonus }
   const toastTimer = useRef(null);
 
   const showToast = (msg) => {
@@ -34,12 +47,9 @@ export default function ShopTab({ gs, setGs }) {
     const card = WESTERN_POOL[Math.floor(Math.random() * WESTERN_POOL.length)];
     const condition = Math.floor(Math.random() * 10) + 1;
     const newInst = { uid: genUid(), id: card.id, condition, enhanceLevel: 0 };
-    setGs(prev => ({
-      ...prev,
-      tickets: prev.tickets - WESTERN_COST,
-      ownedCards: [...(prev.ownedCards || []), newInst],
-    }));
-    setWesternResult({ card, condition });
+    const newOwned = [...(gs?.ownedCards || []), newInst];
+    setGs(prev => ({ ...prev, tickets: prev.tickets - WESTERN_COST, ownedCards: newOwned }));
+    setWesternResult({ card, condition, raidBonus: calcRaidBonus(newOwned) });
   };
 
   return (
@@ -57,8 +67,8 @@ export default function ShopTab({ gs, setGs }) {
               <div className="shop-result-grade-tag">SR</div>
             </div>
             <div className="shop-result-card-name">{westernResult.card.name}</div>
-            <div className="shop-result-card-slogan">{westernResult.card.slogan}</div>
             <div className="shop-result-cond">컨디션 {westernResult.condition}</div>
+            <div className="shop-result-raid-bonus">레이드 보너스 데미지 +{westernResult.raidBonus}</div>
             <button className="shop-result-close-btn" onClick={() => setWesternResult(null)}>확인</button>
           </div>
         </div>

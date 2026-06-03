@@ -240,7 +240,6 @@ function SynthSubTab({ gs, setGs, isGuest }) {
                         <span className="sr-grade" style={{ background: GRADE_BG[result.card.grade], color: GRADE_COL[result.card.grade] }}>{GRADE_LABEL[result.card.grade]}</span>
                       </div>
                       <div className="sr-art"><img src={`/${result.card.img}`} alt={result.card.name} /></div>
-                      <div className="sr-footer"><div className="sr-slogan">{result.card.slogan}</div></div>
                     </>
                   )}
                 </div>

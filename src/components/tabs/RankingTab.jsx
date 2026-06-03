@@ -77,10 +77,6 @@ function CardModal({ entry, onClose }) {
             <div className="card-art">
               <img src={`/${card.img}`} alt={card.name} />
             </div>
-            <div className="card-footer-front">
-              <div className="card-sep" />
-              <div className="card-slogan">{card.slogan}</div>
-            </div>
             <div className="card-aurora" />
             {cs === 'gold' && <div className="cond-gold-overlay" />}
             {cs === 'holo' && <div className="cond-holo-overlay" />}
