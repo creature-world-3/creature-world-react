@@ -4348,6 +4348,16 @@ body.raid-theme .music-toggle-btn {
   font-size: 0.85rem; font-weight: 700; color: var(--text);
   margin-bottom: 8px;
 }
+.farm-auto-btn {
+  margin-left: auto;
+  background: linear-gradient(135deg, #6d28d9, #4f46e5);
+  color: white; border: none; border-radius: 99px;
+  padding: 4px 12px; font-size: 0.72rem; font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.farm-auto-btn:hover { opacity: 0.85; }
+.farm-auto-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .farm-sel-hint { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
 /* 선택 슬롯: 가로 스크롤 strip */
 .farm-sel-slots {

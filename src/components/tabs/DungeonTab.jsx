@@ -287,6 +287,25 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
     setDmgFloats([]); setResult(null); setPhase('select');
   };
 
+  const handleAutoSelect = () => {
+    if (isGuest) { showToast('로그인이 필요합니다'); return; }
+    const autoSelected = [];
+    for (const grade of GRADES_ALL) {
+      const gradeInsts = ownedCards.filter(oc => CARDS.find(c => c.id === oc.id)?.grade === grade);
+      if (!gradeInsts.length) continue;
+      let bestInst = gradeInsts[0], bestDmg = -Infinity;
+      for (const inst of gradeInsts) {
+        const bD = bonusDmg[inst.uid] || bonusDmg[inst.id] || 0;
+        const dmg = calcAvgDmg(grade, inst.condition, inst.enhanceLevel || 0, bD);
+        if (dmg > bestDmg) { bestDmg = dmg; bestInst = inst; }
+      }
+      const cardDef = CARDS.find(c => c.id === bestInst.id);
+      if (cardDef) autoSelected.push({ cardDef, inst: bestInst });
+    }
+    setSelectedCards(autoSelected);
+    showToast('등급별 최강 카드로 자동 선택됐어요!');
+  };
+
   const estimatedDmg = selectedCards.reduce((sum, s) => {
     const bD = bonusDmg[s.inst.uid] || bonusDmg[s.cardDef.id] || 0;
     return sum + calcAvgDmg(s.cardDef.grade, s.inst.condition, s.inst.enhanceLevel||0, bD);
@@ -512,6 +531,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
           {/* 카드 슬롯 */}
           <div className="farm-sel-header">
             참여 카드 선택 <span className="farming-slots-count">{selectedCards.length}/6</span>
+            <button className="farm-auto-btn" onClick={handleAutoSelect} disabled={isGuest}>자동선택</button>
           </div>
           <div className="farm-sel-slots">
             {GRADES_ALL.map(grade => {
