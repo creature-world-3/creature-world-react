@@ -226,7 +226,7 @@ export default function DexTab({ gs, setGs }) {
           </div>
           <div className="synth-confirm-btns">
             <button className="synth-confirm-cancel" onClick={() => setStoneConfirm(false)}>취소</button>
-            <button className="synth-confirm-ok" onClick={executeUseStone}>네</button>
+            <button className="synth-confirm-ok" onClick={executeUseStone}>확인</button>
           </div>
         </div>
       </div>

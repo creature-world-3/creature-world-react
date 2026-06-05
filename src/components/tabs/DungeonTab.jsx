@@ -301,6 +301,10 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
 
   return (
     <div className="dungeon-sub-wrap">
+      {/* 이미지 프리로드 */}
+      <div style={{display:'none'}}>
+        {STAGES.map(s => <img key={s.stage} src={s.img} alt="" />)}
+      </div>
       {toast && <div className="cw-toast">{toast}</div>}
 
       {/* 안내 모달 */}
@@ -474,7 +478,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
           <div className="dg-stage-selector">
             <button className="dg-stage-arrow" onClick={() => setStageIdx(i => Math.max(0,i-1))} disabled={stageIdx===0}>‹</button>
             <div className="dg-stage-card">
-              <img src={currentStage.img} alt="boss" className="dg-stage-boss-img" />
+              <img key={stageIdx} src={currentStage.img} alt="boss" className="dg-stage-boss-img" />
               <div className="dg-stage-info">
                 <div className="dg-stage-num">{currentStage.stage}단계</div>
                 <div className="dg-stage-threshold">목표 <strong>{currentStage.threshold.toLocaleString()}</strong></div>
@@ -569,42 +573,49 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
       {/* ── 전투 화면 ── */}
       {phase === 'battle' && (
         <div className="dg-farm-battle-wrap">
-          <div className="dg-boss-section dg-farm-boss-section">
-            <div className="dg-boss-img-wrap dg-farm-img-wrap">
-              <img src={STAGES[stageIdx].img} className={`dg-boss-img${bossShaking?' dg-boss-shaking':''}`} alt="boss" />
-              <div className="dg-boss-vignette" />
-              {dmgFloats.map(f => (
-                <div key={f.id} className="dg-dmg-float">-{f.dmg.toLocaleString()}</div>
-              ))}
-            </div>
-            <div className="dg-farm-info">
-              <div className="dg-farm-info-row">
-                <div>
-                  <div className="dg-farm-timer-label">{battleRef.current?.stage}단계</div>
-                  <div className="dg-farm-timer">{fmtTime(DUNGEON_DURATION - elapsed)}</div>
-                </div>
-                <div style={{textAlign:'right'}}>
-                  <div className="dg-farm-timer-label">누적 데미지</div>
-                  <div className="dg-farm-total-dmg">{totalDmg.toLocaleString()}</div>
-                </div>
-              </div>
-              {/* 시간 진행 바 */}
-              <div className="dg-farm-progress-bar">
-                <div className="dg-farm-progress-fill" style={{width:`${(elapsed/DUNGEON_DURATION)*100}%`}} />
-              </div>
-              {/* 데미지 목표 진행 바 */}
-              <div className="dg-dmg-progress-label">
-                목표 {STAGES[(battleRef.current?.stage||1)-1].threshold.toLocaleString()}
-                <span style={{marginLeft:4,color:progressPct>=100?'#4ade80':'var(--muted)'}}>
-                  ({Math.floor(progressPct)}%)
-                </span>
-              </div>
-              <div className="dg-farm-progress-bar" style={{marginTop:2}}>
-                <div className="dg-farm-progress-fill"
-                  style={{width:`${progressPct}%`, background:progressPct>=100?'#4ade80':'#f59e0b'}} />
-              </div>
-            </div>
+          {/* 보스 이미지 확대 */}
+          <div className="dg-farm-boss-fullwrap">
+            <img
+              src={STAGES[(battleRef.current?.stage||1)-1].img}
+              className={`dg-farm-boss-large${bossShaking?' dg-boss-shaking':''}`}
+              alt="boss"
+            />
+            <div className="dg-boss-vignette" />
+            {dmgFloats.map(f => (
+              <div key={f.id} className="dg-dmg-float">-{f.dmg.toLocaleString()}</div>
+            ))}
+            <div className="dg-farm-stage-badge">{battleRef.current?.stage}단계</div>
           </div>
+
+          {/* 체력 & 시간 - 이미지 아래 */}
+          {(() => {
+            const stI = (battleRef.current?.stage||1) - 1;
+            const threshold = STAGES[stI].threshold;
+            const hpLeft = Math.max(0, threshold - totalDmg);
+            const hpPct  = Math.max(0, 100 - progressPct);
+            const hpColor = hpPct > 60 ? '#4ade80' : hpPct > 30 ? '#fbbf24' : '#f87171';
+            return (
+              <div className="dg-farm-status">
+                <div className="dg-farm-status-row">
+                  <div className="dg-farm-status-col">
+                    <div className="dg-farm-status-label">남은 시간</div>
+                    <div className="dg-farm-timer">{fmtTime(DUNGEON_DURATION - elapsed)}</div>
+                  </div>
+                  <div className="dg-farm-status-col" style={{textAlign:'right'}}>
+                    <div className="dg-farm-status-label">누적 데미지</div>
+                    <div className="dg-farm-total-dmg">{totalDmg.toLocaleString()}</div>
+                  </div>
+                </div>
+                <div className="dg-farm-hp-row">
+                  <span className="dg-farm-status-label">남은 체력</span>
+                  <span className="dg-farm-hp-num" style={{color:hpColor}}>{hpLeft.toLocaleString()}</span>
+                </div>
+                <div className="dg-farm-hp-bar">
+                  <div className="dg-farm-hp-fill" style={{width:`${hpPct}%`, background:hpColor}} />
+                </div>
+              </div>
+            );
+          })()}
           <div className="dg-farm-cards-section">
             <div className="dg-my-label">
               <span className="dg-tick-dot" style={{background:'#4a9eff',boxShadow:'0 0 6px #4a9eff'}} />

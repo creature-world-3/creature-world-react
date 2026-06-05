@@ -3668,22 +3668,41 @@ body.raid-theme .music-toggle-btn {
 .bag-section { background: var(--card-bg); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .bag-section-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
 .bag-section-hint { font-size: 0.72rem; color: var(--muted); }
-.bag-stones-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.bag-stone-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.bag-stone-icon {
-  width: 44px; height: 44px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
+.bag-stones-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.bag-stone-unit { font-size: 0.62rem; color: var(--muted); margin-left: 1px; }
+
+/* 성장석 카드 아이템 */
+.bag-stone-card-item {
+  aspect-ratio: 3/4; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(145deg, #f8f5ff 0%, #ede9fe 100%);
+  border: 2px solid transparent;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: 7px 4px 6px;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  position: relative; overflow: hidden;
 }
-.bag-stone-gem {
-  width: 20px; height: 20px; border-radius: 4px;
+.bag-stone-card-item::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(145deg, rgba(255,255,255,0.6) 0%, transparent 60%);
+  pointer-events: none;
+}
+.bag-stone-card-item:hover { transform: translateY(-3px); }
+.bag-stone-card-item.selected { transform: scale(1.05); }
+.bag-stone-card-item.empty { opacity: 0.5; }
+.bag-stone-card-header {
+  font-size: 0.58rem; font-weight: 900; font-family: 'Nunito', sans-serif;
+  letter-spacing: 0.5px; z-index: 1;
+}
+.bag-stone-card-gem-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center; z-index: 1;
+}
+.bag-stone-card-gem {
+  width: 28px; height: 28px; border-radius: 6px;
   clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
 }
-.bag-stone-grade { font-size: 0.65rem; font-weight: 900; }
-.bag-stone-count { font-size: 1rem; font-weight: 900; color: var(--text); font-family: 'Nunito', sans-serif; }
-.bag-stone-unit { font-size: 0.65rem; color: var(--muted); margin-left: 1px; }
-.bag-stone-clickable { cursor: pointer; transition: transform 0.15s; }
-.bag-stone-clickable:hover { transform: scale(1.06); }
-.bag-stone-selected .bag-stone-grade { text-shadow: 0 0 6px currentColor; }
+.bag-stone-card-count {
+  font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 0.95rem; z-index: 1;
+}
 
 /* 강화석 → 카드 목록 */
 .bag-stone-cards { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
@@ -4718,16 +4737,46 @@ body.raid-theme .music-toggle-btn {
 
 /* 파밍 전투 전용 */
 .dg-farm-battle-wrap { display: flex; flex-direction: column; gap: 14px; }
-.dg-farm-boss-section { }
-.dg-farm-img-wrap { height: 220px; }
-.dg-farm-info { padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; }
-.dg-farm-info-row { display: flex; justify-content: space-between; align-items: flex-end; }
-.dg-farm-timer-label { font-size: 0.7rem; color: rgba(255,255,255,0.45); font-weight: 700; margin-bottom: 2px; }
-.dg-farm-timer { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 2rem; color: white; letter-spacing: 2px; }
-.dg-farm-total-dmg { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.4rem; color: #fbbf24; }
-.dg-farm-progress-bar { height: 10px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
-.dg-farm-progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #6d28d9, #4a9eff); transition: width 1s linear; }
-.dg-farm-reward-hint { font-size: 0.78rem; color: rgba(255,255,255,0.5); }
+.dg-farm-boss-fullwrap {
+  position: relative; width: 100%; border-radius: 20px; overflow: hidden;
+  background: #07010f; min-height: 300px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 28px rgba(0,0,0,0.5);
+}
+.dg-farm-boss-large {
+  width: 100%; max-height: 340px; object-fit: contain; display: block;
+}
+.dg-farm-stage-badge {
+  position: absolute; top: 12px; left: 12px;
+  background: rgba(0,0,0,0.65); color: #c084fc;
+  font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 0.85rem;
+  padding: 4px 10px; border-radius: 99px;
+  border: 1px solid rgba(192,132,252,0.4);
+}
+.dg-farm-status {
+  background: rgba(255,255,255,0.7); border-radius: 16px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid rgba(109,40,217,0.15);
+}
+.dg-farm-status-row { display: flex; justify-content: space-between; align-items: flex-end; }
+.dg-farm-status-col { display: flex; flex-direction: column; }
+.dg-farm-status-label { font-size: 0.7rem; color: var(--muted); font-weight: 700; margin-bottom: 2px; }
+.dg-farm-timer { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 2rem; color: var(--text); letter-spacing: 2px; }
+.dg-farm-total-dmg { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.4rem; color: #7c3aed; }
+.dg-farm-hp-row { display: flex; justify-content: space-between; align-items: center; }
+.dg-farm-hp-num { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 0.95rem; transition: color 0.5s; }
+.dg-farm-hp-bar { height: 12px; background: rgba(0,0,0,0.1); border-radius: 99px; overflow: hidden; }
+.dg-farm-hp-fill { height: 100%; border-radius: 99px; transition: width 1s linear, background 0.5s; }
+
+/* 단계 이미지 슬라이드 애니메이션 */
+@keyframes stageSlideIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:translateX(0); } }
+.dg-stage-boss-img { animation: stageSlideIn 0.15s ease; }
+
+/* 던전 설명 모달 - 흰 배경이므로 닫기 버튼 별도 스타일 */
+.dungeon-info-sheet .zoom-close {
+  background: #f0f0f5; border-color: #d0d0e0; color: var(--text);
+}
+.dungeon-info-sheet .zoom-close:hover { background: #e4e4ef; }
 
 /* 파밍 카드 목록 */
 /* 단계 선택기 */

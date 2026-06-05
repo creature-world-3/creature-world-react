@@ -264,7 +264,7 @@ function SynthSubTab({ gs, setGs, isGuest }) {
             )}
             <div className="synth-confirm-btns">
               <button className="synth-confirm-cancel" onClick={() => setSynthConfirm(null)}>취소</button>
-              <button className="synth-confirm-ok" onClick={executeSynth}>네</button>
+              <button className="synth-confirm-ok" onClick={executeSynth}>확인</button>
             </div>
           </div>
         </div>
@@ -811,7 +811,7 @@ function ExchangeSubTab({ gs, setGs, isGuest }) {
             )}
             <div className="exsub-confirm-btns">
               <button className="exsub-confirm-cancel" onClick={() => setConfirmData(null)}>취소</button>
-              <button className="exsub-confirm-ok" onClick={() => executeExchange(confirmData.toRemove, confirmData.qty, confirmData.totalCards)}>예</button>
+              <button className="exsub-confirm-ok" onClick={() => executeExchange(confirmData.toRemove, confirmData.qty, confirmData.totalCards)}>확인</button>
             </div>
           </div>
         </div>

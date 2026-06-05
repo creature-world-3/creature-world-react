@@ -113,7 +113,7 @@ export default function BagTab({ gs, setGs }) {
             </div>
             <div className="synth-confirm-btns">
               <button className="synth-confirm-cancel" onClick={() => setStoneConfirm(null)}>취소</button>
-              <button className="synth-confirm-ok" onClick={executeUseStone}>예</button>
+              <button className="synth-confirm-ok" onClick={executeUseStone}>확인</button>
             </div>
           </div>
         </div>
@@ -129,26 +129,36 @@ export default function BagTab({ gs, setGs }) {
           파밍 던전 클리어 시 등급별 성장석을 획득할 수 있어요. 성장석을 탭하면 해당 등급 카드를 확인할 수 있어요.
         </div>
         <div className="bag-stones-grid">
-          {GRADES.map(grade => (
-            <div
-              key={grade}
-              className={`bag-stone-item bag-stone-clickable${selectedGrade === grade ? ' bag-stone-selected' : ''}`}
-              onClick={() => setSelectedGrade(prev => prev === grade ? null : grade)}
-            >
+          {GRADES.map(grade => {
+            const count = stones[grade] || 0;
+            const isSelected = selectedGrade === grade;
+            return (
               <div
-                className="bag-stone-icon"
+                key={grade}
+                className={`bag-stone-card-item${isSelected ? ' selected' : ''}${count === 0 ? ' empty' : ''}`}
                 style={{
-                  background: `${GRADE_COLOR[grade]}22`,
-                  border: `2px solid ${selectedGrade === grade ? GRADE_COLOR[grade] : GRADE_COLOR[grade] + '88'}`,
-                  boxShadow: selectedGrade === grade ? `0 0 8px ${GRADE_COLOR[grade]}66` : 'none',
+                  '--stone-color': GRADE_COLOR[grade],
+                  borderColor: isSelected ? GRADE_COLOR[grade] : 'transparent',
+                  boxShadow: isSelected ? `0 0 14px ${GRADE_COLOR[grade]}55` : '0 2px 8px rgba(0,0,0,0.12)',
                 }}
+                onClick={() => setSelectedGrade(prev => prev === grade ? null : grade)}
               >
-                <div className="bag-stone-gem" style={{ background: GRADE_COLOR[grade] }} />
+                <div className="bag-stone-card-header" style={{ color: GRADE_COLOR[grade] }}>
+                  {GRADE_LABEL[grade]}
+                </div>
+                <div className="bag-stone-card-gem-wrap">
+                  <div className="bag-stone-card-gem" style={{
+                    background: `radial-gradient(circle at 35% 35%, white, ${GRADE_COLOR[grade]})`,
+                    boxShadow: `0 0 12px ${GRADE_COLOR[grade]}88`,
+                    opacity: count === 0 ? 0.3 : 1,
+                  }} />
+                </div>
+                <div className="bag-stone-card-count" style={{ color: count === 0 ? '#aaa' : GRADE_COLOR[grade] }}>
+                  {count}<span className="bag-stone-unit">개</span>
+                </div>
               </div>
-              <div className="bag-stone-grade" style={{ color: GRADE_COLOR[grade] }}>{GRADE_LABEL[grade]}</div>
-              <div className="bag-stone-count">{stones[grade] || 0}<span className="bag-stone-unit">개</span></div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {selectedGrade && (
