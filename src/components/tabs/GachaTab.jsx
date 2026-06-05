@@ -511,7 +511,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
           <div className="draw-col-right">
           <div className="click-section">
             <div className="click-label">클릭 뽑기 (100번마다 +1장 · 하루 최대 10회)</div>
-            <button className="click-btn" onClick={handleClick} disabled={gs.clickDone || isGuest}>탭</button>
+            <button className="click-btn" onClick={handleClick} disabled={gs.clickDone || isGuest}>🐾</button>
             <div className="click-count-text">
               {gs.clickDone ? (
                 <span style={{ color: '#4a9eff', fontWeight: 700 }}>오늘 완료 ✓</span>
