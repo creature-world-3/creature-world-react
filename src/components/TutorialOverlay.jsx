@@ -101,22 +101,29 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
         )}
       </svg>
 
+      {/* 루미 캐릭터 */}
+      <img
+        src="/튜토리얼여우.png"
+        alt="루미"
+        style={{
+          position: 'absolute',
+          bottom: 120,
+          left: -10,
+          height: 210,
+          width: 'auto',
+          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))',
+          zIndex: 9001,
+          pointerEvents: 'none',
+        }}
+      />
+
       {/* 말풍선 영역 */}
       <div
-        style={{ position: 'absolute', bottom: 28, left: 16, right: 16, zIndex: 9001 }}
+        style={{ position: 'absolute', bottom: 20, left: 16, right: 16, zIndex: 9002 }}
         onClick={e => e.stopPropagation()}
       >
-        {/* 루미 이미지 */}
-        <div style={{ paddingLeft: 10, marginBottom: -18, display: 'flex', alignItems: 'flex-end' }}>
-          <img
-            src="/튜토리얼여우.png"
-            alt="루미"
-            style={{ width: 88, height: 88, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }}
-          />
-        </div>
-
         {/* 말풍선 */}
-        <div style={{ background: 'white', borderRadius: 22, padding: '18px 20px 16px', boxShadow: '0 8px 36px rgba(0,0,0,0.28)' }}>
+        <div style={{ background: 'white', borderRadius: 22, padding: '14px 18px 14px 175px', boxShadow: '0 8px 36px rgba(0,0,0,0.28)', minHeight: 120 }}>
 
           {/* 발신자 이름 */}
           <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#f97316', marginBottom: 6, letterSpacing: '0.02em' }}>
