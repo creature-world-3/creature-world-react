@@ -116,11 +116,15 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
         <img
           src="/튜토리얼여우.png"
           alt="루미"
-          style={{ height: 120, width: 'auto', flexShrink: 0, alignSelf: 'flex-end' }}
+          style={{
+            flexShrink: 0, alignSelf: 'flex-end',
+            width: 140, height: 160,
+            objectFit: 'cover', objectPosition: 'center 10%',
+          }}
         />
 
         {/* 텍스트 영역 */}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, paddingLeft: 10 }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f97316', marginBottom: 5 }}>루미</div>
 
           <div style={{ fontSize: '0.9rem', color: '#222', lineHeight: 1.7, marginBottom: 14 }}>
@@ -129,16 +133,12 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
 
           {current.isReward && (
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
               background: 'linear-gradient(135deg, #fff7ed, #fef3c7)',
               border: '1.5px solid #fcd34d',
               borderRadius: 12, padding: '10px 14px', marginBottom: 14,
             }}>
-              <span style={{ fontSize: '1.3rem' }}>🎁</span>
-              <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#d97706' }}>튜토리얼 완료 보상</div>
-                <div style={{ fontSize: '0.78rem', color: '#92400e' }}>뽑기권 50장 지급!</div>
-              </div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#d97706' }}>튜토리얼 완료 보상</div>
+              <div style={{ fontSize: '0.78rem', color: '#92400e' }}>뽑기권 50장 지급!</div>
             </div>
           )}
 
@@ -153,9 +153,9 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleSkip} className="tut-btn-cancel">건너뛰기</button>
-            <button onClick={handleNext} className="tut-btn-ok" style={{ flex: 2 }}>
-              {isLast ? '시작하기! 🎉' : '다음 →'}
+            <button onClick={handleSkip} className="tut-btn-cancel" style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>건너뛰기</button>
+            <button onClick={handleNext} className="tut-btn-ok" style={{ flex: 1 }}>
+              {isLast ? '시작하기!' : '다음 →'}
             </button>
           </div>
         </div>
