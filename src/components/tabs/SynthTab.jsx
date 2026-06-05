@@ -506,7 +506,7 @@ function EnhanceSubTab({ gs, setGs, isGuest }) {
   const rate       = currentLevel >= 10 ? 1 : (ENHANCE_RATE[nextLevel] ?? 1);
   const isAurora   = displayLevel >= 8;
   const isBusy     = enhancePhase !== 'idle';
-  const cardGrowth = selectedInst ? (gs?.cardBonusDmg?.[selectedInst.uid] || 0) : 0;
+  const cardGrowth = selectedInst ? (gs?.cardBonusDmg?.[selectedInst.uid] || gs?.cardBonusDmg?.[selectedInst.id] || 0) : 0;
   const cardBonus  = calcBonus(ownedCards);
 
   return (
