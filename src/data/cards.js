@@ -68,8 +68,8 @@ export const CARDS = [
 
 export const CARD_MAP = Object.fromEntries(CARDS.map(c => [c.id, c]));
 
-// 수집 카운트 기준: 레이드 카드 제외
-export const COLLECTIBLE_CARDS = CARDS.filter(c => !c.raid && c.grade !== 'raid');
+// 수집 카운트 기준: 전체 카드
+export const COLLECTIBLE_CARDS = CARDS;
 export const COLLECTIBLE_IDS   = new Set(COLLECTIBLE_CARDS.map(c => c.id));
 
 export function getConditionEffect(condition) {
