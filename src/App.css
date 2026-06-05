@@ -2146,6 +2146,33 @@ body.raid-theme::before {
 }
 @keyframes raidAtmospherePulse { 0%{opacity:0.7} 100%{opacity:1} }
 
+body.raid-theme .status-card {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+body.raid-theme .status-label { color: rgba(255,255,255,0.5) !important; }
+body.raid-theme .status-val   { color: #fff !important; }
+body.raid-theme .status-sub   { color: rgba(255,255,255,0.4) !important; }
+body.raid-theme .page-tab {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.7) !important;
+}
+body.raid-theme .page-tab.active {
+  background: rgba(200,0,80,0.6) !important;
+  border-color: rgba(255,80,120,0.5) !important;
+  color: #fff !important;
+}
+body.raid-theme .more-drawer-btn {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.7) !important;
+}
+body.raid-theme .logo {
+  background: linear-gradient(135deg, #ff6b9d, #c084fc, #ff9dd1) !important;
+  -webkit-background-clip: text; background-clip: text;
+}
+
 /* ═══════════════════════════════════════
    RAID TAB
 ═══════════════════════════════════════ */

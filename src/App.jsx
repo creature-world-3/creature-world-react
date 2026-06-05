@@ -673,7 +673,7 @@ export default function App() {
                 </div>
               ))}
               <button className="tut-btn-cancel" style={{ width:'100%', marginBottom: 8 }} onClick={() => { setShowHelp(false); setShowTutorial(true); }}>
-                🦊 튜토리얼 다시보기
+                튜토리얼 다시보기
               </button>
               <button className="modal-close" onClick={() => setShowHelp(false)}>닫기</button>
             </div>

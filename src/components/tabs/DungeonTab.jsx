@@ -201,7 +201,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
     const a = gsRef.current?.dungeonAttempts?.[grade];
     const att = (!a || a.date !== todayKST()) ? 0 : (a.count||0);
     if (att >= MAX_DAILY_GROWTH) { showToast('오늘 이 등급의 도전 횟수를 다 사용했어요!'); return; }
-    const bDmg   = gsRef.current?.cardBonusDmg?.[inst.id] || 0;
+    const bDmg   = gsRef.current?.cardBonusDmg?.[inst.uid] || 0;
     const avgDmg = calcAvgDmg(grade, inst.condition, inst.enhanceLevel||0, bDmg);
     const maxHp  = avgDmg * 1200;
     const now = Date.now();
@@ -229,7 +229,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         const sinceLastTick = now - (b.lastTickTime || now);
         if (sinceLastTick < TICK_S * 1000) continue; // 아직 틱 타이밍 아님
         const liveInst = gsRef.current?.ownedCards?.find(c => c.uid === b.cardInst.uid) || b.cardInst;
-        const liveBDmg = gsRef.current?.cardBonusDmg?.[liveInst.id] ?? b.bDmg;
+        const liveBDmg = gsRef.current?.cardBonusDmg?.[liveInst.uid] ?? b.bDmg;
         const dmg   = calcTickDmg(b.cardDef.grade, liveInst.condition, liveInst.enhanceLevel||0, liveBDmg);
         const newHp = Math.max(0, b.hp - dmg);
         updates[grade] = { ...b, hp: newHp, totalDmg: b.totalDmg + dmg, lastDmg: dmg, shaking: true, lastTickTime: now };
@@ -250,7 +250,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         const currentGs   = gsRef.current;
         const currentUser = userRef.current;
         const t      = todayKST();
-        const cardId = battle.cardInst.id;
+        const cardId = battle.cardInst.uid;
         const a      = currentGs?.dungeonAttempts?.[grade];
         const att    = (!a || a.date !== t) ? 0 : (a.count||0);
         const newCount = att + 1;
@@ -315,7 +315,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
   const selLiveInst = selBattle?.active
     ? ((gs?.ownedCards||[]).find(c => c.uid === selBattle.cardInst.uid) || selBattle.cardInst)
     : null;
-  const selLiveBDmg = selLiveInst ? (gs?.cardBonusDmg?.[selLiveInst.id] ?? selBattle?.bDmg ?? 0) : 0;
+  const selLiveBDmg = selLiveInst ? (gs?.cardBonusDmg?.[selLiveInst.uid] ?? selBattle?.bDmg ?? 0) : 0;
 
   return (
     <div className="dungeon-sub-wrap">
@@ -367,7 +367,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
                               const enh  = inst.enhanceLevel||0;
                               const cc   = cond>=9?'#d97706':cond>=6?'#7c3aed':'#888';
                               const pickOne = () => {
-                                setDetailCardPick({ inst, def, bDmg: gsRef.current?.cardBonusDmg?.[def.id]||0 });
+                                setDetailCardPick({ inst, def, bDmg: gsRef.current?.cardBonusDmg?.[inst.uid]||0 });
                                 setShowGrowthPicker(false);
                                 setGrowthPickExp(null);
                               };
@@ -393,9 +393,9 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
                     ) : (
                       <div className="card-picker-grid">
                         {selGradeCards.map(({ def, instances, bestDmg }) => {
-                          const bDmg = bonusDmg[def.id]||0;
+                          const bDmg = instances.length === 1 ? (bonusDmg[instances[0].uid]||0) : 0;
                           const pickOne = (inst) => {
-                            setDetailCardPick({ inst, def, bDmg: gsRef.current?.cardBonusDmg?.[def.id]||0 });
+                            setDetailCardPick({ inst, def, bDmg: gsRef.current?.cardBonusDmg?.[inst.uid]||0 });
                             setShowGrowthPicker(false);
                             setGrowthPickExp(null);
                           };
@@ -780,7 +780,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
             Object.values(p.slots).forEach(slot => {
               if (!slot) return;
               const liveInst = gsRef.current?.ownedCards?.find(c => c.uid === slot.inst.uid) || slot.inst;
-              const liveBDmg = gsRef.current?.cardBonusDmg?.[liveInst.id] ?? 0;
+              const liveBDmg = gsRef.current?.cardBonusDmg?.[liveInst.uid] ?? 0;
               dmg += calcTickDmg(slot.cardDef.grade, liveInst.condition, liveInst.enhanceLevel||0, liveBDmg);
             });
             setTotalDmg(d => d + dmg);
@@ -1031,7 +1031,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
               <div className="dg-farm-cards">
                 {selectedCards.map(({cardDef, inst: savedInst}) => {
                   const inst = (gs?.ownedCards||[]).find(c => c.uid === savedInst.uid) || savedInst;
-                  const bDmg = (gs?.cardBonusDmg?.[inst.id]) ?? 0;
+                  const bDmg = (gs?.cardBonusDmg?.[inst.uid]) ?? 0;
                   return (
                     <div key={savedInst.uid} className={`dg-farm-card grade-${cardDef.grade}`}>
                       <div className="dg-farm-card-img">

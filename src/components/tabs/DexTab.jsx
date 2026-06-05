@@ -177,7 +177,7 @@ export default function DexTab({ gs, setGs }) {
 
   const zoomCs      = zoomCard ? condStyle(zoomCard.card.grade, zoomCard.best.condition) : null;
   const zoomBonus   = calcBonus(ownedCards);
-  const zoomGrowth  = zoomCard ? (gs?.cardBonusDmg?.[zoomCard.card.id] || 0) : 0;
+  const zoomGrowth  = zoomCard ? (gs?.cardBonusDmg?.[zoomCard.best?.uid] || 0) : 0;
 
   const handleUseStone = () => {
     if (!zoomCard) return;
@@ -190,15 +190,16 @@ export default function DexTab({ gs, setGs }) {
   const executeUseStone = () => {
     setStoneConfirm(false);
     if (!zoomCard) return;
-    const grade  = zoomCard.card.grade;
-    const cardId = zoomCard.card.id;
+    const grade   = zoomCard.card.grade;
+    const instUid = zoomCard.best?.uid;
+    if (!instUid) return;
     setGs(prev => {
       const curStone = prev.enhanceStones?.[grade] || 0;
       if (curStone <= 0) return prev;
       return {
         ...prev,
         enhanceStones: { ...prev.enhanceStones, [grade]: curStone - 1 },
-        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [cardId]: (prev.cardBonusDmg?.[cardId] || 0) + 1 },
+        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [instUid]: (prev.cardBonusDmg?.[instUid] || 0) + 1 },
       };
     });
   };
@@ -221,7 +222,7 @@ export default function DexTab({ gs, setGs }) {
         <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
           <div className="synth-confirm-title">성장석을 사용하시겠습니까?</div>
           <div className="synth-confirm-desc">
-            {zoomCard?.card.name} 성장 +{(gs?.cardBonusDmg?.[zoomCard?.card.id] || 0) + 1}
+            {zoomCard?.card.name} 성장 +{(gs?.cardBonusDmg?.[zoomCard?.best?.uid] || 0) + 1}
           </div>
           <div className="synth-confirm-btns">
             <button className="synth-confirm-cancel" onClick={() => setStoneConfirm(false)}>취소</button>

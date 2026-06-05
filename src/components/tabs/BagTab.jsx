@@ -29,9 +29,10 @@ function dmgRangeStr(card, ownedCards, growthMap) {
 }
 
 export default function BagTab({ gs, setGs }) {
-  const [selectedGrade, setSelectedGrade] = useState(null);
-  const [stoneConfirm, setStoneConfirm]   = useState(null);
-  const [toast, setToast]                 = useState(null);
+  const [selectedGrade, setSelectedGrade]     = useState(null);
+  const [stoneConfirm, setStoneConfirm]       = useState(null); // { card, inst }
+  const [stoneInstPick, setStoneInstPick]     = useState(null); // card def — 복수 장일 때 인스턴스 선택
+  const [toast, setToast]                     = useState(null);
   const toastTimer = useRef(null);
 
   const stones     = gs?.enhanceStones || {};
@@ -53,22 +54,24 @@ export default function BagTab({ gs, setGs }) {
   const useStone = (card) => {
     const stoneCount = stones[card.grade] || 0;
     if (stoneCount <= 0) { showToast('성장석이 없습니다'); return; }
-    setStoneConfirm(card);
+    const insts = ownedCards.filter(c => c.id === card.id);
+    if (insts.length > 1) { setStoneInstPick(card); return; }
+    setStoneConfirm({ card, inst: insts[0] });
   };
 
   const executeUseStone = () => {
-    const card = stoneConfirm;
+    const { card, inst } = stoneConfirm;
     setStoneConfirm(null);
     if ((stones[card.grade] || 0) <= 0) { showToast('성장석이 없습니다'); return; }
     setGs(prev => {
       const curStone  = prev.enhanceStones?.[card.grade] || 0;
       if (curStone <= 0) return prev;
-      const newGrowth = (prev.cardBonusDmg?.[card.id] || 0) + 1;
+      const newGrowth = (prev.cardBonusDmg?.[inst.uid] || 0) + 1;
       showToast(`${card.name} 성장 +${newGrowth} 달성!`);
       return {
         ...prev,
         enhanceStones: { ...prev.enhanceStones, [card.grade]: curStone - 1 },
-        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [card.id]: newGrowth },
+        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [inst.uid]: newGrowth },
       };
     });
   };
@@ -77,12 +80,36 @@ export default function BagTab({ gs, setGs }) {
     <div className="bag-wrap">
       {toast && <div className="cw-toast">{toast}</div>}
 
+      {stoneInstPick && (
+        <div className="card-zoom-overlay" onClick={() => setStoneInstPick(null)}>
+          <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
+            <div className="synth-confirm-title">성장시킬 카드를 선택하세요</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', margin: '10px 0' }}>
+              {ownedCards.filter(c => c.id === stoneInstPick.id).map((inst, i) => {
+                const growth = growthMap[inst.uid] || 0;
+                return (
+                  <div key={inst.uid} style={{ textAlign: 'center', cursor: 'pointer' }}
+                    onClick={() => { setStoneInstPick(null); setStoneConfirm({ card: stoneInstPick, inst }); }}>
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                      <img src={`/${stoneInstPick.img}`} alt="" style={{ width: 54, height: 54, objectFit: 'contain', borderRadius: 8, border: '2px solid #e5e7eb' }} />
+                      {inst.enhanceLevel > 0 && <div style={{ position: 'absolute', top: 2, right: 2, fontSize: '0.6rem', fontWeight: 900, color: '#f97316', background: 'rgba(255,255,255,0.9)', borderRadius: 4, padding: '0 3px' }}>+{inst.enhanceLevel}</div>}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#666', marginTop: 2 }}>#{i + 1}{growth > 0 ? ` 성장+${growth}` : ''}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <button className="synth-confirm-cancel" onClick={() => setStoneInstPick(null)} style={{ width: '100%' }}>취소</button>
+          </div>
+        </div>
+      )}
+
       {stoneConfirm && (
         <div className="card-zoom-overlay" onClick={() => setStoneConfirm(null)}>
           <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
             <div className="synth-confirm-title">카드를 성장시키시겠습니까?</div>
             <div className="synth-confirm-desc">
-              {stoneConfirm.name} 성장 +{(growthMap[stoneConfirm.id] || 0) + 1}
+              {stoneConfirm.card.name} 성장 +{(growthMap[stoneConfirm.inst.uid] || 0) + 1}
             </div>
             <div className="synth-confirm-btns">
               <button className="synth-confirm-cancel" onClick={() => setStoneConfirm(null)}>취소</button>
@@ -138,7 +165,7 @@ export default function BagTab({ gs, setGs }) {
               <div className="bag-stone-card-grid">
                 {gradeCards.map(card => {
                   const myCards   = ownedCards.filter(c => c.id === card.id);
-                  const growth    = growthMap[card.id] || 0;
+                  const growth    = Math.max(...myCards.map(c => growthMap[c.uid] || 0), 0);
                   const canUse    = (stones[selectedGrade] || 0) > 0;
                   return (
                     <div

@@ -144,7 +144,7 @@ const STONE_GRADES = new Set(['n', 'r', 'sr', 'ur', 'lg', 'raid']);
 function CardDetailModal({ item, gs, setGs, onClose }) {
   const [localGrowth, setLocalGrowth] = useState(item?.growthBonus || 0);
 
-  useEffect(() => { setLocalGrowth(item?.growthBonus || 0); }, [item]);
+  useEffect(() => { setLocalGrowth(item?.uid ? (gs?.cardBonusDmg?.[item.uid] || 0) : 0); }, [item, gs]);
 
   if (!item) return null;
   const { card, cond, count } = item;
@@ -157,15 +157,16 @@ function CardDetailModal({ item, gs, setGs, onClose }) {
   const handleUseStone = () => {
     if (!canUseStone) return;
     const grade  = card.grade;
-    const cardId = card.id;
+    const instUid = item.uid;
+    if (!instUid) return;
     setGs(prev => {
       const curStone  = prev.enhanceStones?.[grade] || 0;
       if (curStone <= 0) return prev;
-      const newGrowth = (prev.cardBonusDmg?.[cardId] || 0) + 1;
+      const newGrowth = (prev.cardBonusDmg?.[instUid] || 0) + 1;
       return {
         ...prev,
         enhanceStones: { ...prev.enhanceStones, [grade]: curStone - 1 },
-        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [cardId]: newGrowth },
+        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [instUid]: newGrowth },
       };
     });
     setLocalGrowth(g => g + 1);
@@ -510,7 +511,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
           <div className="draw-col-right">
           <div className="click-section">
             <div className="click-label">클릭 뽑기 (100번마다 +1장 · 하루 최대 10회)</div>
-            <button className="click-btn" onClick={handleClick} disabled={gs.clickDone || isGuest}>🐾</button>
+            <button className="click-btn" onClick={handleClick} disabled={gs.clickDone || isGuest}>탭</button>
             <div className="click-count-text">
               {gs.clickDone ? (
                 <span style={{ color: '#4a9eff', fontWeight: 700 }}>오늘 완료 ✓</span>
