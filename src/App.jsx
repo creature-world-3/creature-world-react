@@ -500,7 +500,14 @@ export default function App() {
   }
 
   // ── 로그인 유도 화면 ──
-  const isKakaoInApp = /KAKAOTALK/i.test(navigator.userAgent);
+  const ua = navigator.userAgent;
+  const isKakaoInApp    = /KAKAOTALK/i.test(ua);
+  const isSamsungBrowser = /SamsungBrowser/i.test(ua);
+
+  const openInChrome = () => {
+    const url = window.location.href;
+    window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
+  };
 
   if (!user && !isGuest) {
     return (
@@ -517,6 +524,18 @@ export default function App() {
                 <div className="login-inapp-notice">
                   카카오톡 내에서는 Google 로그인이 원활하지 않을 수 있어요.<br />
                   우측 하단 <strong>···</strong> → <strong>다른 브라우저로 열기</strong>를 눌러주세요.
+                </div>
+              )}
+              {isSamsungBrowser && (
+                <div className="login-inapp-notice" style={{borderColor:'#1a73e8', background:'#e8f0fe'}}>
+                  삼성 인터넷에서는 Google 로그인 시 Gmail이 열리는 문제가 있어요.<br />
+                  <strong>Chrome 브라우저</strong>로 접속하시면 정상 로그인이 가능합니다.<br />
+                  <button
+                    onClick={openInChrome}
+                    style={{marginTop:8, padding:'6px 14px', background:'#1a73e8', color:'white',
+                      border:'none', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:'0.85rem'}}>
+                    Chrome으로 열기
+                  </button>
                 </div>
               )}
               <button className="login-google-btn" onClick={handleLogin}>

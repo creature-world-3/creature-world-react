@@ -126,7 +126,7 @@ export default function BagTab({ gs, setGs }) {
       <div className="bag-section">
         <div className="bag-section-title">성장석</div>
         <div className="bag-section-hint">
-          성장 던전 클리어 시 등급별 성장석을 획득합니다. 성장석을 탭하면 해당 등급 카드를 확인할 수 있어요.
+          파밍 던전 클리어 시 등급별 성장석을 획득할 수 있어요. 성장석을 탭하면 해당 등급 카드를 확인할 수 있어요.
         </div>
         <div className="bag-stones-grid">
           {GRADES.map(grade => (

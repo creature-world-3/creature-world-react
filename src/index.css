@@ -8,6 +8,7 @@
   --text: #1a2a3a;
   --muted: #7a9ab5;
   --white: #ffffff;
+  --card-bg: rgba(255,255,255,0.7);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
