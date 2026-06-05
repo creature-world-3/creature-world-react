@@ -61,7 +61,7 @@ function groupByType(cards, bonusDmg) {
   }
   const groups = Object.values(map);
   groups.forEach(g => {
-    const bDmg = bonusDmg[g.def.id] || 0;
+    const bDmg = bonusDmg[g.instances[0]?.uid] || bonusDmg[g.def.id] || 0;
     g.instances.sort((a, b) =>
       calcAvgDmg(g.def.grade, b.condition, b.enhanceLevel||0, bDmg) -
       calcAvgDmg(g.def.grade, a.condition, a.enhanceLevel||0, bDmg)
@@ -359,7 +359,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
                         const grp = selGradeCards.find(g => g.def.id === growthPickExp);
                         if (!grp) return null;
                         const { def, instances } = grp;
-                        const bDmg = bonusDmg[def.id]||0;
+                        const bDmg = bonusDmg[instances[0]?.uid] || bonusDmg[def.id] || 0;
                         return (
                           <div className="card-picker-grid">
                             {instances.map((inst, i) => {
@@ -689,7 +689,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
     if (!restoredCards.length) return;
 
     const avgTickDmg = restoredCards.reduce((sum, s) => {
-      const bDmg = (fb.bonusDmg||{})[s.inst.id]||0;
+      const bDmg = (fb.bonusDmg||{})[s.inst.uid] || (fb.bonusDmg||{})[s.inst.id] || 0;
       return sum + calcAvgDmg(s.cardDef.grade, s.inst.condition, s.inst.enhanceLevel||0, bDmg);
     }, 0);
 
@@ -876,7 +876,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
                   const grp = pickerGroups.find(g => g.def.id === pickExpanded);
                   if (!grp) return null;
                   const { def, instances } = grp;
-                  const bDmg = bonusDmg[def.id]||0;
+                  const bDmg = bonusDmg[instances[0]?.uid] || bonusDmg[def.id] || 0;
                   return (
                     <div className="card-picker-grid">
                       {instances.map((inst, i) => {
@@ -906,7 +906,7 @@ function FarmingDungeon({ gs, setGs, user, isGuest }) {
                 /* 메인 카드 그리드 */
                 <div className="card-picker-grid">
                   {pickerGroups.map(({ def, instances, bestDmg }) => {
-                    const bDmg = bonusDmg[def.id]||0;
+                    const bDmg = bonusDmg[instances[0]?.uid] || bonusDmg[def.id] || 0;
                     return (
                       <div key={def.id} className={`card-picker-item grade-${def.grade}`}
                         onClick={() => instances.length > 1 ? setPickExpanded(def.id) : handlePickInst(instances[0])}>
