@@ -24,6 +24,19 @@ function getEnhanceCost(grade, currentLevel) {
 }
 const ENHANCE_RATE = { 1: 90, 2: 80, 3: 70, 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10, 10: 5 };
 const GRADE_RANGE  = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
+const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
+
+function calcBonus(ownedCards) {
+  let b = 0;
+  const seen = new Set();
+  for (const o of ownedCards) {
+    if (seen.has(o.id)) continue;
+    seen.add(o.id);
+    const c = CARDS.find(x => x.id === o.id);
+    if (c) b += BONUS_MULT[c.grade] || 0;
+  }
+  return Math.floor(b);
+}
 
 let _uid = 0;
 const genUid = () => `${++_uid}_${Date.now()}`;
@@ -488,147 +501,161 @@ function EnhanceSubTab({ gs, setGs, isGuest }) {
   const [curMin, curMax] = selectedCardDef ? calcDmgRange(selectedCardDef.grade, cond, currentLevel) : [0, 0];
   const [nxtMin, nxtMax] = selectedCardDef ? calcDmgRange(selectedCardDef.grade, cond, nextLevel)    : [0, 0];
 
-  const cost     = selectedCardDef ? getEnhanceCost(selectedCardDef.grade, currentLevel) : 0;
-  const costTier = currentLevel <= 4 ? '+1~+5' : currentLevel <= 9 ? '+6~+10' : '+11 이상';
-  const rate     = currentLevel >= 10 ? 1 : (ENHANCE_RATE[nextLevel] ?? 1);
-  const isAurora = displayLevel >= 8;
-  const isBusy   = enhancePhase !== 'idle';
+  const cost       = selectedCardDef ? getEnhanceCost(selectedCardDef.grade, currentLevel) : 0;
+  const costTier   = currentLevel <= 4 ? '+1~+5' : currentLevel <= 9 ? '+6~+10' : '+11 이상';
+  const rate       = currentLevel >= 10 ? 1 : (ENHANCE_RATE[nextLevel] ?? 1);
+  const isAurora   = displayLevel >= 8;
+  const isBusy     = enhancePhase !== 'idle';
+  const cardGrowth = selectedCardDef ? (gs?.cardBonusDmg?.[selectedCardDef.id] || 0) : 0;
+  const cardBonus  = calcBonus(ownedCards);
 
   return (
     <>
       {toast && <div className="cw-toast">{toast}</div>}
 
-      {/* ── 강화 메인 패널 ── */}
-      {selectedInst && selectedCardDef ? (
-        <div className="enhance-main-panel" key={selectedCardDef.id}>
-
-          {/* 카드 대형 표시 */}
-          <div className={`enhance-card-large-wrap${enhancePhase === 'success' ? ' enhance-success-glow' : ''}`}>
-            <div className={`enhance-card-large${isAurora ? ' enhance-aurora-card' : ''}${enhancePhase === 'shaking' ? ' enhance-shaking' : ''}`}>
-              <img src={`/${selectedCardDef.img}`} alt={selectedCardDef.name} />
-
-              {/* 강화 단계 배지 */}
-              {displayLevel > 0 && (
-                <div className={`enhance-badge-large${enhancePhase === 'success' ? ' enhance-badge-pop' : ''}`}>
-                  +{displayLevel}
-                </div>
-              )}
-
-              {/* 페이즈 오버레이 */}
-              {enhancePhase === 'shaking' && (
-                <div className="enhance-overlay enhance-overlay-pending">강화 중...</div>
-              )}
-              {enhancePhase === 'success' && (
-                <div className="enhance-overlay enhance-overlay-success">✨ 성공!</div>
-              )}
-              {enhancePhase === 'fail' && (
-                <div className="enhance-overlay enhance-overlay-fail">✗ 강화 실패</div>
-              )}
-              {enhancePhase === 'descend' && (
-                <div className="enhance-overlay enhance-overlay-descend">▼ 강화 하락</div>
-              )}
-            </div>
-
-            {/* 파티클 (오버플로우 바깥으로 표시) */}
-            {enhancePhase === 'success' && particles.map((p, i) => (
+      {/* ── 강화 상세 모달 ── */}
+      {selectedInst && selectedCardDef && (
+        <div className="card-zoom-overlay" onClick={() => { if (!isBusy) { setSelectedInst(null); setSelectedCardDef(null); setSiblingInsts([]); } }}>
+          <div className="card-zoom-inner" onClick={e => e.stopPropagation()}>
+            <div className="modal-card-main">
+              {/* 왼쪽: 카드 이미지 */}
               <div
-                key={i}
-                className="enhance-particle"
-                style={{
-                  '--dx':          `${Math.cos(p.angle) * p.dist}px`,
-                  '--dy':          `${Math.sin(p.angle) * p.dist}px`,
-                  width:           p.size + 'px',
-                  height:          p.size + 'px',
-                  background:      p.color,
-                  animationDelay:  p.delay + 'ms',
-                  borderRadius:    Math.random() > 0.5 ? '50%' : '2px',
-                }}
-              />
-            ))}
-          </div>
-
-          {/* 카드 이름 / 등급 */}
-          <div className="enhance-card-title">
-            <span className="enhance-card-name-txt">{selectedCardDef.name}</span>
-            <span className="enhance-grade-tag" style={{ background: GRADE_BG[selectedCardDef.grade], color: GRADE_COL[selectedCardDef.grade] }}>
-              {GRADE_LABEL[selectedCardDef.grade]}
-            </span>
-          </div>
-
-          {/* 같은 카드 여러 장 선택 */}
-          {siblingInsts.length > 1 && (
-            <div className="enhance-sibling-section">
-              <div className="enhance-sibling-label">같은 카드 {siblingInsts.length}장 보유 — 선택해 강화</div>
-              <div className="enhance-sibling-list">
-                {siblingInsts.map((inst, i) => {
-                  const lvl  = inst.enhanceLevel || 0;
-                  const cndNum = inst.condition || 1;
-                  const condColor = cndNum >= 9 ? '#d97706' : cndNum >= 6 ? '#7c3aed' : '#888';
-                  return (
-                    <div
-                      key={inst.uid}
-                      className={`enhance-sibling-item${selectedInst?.uid === inst.uid ? ' active' : ''}`}
-                      style={{ animationDelay: `${i * 55}ms` }}
-                      onClick={() => selectInstance(inst)}
-                    >
-                      <div className="enhance-sibling-img">
-                        <img src={`/${selectedCardDef.img}`} alt="" />
-                        {lvl > 0 && <div className="enhance-sibling-badge">+{lvl}</div>}
-                      </div>
-                      <div className="enhance-sibling-cond" style={{ color: condColor }}>
-                        컨디션 {cndNum}
-                      </div>
+                className={`enhance-card-large-wrap${enhancePhase === 'success' ? ' enhance-success-glow' : ''}`}
+                style={{ width: 'auto', height: 'auto' }}
+              >
+                <div className={`zoom-card grade-${selectedCardDef.grade}${isAurora ? ' enhance-aurora' : ''}${enhancePhase === 'shaking' ? ' enhance-shaking' : ''}`}>
+                  <div className="card-header">
+                    <span className="card-name">{selectedCardDef.name}</span>
+                    <span className="grade-badge" style={{ background: GRADE_BG[selectedCardDef.grade], color: GRADE_COL[selectedCardDef.grade] }}>
+                      {GRADE_LABEL[selectedCardDef.grade]}
+                    </span>
+                  </div>
+                  <div className="card-art">
+                    <img src={`/${selectedCardDef.img}`} alt={selectedCardDef.name} />
+                  </div>
+                  <div className="card-aurora" />
+                  {displayLevel > 0 && (
+                    <div className={`enhance-badge-large${enhancePhase === 'success' ? ' enhance-badge-pop' : ''}`}>
+                      +{displayLevel}
                     </div>
-                  );
-                })}
+                  )}
+                  {enhancePhase === 'shaking' && (
+                    <div className="enhance-overlay enhance-overlay-pending">강화 중...</div>
+                  )}
+                  {enhancePhase === 'success' && (
+                    <div className="enhance-overlay enhance-overlay-success">✨ 성공!</div>
+                  )}
+                  {enhancePhase === 'fail' && (
+                    <div className="enhance-overlay enhance-overlay-fail">✗ 강화 실패</div>
+                  )}
+                  {enhancePhase === 'descend' && (
+                    <div className="enhance-overlay enhance-overlay-descend">▼ 강화 하락</div>
+                  )}
+                </div>
+                {enhancePhase === 'success' && particles.map((p, i) => (
+                  <div
+                    key={i}
+                    className="enhance-particle"
+                    style={{
+                      '--dx':         `${Math.cos(p.angle) * p.dist}px`,
+                      '--dy':         `${Math.sin(p.angle) * p.dist}px`,
+                      width:          p.size + 'px',
+                      height:         p.size + 'px',
+                      background:     p.color,
+                      animationDelay: p.delay + 'ms',
+                      borderRadius:   Math.random() > 0.5 ? '50%' : '2px',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* 오른쪽: 스탯 패널 */}
+              <div className="modal-stat-panel">
+                <div className="modal-stat-row">
+                  <span className="modal-stat-label">현재 데미지</span>
+                  <span className="modal-stat-value modal-stat-dmg">{curMin}~{curMax}</span>
+                </div>
+                <div className="modal-stat-row">
+                  <span className="modal-stat-label">강화 후 데미지</span>
+                  <span className="modal-stat-value" style={{ color: '#4ade80', fontWeight: 900 }}>{nxtMin}~{nxtMax}</span>
+                </div>
+                <div className="modal-stat-row">
+                  <span className="modal-stat-label">비용</span>
+                  <span className="modal-stat-value">{cost}장</span>
+                </div>
+                <div className="modal-stat-row">
+                  <span className="modal-stat-label">성공률</span>
+                  <span className="modal-stat-value">{rate}%</span>
+                </div>
+                {cardGrowth > 0 && (
+                  <div className="modal-stat-row">
+                    <span className="modal-stat-label">성장</span>
+                    <span className="modal-stat-value modal-stat-enhance">+{cardGrowth}</span>
+                  </div>
+                )}
+                {cardBonus > 0 && (
+                  <div className="modal-stat-row">
+                    <span className="modal-stat-label">도감 보너스</span>
+                    <span className="modal-stat-value modal-stat-enhance">+{cardBonus}</span>
+                  </div>
+                )}
+                {currentLevel >= 11 && (
+                  <div style={{ color: '#f87171', fontSize: '0.72rem', fontWeight: 700 }}>실패 시 -1단계</div>
+                )}
+                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem' }}>
+                  보유 <strong style={{ color: 'white' }}>{gs.tickets}장</strong>
+                </div>
+                <button
+                  className="enhance-btn-main"
+                  onClick={doEnhance}
+                  disabled={(gs.tickets || 0) < cost || isBusy || isGuest}
+                >
+                  {isGuest ? '로그인 필요' : isBusy ? '강화 중...' : '강화하기'}
+                </button>
               </div>
             </div>
-          )}
 
-          {/* 데미지 범위 */}
-          <div className="enhance-dmg-section">
-            <div className="enhance-dmg-row">
-              <span className="enhance-dmg-label">현재 데미지</span>
-              <span className="enhance-dmg-val">{curMin}~{curMax}<span className="enhance-dmg-unit"> /틱</span></span>
-            </div>
-            <div className="enhance-dmg-divider">↓</div>
-            <div className="enhance-dmg-row enhance-dmg-after">
-              <span className="enhance-dmg-label">강화 후</span>
-              <span className="enhance-dmg-val enhance-dmg-highlight">{nxtMin}~{nxtMax}<span className="enhance-dmg-unit"> /틱</span></span>
-            </div>
-          </div>
-
-          {/* 강화 정보 */}
-          <div className="enhance-cost-row">
-            <div className="enhance-cost-item">
-              <span className="enhance-cost-label">비용</span>
-              <span className="enhance-cost-val">{cost}장</span>
-            </div>
-            <div className="enhance-cost-divider" />
-            <div className="enhance-cost-item">
-              <span className="enhance-cost-label">성공률</span>
-              <span className="enhance-cost-val enhance-rate-val">{rate}%</span>
-            </div>
-            {currentLevel >= 11 && (
-              <div className="enhance-cost-warn">실패 시 -1단계</div>
+            {/* 같은 카드 여러 장 선택 */}
+            {siblingInsts.length > 1 && (
+              <div className="enhance-sibling-section" style={{ background: 'rgba(255,255,255,0.08)', maxWidth: 360 }}>
+                <div className="enhance-sibling-label" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  같은 카드 {siblingInsts.length}장 보유 — 선택해 강화
+                </div>
+                <div className="enhance-sibling-list">
+                  {siblingInsts.map((inst, i) => {
+                    const lvl    = inst.enhanceLevel || 0;
+                    const cndNum = inst.condition || 1;
+                    const condColor = cndNum >= 9 ? '#fbbf24' : cndNum >= 6 ? '#c084fc' : 'rgba(255,255,255,0.5)';
+                    return (
+                      <div
+                        key={inst.uid}
+                        className={`enhance-sibling-item${selectedInst?.uid === inst.uid ? ' active' : ''}`}
+                        style={{ animationDelay: `${i * 55}ms` }}
+                        onClick={() => selectInstance(inst)}
+                      >
+                        <div className="enhance-sibling-img">
+                          <img src={`/${selectedCardDef.img}`} alt="" />
+                          {lvl > 0 && <div className="enhance-sibling-badge">+{lvl}</div>}
+                        </div>
+                        <div className="enhance-sibling-cond" style={{ background: 'rgba(0,0,0,0.3)', color: condColor }}>
+                          컨디션 {cndNum}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
-          </div>
-          <div className="enhance-tickets-row">보유 뽑기권: <strong>{gs.tickets}장</strong></div>
 
-          <button
-            className="enhance-btn-main"
-            onClick={doEnhance}
-            disabled={(gs.tickets || 0) < cost || isBusy || isGuest}
-          >
-            {isGuest ? '로그인이 필요합니다' : isBusy ? '강화 중...' : '강화하기'}
-          </button>
+            <button className="zoom-close" onClick={() => { setSelectedInst(null); setSelectedCardDef(null); setSiblingInsts([]); }}>
+              닫기 ✕
+            </button>
+          </div>
         </div>
-      ) : (
-        <div className="enhance-empty-hint">강화할 카드를 아래에서 선택하세요</div>
       )}
 
       {/* ── 카드 선택 그리드 ── */}
-      <div className={`synth-cards-section${isBusy ? ' enhance-cards-locked' : ''}`}>
+      <div className="synth-cards-section">
         <div className="col-header" style={{ marginBottom: 14 }}>
           <div className="col-title">카드 선택</div>
           <div className="col-count">{GRADE_LABEL[filterGrade]} 등급</div>

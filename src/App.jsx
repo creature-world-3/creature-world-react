@@ -826,10 +826,12 @@ export default function App() {
             user={user}
             onComplete={() => {
               setShowTutorial(false);
-              setGs(prev => ({ ...prev, tickets: prev.tickets + 50 }));
-              clearTimeout(toastTimer.current);
-              setToast('튜토리얼 완료! 뽑기권 +50장 지급!');
-              toastTimer.current = setTimeout(() => setToast(null), 3000);
+              if (!gs.tutorialCompleted) {
+                setGs(prev => ({ ...prev, tickets: prev.tickets + 50, tutorialCompleted: true }));
+                clearTimeout(toastTimer.current);
+                setToast('튜토리얼 완료! 뽑기권 +50장 지급!');
+                toastTimer.current = setTimeout(() => setToast(null), 3000);
+              }
             }}
             onSkip={() => setShowTutorial(false)}
           />

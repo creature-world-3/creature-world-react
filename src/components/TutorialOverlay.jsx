@@ -91,7 +91,7 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
             )}
           </mask>
         </defs>
-        <rect width="100%" height="100%" fill="rgba(0,0,0,0.76)" mask="url(#tut-spotlight)" />
+        <rect width="100%" height="100%" fill="rgba(0,0,0,0.88)" mask="url(#tut-spotlight)" />
         {rect && (
           <rect
             x={rect.left} y={rect.top} width={rect.w} height={rect.h} rx={16}
