@@ -101,41 +101,32 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
         )}
       </svg>
 
-      {/* 루미 캐릭터 */}
-      <img
-        src="/튜토리얼여우.png"
-        alt="루미"
-        style={{
-          position: 'absolute',
-          bottom: 120,
-          left: -10,
-          height: 210,
-          width: 'auto',
-          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))',
-          zIndex: 9001,
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* 말풍선 영역 */}
+      {/* 하단 패널 */}
       <div
-        style={{ position: 'absolute', bottom: 20, left: 16, right: 16, zIndex: 9002 }}
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 9001,
+          background: 'white', borderRadius: '20px 20px 0 0',
+          boxShadow: '0 -4px 24px rgba(0,0,0,0.2)',
+          display: 'flex', alignItems: 'flex-end', gap: 0,
+          padding: '20px 20px 36px 0',
+        }}
         onClick={e => e.stopPropagation()}
       >
-        {/* 말풍선 */}
-        <div style={{ background: 'white', borderRadius: 22, padding: '14px 18px 14px 175px', boxShadow: '0 8px 36px rgba(0,0,0,0.28)', minHeight: 120 }}>
+        {/* 루미 */}
+        <img
+          src="/튜토리얼여우.png"
+          alt="루미"
+          style={{ height: 120, width: 'auto', flexShrink: 0, alignSelf: 'flex-end' }}
+        />
 
-          {/* 발신자 이름 */}
-          <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#f97316', marginBottom: 6, letterSpacing: '0.02em' }}>
-            루미
-          </div>
+        {/* 텍스트 영역 */}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f97316', marginBottom: 5 }}>루미</div>
 
-          {/* 대사 */}
-          <div style={{ fontSize: '0.92rem', color: '#222', lineHeight: 1.7, marginBottom: 14, minHeight: 44 }}>
+          <div style={{ fontSize: '0.9rem', color: '#222', lineHeight: 1.7, marginBottom: 14 }}>
             {current.text}
           </div>
 
-          {/* 보상 안내 (마지막 스텝) */}
           {current.isReward && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
@@ -151,8 +142,7 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
             </div>
           )}
 
-          {/* 진행 도트 */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 5, marginBottom: 14 }}>
             {STEPS.map((_, i) => (
               <div key={i} style={{
                 width: i === step ? 22 : 6, height: 6, borderRadius: 3,
@@ -162,7 +152,6 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
             ))}
           </div>
 
-          {/* 버튼 */}
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleSkip} className="tut-btn-cancel">건너뛰기</button>
             <button onClick={handleNext} className="tut-btn-ok" style={{ flex: 2 }}>
