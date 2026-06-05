@@ -19,18 +19,20 @@ import RaidTab from './components/tabs/RaidTab.jsx';
 import MailboxTab from './components/tabs/MailboxTab.jsx';
 import RankingTab from './components/tabs/RankingTab.jsx';
 import BagTab from './components/tabs/BagTab.jsx';
+import TutorialOverlay from './components/TutorialOverlay.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
-import { CARDS } from './data/cards.js';
+import { CARDS, COLLECTIBLE_CARDS, COLLECTIBLE_IDS } from './data/cards.js';
 import './App.css';
 
-const COLLECTIBLE_CARD_COUNT = CARDS.filter(c => !c.raid && c.grade !== 'raid').length;
-const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking', 'dex', 'bag'];
+const COLLECTIBLE_CARD_COUNT = COLLECTIBLE_CARDS.length;
+const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'bag', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking', 'dex'];
 
 
 export const BASE_STATE = {
   tickets: 5, ownedCards: [],
   attendDate: null, attendStreak: 0,
+  dailyBonusDate: null,
   clickCount: 0, clickRound: 0, clickDone: false, clickDate: null,
   testEventDate: null,
   sessionMinutes: 0, sessionBonus: false, sessionDate: null,
@@ -54,6 +56,10 @@ function applyDailyReset(state) {
   if (s.sessionDate !== today) {
     s.sessionMinutes = 0; s.sessionBonus = false; s.sessionDate = today;
   }
+  if (s.dailyBonusDate !== today) {
+    s.tickets = (s.tickets || 0) + 50;
+    s.dailyBonusDate = today;
+  }
   return s;
 }
 
@@ -61,7 +67,7 @@ const NOTICES = [
   {
     version: 'v1.5', date: '2026.06.03',
     items: [
-      '성장 던전 오픈 — 등급별 보스 처치 시 카드 기본 데미지 영구 +1 (하루 3회)',
+      '성장 던전 오픈 — 등급별 보스 처치 시 성장석 획득, 가방에서 카드에 사용하면 데미지 영구 +1 (하루 3회)',
       '파밍 던전 오픈 — 카드 배치 후 10분 자동 전투, 뽑기권 획득 (하루 1회)',
       '서부 시리즈 SR 6종 추가 (상점 전용 뽑기)',
       '거래소 삽니다 탭 추가',
@@ -112,7 +118,7 @@ const NOTICES = [
 ];
 
 const HELP_ITEMS = [
-  { icon: '', title: '매일 뽑기권',    desc: '매일 처음 접속하면 뽑기권 5장을 드려요!' },
+  { icon: '', title: '매일 뽑기권',    desc: '매일 처음 접속하면 뽑기권 50장을 자동으로 드려요!' },
   { icon: '', title: '1시간 접속 보너스', desc: '오늘 1시간 이상 접속하면 추가로 30장을 드려요.' },
   { icon: '', title: '클릭 뽑기',      desc: '100번 클릭할 때마다 뽑기권 1장! 하루 최대 10장까지!' },
   { icon: '', title: '출석체크',       desc: '하루 1회 출석체크로 5~15장을 받아요. 7일 개근 시 보너스 100장!' },
@@ -137,6 +143,8 @@ export default function App() {
   const [nicknameInput, setNicknameInput]         = useState('');
   const [nicknameError, setNicknameError]         = useState('');
   const [nicknameChecking, setNicknameChecking]   = useState(false);
+  const [showTutorial, setShowTutorial]           = useState(false);
+  const isNewUserRef = useRef(false);
   const [showInviteModal, setShowInviteModal]     = useState(false);
   const [inviteCopied, setInviteCopied]           = useState(false);
   const [isGuest, setIsGuest]                     = useState(false);
@@ -221,19 +229,34 @@ export default function App() {
 
   // ── 공통: Firestore 유저 데이터 로드/생성 ──
   const loadUserData = async (uid, profileData = null) => {
+    const today = new Date().toDateString();
     const snap = await getDoc(doc(db, 'users', uid));
     if (snap.exists()) {
-      const loaded = applyDailyReset({ ...BASE_STATE, ...snap.data() });
+      const rawData = snap.data();
+      const gotDailyBonus = rawData.dailyBonusDate !== today;
+      const loaded = applyDailyReset({ ...BASE_STATE, ...rawData });
       setGs(loaded);
+      // dailyBonusDate를 즉시 Firestore에 기록 (첫 로드 저장 스킵 우회)
+      if (gotDailyBonus) {
+        updateDoc(doc(db, 'users', uid), { dailyBonusDate: today, tickets: loaded.tickets }).catch(console.error);
+        clearTimeout(toastTimer.current);
+        setToast('매일 접속 보너스! 뽑기권 +50장!');
+        toastTimer.current = setTimeout(() => setToast(null), 2500);
+      }
       if (!loaded.nickname) setShowNicknameModal(true);
+      else if (!rawData.tutorialCompleted) setShowTutorial(true);
     } else {
       const newState = {
         ...BASE_STATE,
+        tickets: BASE_STATE.tickets + 50, // 신규 유저도 첫날 보너스 50장
+        dailyBonusDate: today,
         ...(profileData?.nickname ? { nickname: profileData.nickname } : {}),
       };
       await setDoc(doc(db, 'users', uid), newState);
       setGs(newState);
+      isNewUserRef.current = true;
       if (!newState.nickname) setShowNicknameModal(true);
+      else setShowTutorial(true);
     }
     isFirstLoad.current = true;
   };
@@ -325,6 +348,7 @@ export default function App() {
       await updateDoc(doc(db, 'users', user.uid), { nickname: trimmed });
       setGs(prev => ({ ...prev, nickname: trimmed }));
       setShowNicknameModal(false);
+      if (isNewUserRef.current || !gs.tutorialCompleted) { isNewUserRef.current = false; setShowTutorial(true); }
 
       // ── 추천인 처리 (최초 가입 시, 자기 자신 제외) ──
       if (referrer && referrer !== trimmed && !gs.referredBy) {
@@ -442,7 +466,7 @@ export default function App() {
     setShowInviteModal(true);
   };
 
-  const uniqueOwned = new Set(gs.ownedCards.map(c => c.id)).size;
+  const uniqueOwned = new Set(gs.ownedCards.map(c => c.id).filter(id => COLLECTIBLE_IDS.has(id))).size;
   const sessionMins = Math.min(gs.sessionMinutes || 0, 60);
   const sessionPct  = (sessionMins / 60) * 100;
   const tabProps    = { gs, setGs };
@@ -456,13 +480,13 @@ export default function App() {
     synth:   <SynthTab {...tabProps} isGuest={isGuest} />,
     dungeon: <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} onSubTabChange={handleDungeonSubTabChange} />,
     shop:    <ShopTab {...tabProps} />,
-    dex:     <DexTab gs={gs} />,
+    dex:     <DexTab gs={gs} setGs={setGs} />,
     board:   <BoardTab gs={gs} user={user} />,
     trade:   <TradeTab gs={gs} setGs={setGs} user={user} />,
     raid:    <RaidTab gs={gs} setGs={setGs} user={user} />,
     mailbox: <MailboxTab gs={gs} setGs={setGs} user={user} />,
     ranking: <RankingTab />,
-    bag:     <BagTab gs={gs} />,
+    bag:     <BagTab gs={gs} setGs={setGs} />,
   };
 
   // ── 로딩 화면 ──
@@ -543,7 +567,7 @@ export default function App() {
           />
 
           <div className="status-bar">
-            <div className="status-card">
+            <div className="status-card" data-tut="tickets">
               <div className="status-label">보유 뽑기권</div>
               <div className="status-val">
                 {gs.tickets}
@@ -648,7 +672,10 @@ export default function App() {
                   </div>
                 </div>
               ))}
-              <button className="modal-close" onClick={() => setShowHelp(false)}>시작하기</button>
+              <button className="tut-btn-cancel" style={{ width:'100%', marginBottom: 8 }} onClick={() => { setShowHelp(false); setShowTutorial(true); }}>
+                🦊 튜토리얼 다시보기
+              </button>
+              <button className="modal-close" onClick={() => setShowHelp(false)}>닫기</button>
             </div>
           </div>
         )}
@@ -756,10 +783,26 @@ export default function App() {
                   <div key={grade} className="bonus-info-row">
                     <span className="bonus-info-grade" style={{ color }}>{grade}</span>
                     <span className="bonus-info-desc">종류 1종 보유 시</span>
-                    <span className="bonus-info-val">+{val} 데미지/틱</span>
+                    <span className="bonus-info-val">+{val} 데미지</span>
                   </div>
                 ))}
               </div>
+              {(() => {
+                const MULT = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
+                let total = 0;
+                const seen = new Set();
+                for (const o of (gs.ownedCards || [])) {
+                  if (seen.has(o.id)) continue;
+                  seen.add(o.id);
+                  const c = CARDS.find(x => x.id === o.id);
+                  if (c) total += MULT[c.grade] || 0;
+                }
+                return (
+                  <div className="bonus-info-current">
+                    현재 데미지 보너스 : <strong>+{Math.floor(total)}</strong>
+                  </div>
+                );
+              })()}
               <button className="modal-close" onClick={() => setShowBonusInfo(false)}>확인</button>
             </div>
           </div>
@@ -777,6 +820,19 @@ export default function App() {
               <button className="modal-close" onClick={() => setShowWelcomeNotice(false)}>확인</button>
             </div>
           </div>
+        )}
+        {showTutorial && (
+          <TutorialOverlay
+            user={user}
+            onComplete={() => {
+              setShowTutorial(false);
+              setGs(prev => ({ ...prev, tickets: prev.tickets + 50 }));
+              clearTimeout(toastTimer.current);
+              setToast('튜토리얼 완료! 뽑기권 +50장 지급!');
+              toastTimer.current = setTimeout(() => setToast(null), 3000);
+            }}
+            onSkip={() => setShowTutorial(false)}
+          />
         )}
         </>
       } />

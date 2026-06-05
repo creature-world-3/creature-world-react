@@ -138,13 +138,39 @@ function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
   );
 }
 
+const STONE_GRADES = new Set(['n', 'r', 'sr', 'ur', 'lg', 'raid']);
+
 // ── 카드 상세 모달 (10뽑 + 수집북 공용) ──
-function CardDetailModal({ item, onClose }) {
+function CardDetailModal({ item, gs, setGs, onClose }) {
+  const [localGrowth, setLocalGrowth] = useState(item?.growthBonus || 0);
+
+  useEffect(() => { setLocalGrowth(item?.growthBonus || 0); }, [item]);
+
   if (!item) return null;
   const { card, cond, count } = item;
-  const cs          = condStyle(card.grade, cond);
-  const enhLvl      = item.enhanceLevel || 0;
-  const growthBonus = item.growthBonus || 0;
+  const cs     = condStyle(card.grade, cond);
+  const enhLvl = item.enhanceLevel || 0;
+
+  const stoneCount  = gs?.enhanceStones?.[card.grade] || 0;
+  const canUseStone = stoneCount > 0 && STONE_GRADES.has(card.grade);
+
+  const handleUseStone = () => {
+    if (!canUseStone) return;
+    const grade  = card.grade;
+    const cardId = card.id;
+    setGs(prev => {
+      const curStone  = prev.enhanceStones?.[grade] || 0;
+      if (curStone <= 0) return prev;
+      const newGrowth = (prev.cardBonusDmg?.[cardId] || 0) + 1;
+      return {
+        ...prev,
+        enhanceStones: { ...prev.enhanceStones, [grade]: curStone - 1 },
+        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [cardId]: newGrowth },
+      };
+    });
+    setLocalGrowth(g => g + 1);
+  };
+
   return (
     <div className="card-zoom-overlay card-detail-overlay" onClick={onClose}>
       <div className="card-zoom-inner" onClick={e => e.stopPropagation()}>
@@ -166,7 +192,7 @@ function CardDetailModal({ item, onClose }) {
             <div className="modal-stat-row">
               <span className="modal-stat-label">데미지</span>
               <span className="modal-stat-value modal-stat-dmg">
-                {dmgRange(card.grade, cond, enhLvl, growthBonus)}
+                {dmgRange(card.grade, cond, enhLvl, localGrowth)}
               </span>
             </div>
             {enhLvl > 0 && (
@@ -175,10 +201,10 @@ function CardDetailModal({ item, onClose }) {
                 <span className="modal-stat-value modal-stat-enhance">{enhLvl}단계</span>
               </div>
             )}
-            {growthBonus > 0 && (
+            {localGrowth > 0 && (
               <div className="modal-stat-row">
                 <span className="modal-stat-label">성장</span>
-                <span className="modal-stat-value modal-stat-enhance">+{growthBonus}</span>
+                <span className="modal-stat-value modal-stat-enhance">+{localGrowth}</span>
               </div>
             )}
             <div className="modal-stat-row">
@@ -193,6 +219,11 @@ function CardDetailModal({ item, onClose }) {
             )}
           </div>
         </div>
+        {canUseStone && (
+          <button className="stone-use-btn" onClick={handleUseStone}>
+            {GRADE_LABEL[card.grade]} 성장석 사용 (성장 +1) · {gs?.enhanceStones?.[card.grade] || 0}개 보유
+          </button>
+        )}
         <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
       </div>
     </div>
@@ -294,14 +325,15 @@ export default function GachaTab({ gs, setGs, isGuest }) {
     const wasYesterday = gs.attendDate === yesterday.toDateString();
     const newStreak = wasYesterday ? (gs.attendStreak || 0) + 1 : 1;
     const amount = Math.floor(Math.random() * 11) + 5;
-    const bonus  = newStreak % 7 === 0 ? 100 : 0;
+    const bonus  = newStreak === 7 ? 100 : 0;
+    const finalStreak = newStreak >= 7 ? 0 : newStreak;
     setGs(prev => ({
       ...prev,
       tickets: prev.tickets + amount + bonus,
       attendDate: today,
-      attendStreak: newStreak,
+      attendStreak: finalStreak,
     }));
-    showToast(`출석 완료! 뽑기권 ${amount}장 획득!${bonus ? ' 7일 개근 +100장!' : ''}`);
+    showToast(`출석 완료! 뽑기권 ${amount}장 획득!${bonus ? ' 7일 개근 달성 +100장! 🎉' : ''}`);
   };
 
   // ── 수집북 필터/페이지 ──
@@ -344,7 +376,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
           cardDef={pickerCard.card}
           instances={pickerCard.instances}
           onSelect={(inst) => {
-            setZoomItem({ card: pickerCard.card, cond: inst.condition, count: pickerCard.instances.length, enhanceLevel: inst.enhanceLevel || 0, growthBonus: gs.cardBonusDmg?.[pickerCard.card.id] || 0 });
+            setZoomItem({ card: pickerCard.card, cond: inst.condition, count: pickerCard.instances.length, enhanceLevel: inst.enhanceLevel || 0, growthBonus: gs.cardBonusDmg?.[pickerCard.card.id] || 0, uid: inst.uid });
             setPickerCard(null);
           }}
           onClose={() => setPickerCard(null)}
@@ -352,7 +384,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
       )}
 
       {/* 카드 상세 모달 */}
-      <CardDetailModal item={zoomItem} onClose={() => setZoomItem(null)} />
+      <CardDetailModal item={zoomItem} gs={gs} setGs={setGs} onClose={() => setZoomItem(null)} />
 
       {/* 10연속 결과 오버레이 */}
       {draw10Results && (
@@ -562,7 +594,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
                     if (myCards.length > 1) {
                       setPickerCard({ card, instances: myCards });
                     } else {
-                      setZoomItem({ card, cond: best.condition, count: 1, enhanceLevel: best.enhanceLevel || 0, growthBonus: gs.cardBonusDmg?.[card.id] || 0 });
+                      setZoomItem({ card, cond: best.condition, count: 1, enhanceLevel: best.enhanceLevel || 0, growthBonus: gs.cardBonusDmg?.[card.id] || 0, uid: best.uid });
                     }
                   }}
                 >

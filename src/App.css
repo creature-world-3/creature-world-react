@@ -78,6 +78,13 @@
 .bonus-info-grade { font-weight: 900; min-width: 36px; }
 .bonus-info-desc  { color: var(--muted); flex: 1; }
 .bonus-info-val   { font-weight: 700; color: var(--blue-dark); }
+.bonus-info-current {
+  margin-top: 10px; padding: 10px 14px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1.5px solid #bfdbfe; border-radius: 12px;
+  font-size: 0.9rem; color: #1e40af; text-align: center;
+}
+.bonus-info-current strong { font-size: 1.1rem; color: #1d4ed8; }
 .prob-mini    { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; font-size: 0.68rem; color: #888; }
 .prog-wrap { margin-top: 6px; }
 .prog-track { height: 6px; background: #e0f0ff; border-radius: 99px; overflow: hidden; }
@@ -750,12 +757,11 @@
 .shop-result-label {
   font-size:0.85rem; font-weight:700; color:#c084fc; letter-spacing:0.5px;
 }
-.shop-result-front {
+.western-result-card {
   width:140px; height:196px; border-radius:12px; overflow:hidden; position:relative;
   box-shadow:0 8px 32px rgba(0,0,0,0.6);
 }
-.shop-result-front img { width:100%; height:100%; object-fit:cover; object-position:center 30%; }
-.shop-result-front-aurora { border-radius:12px; }
+.western-result-card img { width:100%; height:100%; object-fit:cover; object-position:center 30%; }
 .shop-result-grade-tag {
   position:absolute; top:8px; right:8px;
   background:linear-gradient(135deg,#7c3aed,#c084fc); color:#fff;
@@ -874,7 +880,44 @@
   justify-content:center; width:100%;
 }
 .synth-slots-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; }
-.synth-slots-label { font-size:0.72rem; color:var(--muted); font-weight:700; }
+.synth-slots-label { font-size:0.72rem; color:var(--muted); font-weight:700; display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+.synth-autofill-wrap { position:relative; margin-left:auto; }
+.synth-autofill-btn {
+  font-size:0.7rem; font-weight:700; padding:4px 10px; border-radius:99px;
+  background:rgba(74,158,255,0.12); color:#4a9eff; border:1.5px solid rgba(74,158,255,0.3);
+  cursor:pointer; white-space:nowrap;
+}
+.synth-autofill-menu {
+  position:absolute; right:0; top:calc(100% + 4px); z-index:20;
+  background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.14);
+  overflow:hidden; min-width:130px;
+}
+.synth-autofill-option {
+  display:block; width:100%; padding:10px 14px; text-align:left;
+  font-size:0.8rem; font-weight:700; background:none; border:none; cursor:pointer;
+  color:#333;
+}
+.synth-autofill-option:hover { background:#f0f7ff; color:#4a9eff; }
+.synth-confirm-box {
+  background:white; border-radius:24px; padding:28px 24px 22px;
+  width:100%; max-width:320px; text-align:center;
+  box-shadow:0 12px 40px rgba(0,0,0,0.22);
+  animation:panelSlideDown 0.22s cubic-bezier(.25,.8,.25,1);
+}
+.synth-confirm-title { font-size:1rem; font-weight:900; color:#1a6fd4; margin-bottom:10px; }
+.synth-confirm-card-preview { width:80px; height:80px; margin:0 auto 10px; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+.synth-confirm-card-preview img { width:100%; height:100%; object-fit:cover; object-position:center 20%; }
+.synth-confirm-desc { font-size:0.85rem; color:#555; line-height:1.6; margin-bottom:20px; }
+.synth-confirm-btns { display:flex; gap:10px; }
+.synth-confirm-cancel, .tut-btn-cancel {
+  flex:1; padding:11px; border-radius:12px; border:1.5px solid #e5e7eb;
+  background:white; color:#666; font-size:0.9rem; font-weight:700; cursor:pointer;
+}
+.synth-confirm-ok, .tut-btn-ok {
+  flex:1; padding:11px; border-radius:12px; border:none;
+  background:linear-gradient(135deg,#4a9eff,#1a6fd4); color:white;
+  font-size:0.9rem; font-weight:700; cursor:pointer;
+}
 .synth-slots { display:flex; gap:12px; align-items:center; }
 .synth-arrow { font-size:1.5rem; color:var(--muted); }
 .synth-result-col { display:flex; flex-direction:column; align-items:center; gap:8px; }
@@ -1804,6 +1847,7 @@
 }
 .trade-sell-btn:hover:not(:disabled):not(.disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(56,142,60,0.4); }
 .trade-sell-btn.disabled, .trade-sell-btn:disabled { background: #555; color: #888; cursor: not-allowed; }
+.trade-no-card-label { font-size: 0.72rem; color: rgba(255,255,255,0.25); flex-shrink: 0; }
 
 /* 구매 요청 안내 문구 */
 .trade-buy-form-hint {
@@ -2462,6 +2506,7 @@ body.raid-theme::before {
 }
 .raid-part-grade-row { display: flex; align-items: center; gap: 5px; }
 .raid-part-grade { font-size: 0.6rem; font-weight: 900; }
+.raid-part-dps-row { display: flex; align-items: center; }
 .raid-part-dps { font-size: 0.6rem; color: #ffd93d; font-weight: 700; }
 .raid-part-dmg-row { margin-top: 1px; }
 .raid-part-dmg {
@@ -3609,6 +3654,63 @@ body.raid-theme .music-toggle-btn {
 .bag-stone-grade { font-size: 0.65rem; font-weight: 900; }
 .bag-stone-count { font-size: 1rem; font-weight: 900; color: var(--text); font-family: 'Nunito', sans-serif; }
 .bag-stone-unit { font-size: 0.65rem; color: var(--muted); margin-left: 1px; }
+.bag-stone-clickable { cursor: pointer; transition: transform 0.15s; }
+.bag-stone-clickable:hover { transform: scale(1.06); }
+.bag-stone-selected .bag-stone-grade { text-shadow: 0 0 6px currentColor; }
+
+/* 강화석 → 카드 목록 */
+.bag-stone-cards { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+.bag-stone-cards-title { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+.bag-stone-cards-hint { font-size: 0.7rem; color: var(--muted); font-weight: 400; }
+.bag-stone-empty { font-size: 0.78rem; color: var(--muted); text-align: center; padding: 12px 0; }
+.bag-stone-card-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px;
+}
+.bag-stone-card {
+  position: relative; border-radius: 10px; overflow: hidden; cursor: default;
+  border: 2px solid transparent; transition: border-color 0.18s, transform 0.15s;
+  aspect-ratio: 2/3; display: flex; flex-direction: column;
+}
+.bag-stone-card img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
+.bag-stone-card-usable { cursor: pointer; }
+.bag-stone-card-usable:hover { transform: scale(1.04); }
+.bag-stone-card-badge {
+  position: absolute; top: 4px; right: 4px;
+  background: linear-gradient(135deg,#f59e0b,#d97706); color: white;
+  font-size: 0.6rem; font-weight: 900; padding: 2px 5px; border-radius: 6px;
+}
+.bag-stone-card-footer {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%);
+  padding: 14px 4px 4px;
+  display: flex; align-items: flex-end; justify-content: space-between;
+}
+.bag-stone-card-name { font-size: 0.58rem; font-weight: 700; color: white; line-height: 1.2; }
+.bag-stone-card-dup { font-size: 0.6rem; color: rgba(255,255,255,0.8); font-weight: 700; }
+.bag-stone-card-dmg {
+  position: absolute; top: 4px; left: 4px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 0.55rem; font-weight: 700; padding: 2px 5px; border-radius: 5px;
+  pointer-events: none;
+}
+.bag-stone-card-use {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: rgba(255,255,255,0.92); color: #1d4ed8;
+  font-size: 0.9rem; font-weight: 900; padding: 4px 10px; border-radius: 8px;
+  pointer-events: none; opacity: 0; transition: opacity 0.15s;
+}
+.bag-stone-card-usable:hover .bag-stone-card-use { opacity: 1; }
+
+/* ── 강화석 사용 버튼 (공통 — 도감/수집북/가방 모달) ── */
+.stone-use-btn {
+  width: 100%; padding: 10px 0; margin-top: 6px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: white; border: none; border-radius: 12px;
+  font-family: 'Noto Sans KR', sans-serif; font-size: 0.82rem; font-weight: 700;
+  cursor: pointer; transition: opacity 0.18s, transform 0.15s;
+}
+.stone-use-btn:hover { opacity: 0.88; transform: scale(1.01); }
+.stone-use-btn:active { transform: scale(0.97); }
 
 /* 상점 결과 레이드 보너스 */
 .shop-result-raid-bonus {
@@ -3617,10 +3719,100 @@ body.raid-theme .music-toggle-btn {
   border-radius: 8px; padding: 4px 12px;
 }
 
+/* ── 서부 시리즈 미리보기 버튼 ── */
+.wp-preview-btn {
+  margin-left: 8px;
+  padding: 3px 9px; font-size: 0.68rem; font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif;
+  background: rgba(180,120,30,0.12); color: #92400e;
+  border: 1.5px solid rgba(180,120,30,0.35); border-radius: 20px;
+  cursor: pointer; transition: background 0.18s;
+  vertical-align: middle;
+}
+.wp-preview-btn:hover { background: rgba(180,120,30,0.22); }
+
+/* ── 서부 미리보기 모달 ── */
+.wp-wrap {
+  background: #1a1008; border-radius: 22px;
+  padding: 20px 16px 16px; width: min(360px, 92vw);
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.wp-title {
+  font-size: 0.9rem; font-weight: 900; color: #fbbf24;
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.wp-slider {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+}
+.wp-card-area {
+  flex: 1; aspect-ratio: 2/3; position: relative; overflow: hidden;
+  border-radius: 16px;
+}
+.wp-card {
+  position: absolute; inset: 0;
+  border-radius: 16px; overflow: hidden;
+  display: flex; align-items: flex-end;
+}
+.wp-card img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center 20%;
+}
+.wp-card-aurora {
+  position: absolute; inset: 0; border-radius: 16px; z-index: 2; mix-blend-mode: screen;
+  background: repeating-linear-gradient(120deg,rgba(192,132,252,0.3) 0%,rgba(100,180,255,0.22) 25%,rgba(255,100,200,0.22) 50%,rgba(192,132,252,0.3) 75%);
+  background-size: 200% 200%; animation: auroraSR 3s ease-in-out infinite;
+}
+.wp-card-overlay {
+  position: relative; z-index: 3; width: 100%; padding: 40px 10px 10px;
+  background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%);
+}
+.wp-card-name { font-size: 0.95rem; font-weight: 900; color: #fff; }
+.wp-card-slogan { font-size: 0.65rem; color: rgba(255,255,255,0.65); font-style: italic; margin-top: 3px; }
+
+/* 슬라이드 애니메이션 */
+@keyframes wpSlideRight { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+@keyframes wpSlideLeft  { from { transform: translateX(-100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+.wp-slide-right { animation: wpSlideRight 0.28s cubic-bezier(.25,.46,.45,.94) forwards; }
+.wp-slide-left  { animation: wpSlideLeft  0.28s cubic-bezier(.25,.46,.45,.94) forwards; }
+
+.wp-arrow {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2);
+  color: white; font-size: 1.3rem; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.18s;
+}
+.wp-arrow:hover { background: rgba(255,255,255,0.2); }
+
+.wp-dots { display: flex; gap: 6px; }
+.wp-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(255,255,255,0.28); cursor: pointer; transition: background 0.2s;
+}
+.wp-dot.active { background: #fbbf24; }
+
+.wp-close {
+  background: transparent; border: 1.5px solid rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.6); border-radius: 10px;
+  padding: 7px 28px; font-size: 0.8rem; font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+  transition: background 0.18s;
+}
+.wp-close:hover { background: rgba(255,255,255,0.08); }
+
 .mailbox-wrap { padding: 0 0 40px; }
 .mailbox-header { margin-bottom: 20px; }
+.mailbox-header-row { display: flex; justify-content: space-between; align-items: center; }
 .mailbox-title { font-size: 1.3rem; font-weight: 900; color: var(--blue-dark); margin-bottom: 4px; }
 .mailbox-subtitle { font-size: 0.78rem; color: var(--muted); }
+.mailbox-claim-all-btn {
+  background: linear-gradient(135deg, #4a9eff, #1a6fd4);
+  color: white; font-size: 0.82rem; font-weight: 700;
+  padding: 9px 18px; border-radius: 99px; border: none;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.mailbox-claim-all-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .mailbox-empty {
   text-align: center; padding: 60px 20px;
   color: var(--muted); font-size: 0.9rem;
@@ -3704,6 +3896,18 @@ body.raid-theme .music-toggle-btn {
 .ranking-title {
   font-family: 'Nunito', sans-serif; font-weight: 900;
   font-size: 1.35rem; color: #ffffff;
+}
+.ranking-category-tabs {
+  display: flex; gap: 8px; margin: 14px 0 4px;
+}
+.ranking-cat-btn {
+  flex: 1; padding: 8px 0; border-radius: 99px; border: none;
+  background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.55);
+  font-size: 0.85rem; font-weight: 700; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.ranking-cat-btn.active {
+  background: rgba(255,255,255,0.22); color: #ffffff;
 }
 .ranking-sub {
   font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: -14px;

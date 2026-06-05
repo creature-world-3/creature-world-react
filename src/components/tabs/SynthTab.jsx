@@ -122,9 +122,11 @@ function SynthSubTab({ gs, setGs, isGuest }) {
   const [flipped, setFlipped] = useState(false);
   const [flash, setFlash]   = useState(null);
   const [toast, setToast]   = useState(null);
+  const [autoFillOpen, setAutoFillOpen] = useState(false);
+  const [synthConfirm, setSynthConfirm] = useState(null); // null | { is3card: bool }
   const toastTimer = useRef(null);
 
-  useEffect(() => { setSlots([null, null, null]); setFlipped(false); setSynthPicker(null); }, [synthGrade]);
+  useEffect(() => { setSlots([null, null, null]); setFlipped(false); setSynthPicker(null); setAutoFillOpen(false); setSynthConfirm(null); }, [synthGrade]);
   useEffect(() => {
     if (!flash) return;
     const t = setTimeout(() => setFlash(null), 1000);
@@ -158,8 +160,34 @@ function SynthSubTab({ gs, setGs, isGuest }) {
     }
   };
 
-  const doSynth = () => {
-    if (slots.some(s => s === null)) return;
+  const autoFill = (sortBy) => {
+    const gradeInsts = [];
+    for (const c of ownedCards) {
+      const def = CARDS.find(x => x.id === c.id);
+      if (!def || def.grade !== synthGrade || def.raid) continue;
+      gradeInsts.push({ inst: c, cardDef: def });
+    }
+    if (gradeInsts.length < 3) { showToast('카드가 3장 미만이에요'); setAutoFillOpen(false); return; }
+    if (sortBy === 'condition') {
+      gradeInsts.sort((a, b) => (a.inst.condition || 1) - (b.inst.condition || 1));
+    } else {
+      const [mn, mx] = GRADE_RANGE[synthGrade] || [1, 10];
+      gradeInsts.sort((a, b) => {
+        const sA = Math.floor(((mn + mx) / 2 + (a.inst.condition || 1)) * (1 + (a.inst.enhanceLevel || 0) * 0.1));
+        const sB = Math.floor(((mn + mx) / 2 + (b.inst.condition || 1)) * (1 + (b.inst.enhanceLevel || 0) * 0.1));
+        return sA - sB;
+      });
+    }
+    setSlots([
+      { cardDef: gradeInsts[0].cardDef, inst: gradeInsts[0].inst },
+      { cardDef: gradeInsts[1].cardDef, inst: gradeInsts[1].inst },
+      { cardDef: gradeInsts[2].cardDef, inst: gradeInsts[2].inst },
+    ]);
+    setAutoFillOpen(false);
+  };
+
+  const executeSynth = () => {
+    setSynthConfirm(null);
     const grade    = slots[0].cardDef.grade;
     const gradeIdx = GRADES.indexOf(grade);
     const newOwned = [...(gs.ownedCards || [])];
@@ -171,7 +199,7 @@ function SynthSubTab({ gs, setGs, isGuest }) {
     if (gradeIdx < GRADES.length - 1 && Math.random() < 0.1) {
       resultGrade = GRADES[gradeIdx + 1]; showToast('등급 업그레이드 성공!');
     }
-    const pool = CARDS.filter(c => c.grade === resultGrade && !c.raid);
+    const pool = CARDS.filter(c => c.grade === resultGrade && !c.raid && c.special !== 'western');
     const card  = pool[Math.floor(Math.random() * pool.length)] ?? CARDS[0];
     const cond  = randomCondition();
     newOwned.push({ uid: genUid(), id: card.id, condition: cond, enhanceLevel: 0 });
@@ -181,6 +209,16 @@ function SynthSubTab({ gs, setGs, isGuest }) {
     setFlipped(false);
     if (['sr', 'ur', 'lg'].includes(card.grade)) setFlash(card.grade);
     setTimeout(() => setFlipped(true), 300);
+  };
+
+  const doSynth = () => {
+    if (slots.some(s => s === null)) return;
+    // 슬롯에 넣은 카드 중 1장만 보유한 카드 찾기
+    const lastCopySlot = slots.find(s => {
+      const total = ownedCards.filter(c => c.id === s.cardDef.id).length;
+      return total === 1;
+    });
+    setSynthConfirm({ lastCopyCard: lastCopySlot ? lastCopySlot.cardDef : null });
   };
 
   const canSynth   = slots.every(s => s !== null);
@@ -193,6 +231,31 @@ function SynthSubTab({ gs, setGs, isGuest }) {
     <>
       {flash && <div className={`grade-flash grade-flash-${flash}`}><div className="grade-flash-text">{FLASH_LABEL[flash]}</div></div>}
       {toast && <div className="cw-toast">{toast}</div>}
+
+      {/* 합성 확인 모달 */}
+      {synthConfirm && (
+        <div className="card-zoom-overlay" onClick={() => setSynthConfirm(null)}>
+          <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
+            {synthConfirm.lastCopyCard ? (
+              <>
+                <div className="synth-confirm-title">마지막 1장입니다</div>
+                <div className="synth-confirm-card-preview">
+                  <img src={`/${synthConfirm.lastCopyCard.img}`} alt={synthConfirm.lastCopyCard.name} />
+                </div>
+                <div className="synth-confirm-desc">
+                  <strong>{synthConfirm.lastCopyCard.name}</strong>을(를) 1장 보유중입니다.<br />정말 합성하시겠습니까?
+                </div>
+              </>
+            ) : (
+              <div className="synth-confirm-title">합성하시겠습니까?</div>
+            )}
+            <div className="synth-confirm-btns">
+              <button className="synth-confirm-cancel" onClick={() => setSynthConfirm(null)}>취소</button>
+              <button className="synth-confirm-ok" onClick={executeSynth}>네</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 인스턴스 피커 */}
       {synthPicker && (
@@ -210,7 +273,20 @@ function SynthSubTab({ gs, setGs, isGuest }) {
         <div className="synth-desc">같은 등급 카드 3장으로 합성! 10% 확률로 상위 등급 카드 획득!</div>
         <div className="synth-main-row">
           <div className="synth-slots-wrap">
-            <div className="synth-slots-label">재료 카드 (3장)</div>
+            <div className="synth-slots-label">
+              재료 카드 (3장)
+              <div className="synth-autofill-wrap">
+                <button className="synth-autofill-btn" onClick={() => setAutoFillOpen(p => !p)}>
+                  자동 채우기 {autoFillOpen ? '▴' : '▾'}
+                </button>
+                {autoFillOpen && (
+                  <div className="synth-autofill-menu">
+                    <button className="synth-autofill-option" onClick={() => autoFill('condition')}>컨디션 낮은순</button>
+                    <button className="synth-autofill-option" onClick={() => autoFill('power')}>데미지 낮은순</button>
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="synth-slots">
               {slots.map((slot, i) => (
                 <div key={i} className={`synth-slot${slot ? ' filled grade-highlight' : ''}`} onClick={() => slot && removeSlot(i)}>
@@ -678,35 +754,37 @@ function ExchangeSubTab({ gs, setGs, isGuest }) {
     const toRemoveArr = [...myCards].sort((a, b) => a.condition - b.condition).slice(0, totalCards);
     const toRemove    = new Set(toRemoveArr.map(c => c.uid));
     const highCondCards = toRemoveArr.filter(c => (c.condition || 1) >= 8);
-    if (highCondCards.length > 0) {
-      setConfirmData({ toRemove, qty, totalCards, highCondCards });
-      return;
-    }
-    executeExchange(toRemove, qty, totalCards);
+    setConfirmData({ toRemove, qty, totalCards, highCondCards });
   };
 
   return (
     <>
       {toast && <div className="cw-toast">{toast}</div>}
 
-      {/* 컨디션 경고 확인 모달 */}
+      {/* 교환 확인 모달 */}
       {confirmData && (
         <div className="exsub-confirm-overlay" onClick={() => setConfirmData(null)}>
           <div className="exsub-confirm-box" onClick={e => e.stopPropagation()}>
-            <div className="exsub-confirm-title">고컨디션 카드 포함</div>
+            <div className="exsub-confirm-title">교환하시겠습니까?</div>
             <div className="exsub-confirm-desc">
-              교환할 카드 중 <strong>컨디션 8 이상</strong> 카드가{' '}
-              <strong>{confirmData.highCondCards.length}장</strong> 포함되어 있습니다.
+              카드 <strong>{confirmData.totalCards}장</strong> →{' '}
+              뽑기권 <strong>{confirmData.qty * ticketsPerExchange}장</strong>
             </div>
-            <div className="exsub-confirm-conds">
-              {confirmData.highCondCards.map(c => (
-                <span key={c.uid} className="exsub-confirm-cond-badge">컨디션 {c.condition}</span>
-              ))}
-            </div>
-            <div className="exsub-confirm-sub">정말 교환하시겠습니까?</div>
+            {confirmData.highCondCards.length > 0 && (
+              <>
+                <div className="exsub-confirm-desc" style={{ color: '#f97316', fontSize: '0.8rem' }}>
+                  ⚠ 컨디션 8 이상 카드 {confirmData.highCondCards.length}장 포함
+                </div>
+                <div className="exsub-confirm-conds">
+                  {confirmData.highCondCards.map(c => (
+                    <span key={c.uid} className="exsub-confirm-cond-badge">컨디션 {c.condition}</span>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="exsub-confirm-btns">
               <button className="exsub-confirm-cancel" onClick={() => setConfirmData(null)}>취소</button>
-              <button className="exsub-confirm-ok" onClick={() => executeExchange(confirmData.toRemove, confirmData.qty, confirmData.totalCards)}>교환</button>
+              <button className="exsub-confirm-ok" onClick={() => executeExchange(confirmData.toRemove, confirmData.qty, confirmData.totalCards)}>예</button>
             </div>
           </div>
         </div>

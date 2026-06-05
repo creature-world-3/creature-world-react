@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { CARDS, CHARACTERS } from '../../data/cards.js';
+import { CARDS, CHARACTERS, COLLECTIBLE_IDS } from '../../data/cards.js';
 
 const GRADE_ORDER = { n: 0, r: 1, sr: 2, ur: 3, lg: 4, raid: 5 };
 const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
@@ -17,7 +17,8 @@ const GRADE_TABS = [
   { key: 'raid', label: 'RAID'   },
 ];
 
-const GRADE_RANGE  = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
+const GRADE_RANGE   = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
+const STONE_GRADES  = new Set(['n', 'r', 'sr', 'ur', 'lg', 'raid']);
 const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
 function calcBonus(ownedCards) {
   let b = 0;
@@ -164,17 +165,43 @@ function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
   );
 }
 
-export default function DexTab({ gs }) {
-  const [gradeTab,   setGradeTab]   = useState('all');
-  const [zoomCard,   setZoomCard]   = useState(null);
-  const [pickerCard, setPickerCard] = useState(null); // { card, instances }
+export default function DexTab({ gs, setGs }) {
+  const [gradeTab,    setGradeTab]    = useState('all');
+  const [zoomCard,    setZoomCard]    = useState(null);
+  const [pickerCard,  setPickerCard]  = useState(null); // { card, instances }
+  const [stoneConfirm, setStoneConfirm] = useState(false);
 
   const ownedCards  = gs?.ownedCards || [];
   const ownedIds    = new Set(ownedCards.map(c => c.id));
-  const uniqueOwned = ownedIds.size;
+  const uniqueOwned = new Set([...ownedIds].filter(id => COLLECTIBLE_IDS.has(id))).size;
 
-  const zoomCs    = zoomCard ? condStyle(zoomCard.card.grade, zoomCard.best.condition) : null;
-  const zoomBonus = calcBonus(ownedCards);
+  const zoomCs      = zoomCard ? condStyle(zoomCard.card.grade, zoomCard.best.condition) : null;
+  const zoomBonus   = calcBonus(ownedCards);
+  const zoomGrowth  = zoomCard ? (gs?.cardBonusDmg?.[zoomCard.card.id] || 0) : 0;
+
+  const handleUseStone = () => {
+    if (!zoomCard) return;
+    const grade = zoomCard.card.grade;
+    const stoneCount = gs?.enhanceStones?.[grade] || 0;
+    if (stoneCount <= 0 || !STONE_GRADES.has(grade)) return;
+    setStoneConfirm(true);
+  };
+
+  const executeUseStone = () => {
+    setStoneConfirm(false);
+    if (!zoomCard) return;
+    const grade  = zoomCard.card.grade;
+    const cardId = zoomCard.card.id;
+    setGs(prev => {
+      const curStone = prev.enhanceStones?.[grade] || 0;
+      if (curStone <= 0) return prev;
+      return {
+        ...prev,
+        enhanceStones: { ...prev.enhanceStones, [grade]: curStone - 1 },
+        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [cardId]: (prev.cardBonusDmg?.[cardId] || 0) + 1 },
+      };
+    });
+  };
 
   const filteredNormal = gradeTab !== 'all' && gradeTab !== 'raid'
     ? NORMAL_CARDS.filter(c => c.grade === gradeTab)
@@ -189,10 +216,24 @@ export default function DexTab({ gs }) {
 
   return (
   <>
+    {stoneConfirm && (
+      <div className="card-zoom-overlay" onClick={() => setStoneConfirm(false)}>
+        <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
+          <div className="synth-confirm-title">성장석을 사용하시겠습니까?</div>
+          <div className="synth-confirm-desc">
+            {zoomCard?.card.name} 성장 +{(gs?.cardBonusDmg?.[zoomCard?.card.id] || 0) + 1}
+          </div>
+          <div className="synth-confirm-btns">
+            <button className="synth-confirm-cancel" onClick={() => setStoneConfirm(false)}>취소</button>
+            <button className="synth-confirm-ok" onClick={executeUseStone}>네</button>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="dex-tab">
       <div className="col-header">
         <span className="col-title">도감</span>
-        <span className="col-count">{uniqueOwned} / {CARDS.length}</span>
+        <span className="col-count">{uniqueOwned} / {COLLECTIBLE_IDS.size}</span>
       </div>
 
       <div className="dex-grade-tabs">
@@ -296,13 +337,19 @@ export default function DexTab({ gs }) {
               <div className="modal-stat-row">
                 <span className="modal-stat-label">데미지</span>
                 <span className="modal-stat-value modal-stat-dmg">
-                  {dmgRange(zoomCard.card.grade, zoomCard.best.condition, zoomCard.best.enhanceLevel || 0, zoomBonus)}
+                  {dmgRange(zoomCard.card.grade, zoomCard.best.condition, zoomCard.best.enhanceLevel || 0, zoomBonus + zoomGrowth)}
                 </span>
               </div>
               {(zoomCard.best.enhanceLevel || 0) > 0 && (
                 <div className="modal-stat-row">
                   <span className="modal-stat-label">강화</span>
                   <span className="modal-stat-value modal-stat-enhance">{zoomCard.best.enhanceLevel}단계</span>
+                </div>
+              )}
+              {zoomGrowth > 0 && (
+                <div className="modal-stat-row">
+                  <span className="modal-stat-label">성장</span>
+                  <span className="modal-stat-value modal-stat-enhance">+{zoomGrowth}</span>
                 </div>
               )}
               {zoomBonus > 0 && (
@@ -323,6 +370,17 @@ export default function DexTab({ gs }) {
               )}
             </div>
           </div>
+          {(() => {
+            const grade = zoomCard.card.grade;
+            const stoneCount = gs?.enhanceStones?.[grade] || 0;
+            const GRADE_LABEL_MAP = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND' };
+            if (stoneCount <= 0 || !STONE_GRADES.has(grade)) return null;
+            return (
+              <button className="stone-use-btn" onClick={handleUseStone}>
+                {GRADE_LABEL_MAP[grade]} 성장석 사용 (성장 +1) · {stoneCount}개 보유
+              </button>
+            );
+          })()}
           <button className="zoom-close" onClick={() => setZoomCard(null)}>닫기 ✕</button>
         </div>
       </div>

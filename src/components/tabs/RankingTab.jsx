@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
-import { CARDS } from '../../data/cards.js';
+import { CARDS, COLLECTIBLE_IDS } from '../../data/cards.js';
 
 const GRADE_RANGE = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
 const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND', raid:'RAID' };
@@ -110,15 +110,14 @@ function CardModal({ entry, onClose }) {
 }
 
 // ── 시상대 슬롯 ──
-function PodiumSlot({ entry, rank, onCardClick }) {
-  const ps    = PODIUM_STYLE[rank];
-  const enh   = entry ? (entry.inst.enhanceLevel || 0) : 0;
-  const cond  = entry ? (entry.inst.condition || 1) : 1;
+function PodiumSlot({ entry, rank, onCardClick, mode }) {
+  const ps   = PODIUM_STYLE[rank];
+  const enh  = entry ? (entry.inst.enhanceLevel || 0) : 0;
+  const cond = entry ? (entry.inst.condition || 1) : 1;
   const range = entry ? dmgRange(entry.card.grade, cond, enh) : '';
 
   return (
     <div className={`podium-slot podium-rank-${rank}`}>
-      {/* 카드 이미지 */}
       <div className="podium-card-area">
         {entry ? (
           <div
@@ -138,7 +137,6 @@ function PodiumSlot({ entry, rank, onCardClick }) {
         )}
       </div>
 
-      {/* 시상대 블록 */}
       <div
         className="podium-block"
         style={{ height: ps.blockH, background: ps.bg, borderColor: ps.border }}
@@ -146,13 +144,18 @@ function PodiumSlot({ entry, rank, onCardClick }) {
         <span className="podium-rank-num" style={{ color: ps.color }}>{rank}</span>
       </div>
 
-      {/* 닉네임 / 카드명 / 데미지 */}
       <div className="podium-info">
         {entry ? (
           <>
             <div className="podium-nickname">{entry.nickname}</div>
-            <div className="podium-card-name">{entry.card.name}</div>
-            <div className="podium-dmg" style={{ color: ps.color }}>{range}</div>
+            {mode === 'damage' ? (
+              <>
+                <div className="podium-card-name">{entry.card.name}</div>
+                <div className="podium-dmg" style={{ color: ps.color }}>{range}</div>
+              </>
+            ) : (
+              <div className="podium-dmg" style={{ color: ps.color }}>{entry.cardCount}개</div>
+            )}
           </>
         ) : null}
       </div>
@@ -161,81 +164,61 @@ function PodiumSlot({ entry, rank, onCardClick }) {
 }
 
 export default function RankingTab() {
-  const [entries,     setEntries]     = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [modalEntry,  setModalEntry]  = useState(null);
-  const [loadError,   setLoadError]   = useState(null);
+  const [dmgEntries,     setDmgEntries]     = useState([]);
+  const [collectEntries, setCollectEntries] = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [lastUpdated,    setLastUpdated]    = useState(null);
+  const [modalEntry,     setModalEntry]     = useState(null);
+  const [loadError,      setLoadError]      = useState(null);
+  const [category,       setCategory]       = useState('damage'); // 'damage' | 'collect'
 
   const load = async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      console.log('[Ranking] ▶ users 컬렉션 조회 시작...');
-      console.log('[Ranking] CARDS 총 개수:', CARDS.length);
       const snap = await getDocs(query(collection(db, 'users'), limit(200)));
-      console.log('[Ranking] ✅ 문서 수:', snap.size);
 
-      if (snap.size === 0) {
-        console.warn('[Ranking] ⚠️ users 컬렉션에 문서가 없음');
-      }
+      const dmgRows     = [];
+      const collectRows = [];
 
-      const rows = [];
-      let docIdx = 0;
       snap.forEach(docSnap => {
-        const data = docSnap.data();
-        const fieldKeys = Object.keys(data);
-        console.log(`[Ranking] 문서 #${docIdx} id=${docSnap.id} | 필드:`, fieldKeys);
-
+        const data     = docSnap.data();
         const rawOwned = data.ownedCards ?? data.cards ?? data.cardList ?? null;
-        const ownedType = Array.isArray(rawOwned) ? 'Array' : typeof rawOwned;
-        const ownedLen  = Array.isArray(rawOwned) ? rawOwned.length : 'N/A';
-        console.log(`[Ranking] 문서 #${docIdx} ownedCards 타입:${ownedType} 길이:${ownedLen} nickname:"${data.nickname}"`);
+        const owned    = Array.isArray(rawOwned) ? rawOwned : [];
+        const best     = getBestCard(owned);
+        if (!best) return;
 
-        if (Array.isArray(rawOwned) && rawOwned.length > 0) {
-          console.log(`[Ranking] 문서 #${docIdx} ownedCards[0] 샘플:`, JSON.stringify(rawOwned[0]));
-        } else {
-          console.warn(`[Ranking] 문서 #${docIdx} ownedCards 비어있거나 배열 아님:`, rawOwned);
-        }
-
-        const owned = rawOwned ?? [];
-        const best  = getBestCard(owned);
-        if (!best) {
-          console.log(`[Ranking] 문서 #${docIdx} 스킵: 매칭 카드 없음 (owned ${owned.length}개 중 CARDS 매칭 0개)`);
-          docIdx++;
-          return;
-        }
-        console.log(`[Ranking] 문서 #${docIdx} bestCard: ${best.card.name}(${best.card.grade}) score=${best.score}`);
-        rows.push({
-          uid:      docSnap.id,
-          nickname: data.nickname || '유저',
-          card:     best.card,
-          inst:     best.inst,
-          score:    best.score,
-        });
-        docIdx++;
+        const cardCount = new Set(owned.map(c => c.id).filter(id => COLLECTIBLE_IDS.has(id))).size;
+        const base = {
+          uid:       docSnap.id,
+          nickname:  data.nickname || '유저',
+          card:      best.card,
+          inst:      best.inst,
+          score:     best.score,
+          cardCount,
+        };
+        dmgRows.push(base);
+        collectRows.push(base);
       });
 
-      console.log('[Ranking] 유효 유저 수:', rows.length, '/ 전체:', snap.size);
-      rows.sort((a, b) => b.score - a.score);
-      const top10 = rows.slice(0, 10);
-      console.log('[Ranking] 최종 상위 10개:', top10.map(r => `${r.nickname}(score=${r.score})`));
-      setEntries(top10);
+      dmgRows.sort((a, b) => b.score - a.score);
+      collectRows.sort((a, b) => b.cardCount - a.cardCount);
+
+      setDmgEntries(dmgRows.slice(0, 10));
+      setCollectEntries(collectRows.slice(0, 10));
       setLastUpdated(new Date().toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' }));
     } catch (e) {
-      console.error('[Ranking] ❌ 오류 코드:', e.code);
-      console.error('[Ranking] ❌ 오류 메시지:', e.message);
-      console.error('[Ranking] ❌ 전체 오류:', e);
+      console.error('[Ranking] 오류:', e);
       setLoadError(`${e.code ?? '오류'}: ${e.message}`);
     } finally {
-      console.log('[Ranking] ▶ setLoading(false) 호출 (finally)');
       setLoading(false);
     }
   };
 
   useEffect(() => { load(); }, []);
 
-  const rest = entries.slice(3);
+  const entries = category === 'damage' ? dmgEntries : collectEntries;
+  const rest    = entries.slice(3);
 
   return (
     <>
@@ -248,6 +231,23 @@ export default function RankingTab() {
             {loading ? '...' : '↻ 새로고침'}
           </button>
         </div>
+
+        {/* 카테고리 탭 */}
+        <div className="ranking-category-tabs">
+          <button
+            className={`ranking-cat-btn${category === 'damage' ? ' active' : ''}`}
+            onClick={() => setCategory('damage')}
+          >
+            데미지
+          </button>
+          <button
+            className={`ranking-cat-btn${category === 'collect' ? ' active' : ''}`}
+            onClick={() => setCategory('collect')}
+          >
+            카드 수집
+          </button>
+        </div>
+
         {lastUpdated && (
           <div className="ranking-sub">
             <span className="ranking-updated">{lastUpdated} 기준</span>
@@ -268,9 +268,9 @@ export default function RankingTab() {
           <>
             {/* ── 시상대 (1~3등) ── */}
             <div className="podium-wrap">
-              <PodiumSlot entry={entries[1] ?? null} rank={2} onCardClick={setModalEntry} />
-              <PodiumSlot entry={entries[0] ?? null} rank={1} onCardClick={setModalEntry} />
-              <PodiumSlot entry={entries[2] ?? null} rank={3} onCardClick={setModalEntry} />
+              <PodiumSlot entry={entries[1] ?? null} rank={2} onCardClick={setModalEntry} mode={category} />
+              <PodiumSlot entry={entries[0] ?? null} rank={1} onCardClick={setModalEntry} mode={category} />
+              <PodiumSlot entry={entries[2] ?? null} rank={3} onCardClick={setModalEntry} mode={category} />
             </div>
 
             {/* ── 4~10등 리스트 ── */}
@@ -294,15 +294,23 @@ export default function RankingTab() {
                       </div>
                       <div className="ranking-info">
                         <div className="ranking-nickname">{entry.nickname}</div>
-                        <div className="ranking-card-name">
-                          {entry.card.name}
-                          <span className="ranking-grade" style={{ color: GRADE_COLOR[entry.card.grade] }}>
-                            &nbsp;{GRADE_LABEL[entry.card.grade]}
-                          </span>
-                        </div>
-                        <div className="ranking-dmg-range">{range}</div>
+                        {category === 'damage' ? (
+                          <>
+                            <div className="ranking-card-name">
+                              {entry.card.name}
+                              <span className="ranking-grade" style={{ color: GRADE_COLOR[entry.card.grade] }}>
+                                &nbsp;{GRADE_LABEL[entry.card.grade]}
+                              </span>
+                            </div>
+                            <div className="ranking-dmg-range">{range}</div>
+                          </>
+                        ) : (
+                          <div className="ranking-dmg-range">{entry.cardCount}개</div>
+                        )}
                       </div>
-                      <div className="ranking-score">{entry.score}</div>
+                      <div className="ranking-score">
+                        {category === 'damage' ? entry.score : entry.cardCount}
+                      </div>
                     </div>
                   );
                 })}

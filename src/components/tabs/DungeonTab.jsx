@@ -148,32 +148,24 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
     if (completed.length > 0) {
       setGs(prev => {
         let next = { ...prev };
-        for (const { grade, cardId, isToday } of completed) {
-          const newBonus = (next.cardBonusDmg?.[cardId] || 0) + 1;
+        for (const { grade, cardId: _cid, isToday } of completed) {
           const nb = { ...(next.growthBattles||{}) }; delete nb[grade];
           if (isToday) {
             const a = next.dungeonAttempts?.[grade];
             const att = (!a || a.date !== today) ? 0 : (a.count||0);
             next = {
               ...next,
-              cardBonusDmg:    { ...(next.cardBonusDmg||{}), [cardId]: newBonus },
               dungeonAttempts: { ...(next.dungeonAttempts||{}), [grade]: { count: att + 1, date: today } },
               growthBattles:   nb,
             };
           } else {
-            // 이전 날 배틀 클리어 → 오늘 시도 횟수는 건드리지 않고 보너스만
-            next = {
-              ...next,
-              cardBonusDmg:  { ...(next.cardBonusDmg||{}), [cardId]: newBonus },
-              growthBattles: nb,
-            };
+            next = { ...next, growthBattles: nb };
           }
         }
         return next;
       });
       const updates = {};
-      for (const { grade, cardId, isToday } of completed) {
-        updates[`cardBonusDmg.${cardId}`] = (gs?.cardBonusDmg?.[cardId] || 0) + 1;
+      for (const { grade, cardId: _cid, isToday } of completed) {
         updates[`growthBattles.${grade}`] = deleteField();
         if (isToday) {
           const a = gs?.dungeonAttempts?.[grade];
@@ -185,7 +177,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
       completed.forEach(({ grade }) => {
         addDoc(collection(db,'mailbox'), {
           title: '성장 던전 클리어 보상',
-          message: `${GRADE_LABEL[grade]} 등급 성장 던전 클리어! ${GRADE_LABEL[grade]} 강화석 1개를 드립니다.`,
+          message: `${GRADE_LABEL[grade]} 등급 성장 던전 클리어! ${GRADE_LABEL[grade]} 성장석 1개를 드립니다.`,
           targetUid: user.uid,
           reward: { type: 'enhanceStone', grade, amount: 1 },
           createdAt: serverTimestamp(),
@@ -262,24 +254,22 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         const a      = currentGs?.dungeonAttempts?.[grade];
         const att    = (!a || a.date !== t) ? 0 : (a.count||0);
         const newCount = att + 1;
-        const newBonus = (currentGs?.cardBonusDmg?.[cardId] || 0) + 1;
+        const curBonus = currentGs?.cardBonusDmg?.[cardId] || 0;
         setGs(prev => ({
           ...prev,
-          cardBonusDmg:    { ...(prev.cardBonusDmg||{}), [cardId]: newBonus },
           dungeonAttempts: { ...(prev.dungeonAttempts||{}), [grade]: { count: newCount, date: t } },
           growthBattles:   (() => { const nb={...(prev.growthBattles||{})}; delete nb[grade]; return nb; })(),
         }));
         if (currentUser) {
           try {
             await updateDoc(doc(db,'users',currentUser.uid), {
-              [`cardBonusDmg.${cardId}`]:    newBonus,
               [`dungeonAttempts.${grade}`]:  { count: newCount, date: t },
               [`growthBattles.${grade}`]:    deleteField(),
             });
           } catch(e) { console.error('[growth clear]', e); }
           addDoc(collection(db,'mailbox'), {
             title: '성장 던전 클리어 보상',
-            message: `${GRADE_LABEL[grade]} 등급 성장 던전 클리어! ${GRADE_LABEL[grade]} 강화석 1개를 드립니다.`,
+            message: `${GRADE_LABEL[grade]} 등급 성장 던전 클리어! ${GRADE_LABEL[grade]} 성장석 1개를 드립니다.`,
             targetUid: currentUser.uid,
             reward: { type: 'enhanceStone', grade, amount: 1 },
             createdAt: serverTimestamp(),
@@ -287,13 +277,13 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         }
         if (newCount < MAX_DAILY_GROWTH) {
           const liveRestartInst = gsRef.current?.ownedCards?.find(c => c.uid === battle.cardInst.uid) || battle.cardInst;
-          const avg   = calcAvgDmg(grade, liveRestartInst.condition, liveRestartInst.enhanceLevel||0, newBonus);
+          const avg   = calcAvgDmg(grade, liveRestartInst.condition, liveRestartInst.enhanceLevel||0, curBonus);
           const maxHp = avg * 1200;
           const restartNow = Date.now();
-          const newBD = { cardInstUid: battle.cardInst.uid, cardId: battle.cardInst.id, bDmg: newBonus, maxHp, startTime: restartNow, date: todayKST() };
+          const newBD = { cardInstUid: battle.cardInst.uid, cardId: battle.cardInst.id, bDmg: curBonus, maxHp, startTime: restartNow, date: todayKST() };
           setBattles(prev => ({
             ...prev,
-            [grade]: { ...prev[grade], active: true, hp: maxHp, maxHp, bDmg: newBonus, totalDmg: 0, lastDmg: null, lastTickTime: restartNow },
+            [grade]: { ...prev[grade], active: true, hp: maxHp, maxHp, bDmg: curBonus, totalDmg: 0, lastDmg: null, lastTickTime: restartNow },
           }));
           setGs(prev => ({ ...prev, growthBattles: { ...(prev.growthBattles||{}), [grade]: newBD } }));
           if (currentUser) {
@@ -335,7 +325,7 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
         <div className="card-zoom-overlay" onClick={() => setGrowthInfoOpen(false)}>
           <div className="dungeon-info-sheet" onClick={e => e.stopPropagation()}>
             <div className="dungeon-info-title">성장 던전 안내</div>
-            <p className="dungeon-info-body">등급별 보스에게 도전하세요. 클리어하면 출격 카드의 기본 데미지가 영구적으로 +1 상승합니다. 등급별 하루에 3번까지 도전 가능합니다.</p>
+            <p className="dungeon-info-body">등급별 보스에게 도전하세요. 클리어하면 해당 등급 성장석 1개를 우편으로 드립니다. 가방에서 원하는 카드에 사용하여 데미지를 영구적으로 +1 올릴 수 있어요. 등급별 하루에 3번까지 도전 가능합니다.</p>
             <button className="zoom-close" onClick={() => setGrowthInfoOpen(false)}>닫기 ✕</button>
           </div>
         </div>
@@ -529,13 +519,16 @@ function GrowthDungeon({ gs, setGs, user, isGuest }) {
             {/* 도전 횟수 */}
             {selHasCards && (
               <div className="growth-detail-attempts">
-                <span>오늘 도전 횟수</span>
+                <span>도전 가능횟수</span>
                 <div className="gbc-attempts" style={{ display:'inline-flex', marginLeft:8 }}>
                   {[...Array(MAX_DAILY_GROWTH)].map((_,i) => (
                     <span key={i} className={`gbc-dot${i<selAtt?' used':''}`} />
                   ))}
                 </div>
-                <span style={{ marginLeft:8, color:'var(--muted)', fontSize:'0.8rem' }}>{selAtt}/{MAX_DAILY_GROWTH}</span>
+                <span style={{ marginLeft:8, fontWeight:900, fontSize:'0.88rem',
+                  color: (MAX_DAILY_GROWTH - selAtt) === 0 ? 'var(--muted)' : 'var(--blue-dark)' }}>
+                  {MAX_DAILY_GROWTH - selAtt}회
+                </span>
               </div>
             )}
 

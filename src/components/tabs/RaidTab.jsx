@@ -252,7 +252,7 @@ function BossListScreen({ gs, user, onEnter }) {
                 {activeCount > 0 && (
                   <div className="raid-boss-select-channels">{activeCount}개 채널 진행 중</div>
                 )}
-                {isMyBoss && <div className="raid-boss-my-badge">내 레이드 참여 중</div>}
+                {isMyBoss && <div className="raid-boss-my-badge">레이드 참여 중</div>}
               </div>
               <div className="raid-boss-select-enter">
                 {isEntering ? '...' : isMyBoss ? '내 채널 →' : '입장 →'}
@@ -811,7 +811,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
                 const liveMyCond   = liveMyInst?.condition ?? myPart.cardCondition;
                 return (
                   <div className="raid-my-tick">
-                    {dmgRange(myPart.cardGrade, liveMyCond, myPart.cardBonus||0, liveMyEnhLvl)}dmg / 3초
+                    {dmgRange(myPart.cardGrade, liveMyCond, myPart.cardBonus||0, liveMyEnhLvl)}dmg
                     {liveMyEnhLvl > 0 && <span className="raid-enhance-tag">+{liveMyEnhLvl}</span>}
                   </div>
                 );
@@ -888,7 +888,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
                     <div className="raid-picker-overlay">
                       <div className="raid-picker-name">{card.name}</div>
                       <div className="raid-picker-grade" style={{ color:GRADE_COLOR[card.grade] }}>{GRADE_LABEL[card.grade]}</div>
-                      <div className="raid-picker-dmg">{dmgRange(card.grade, inst?.condition||1, 0, inst?.enhanceLevel||0)}dmg/틱</div>
+                      <div className="raid-picker-dmg">{dmgRange(card.grade, inst?.condition||1, 0, inst?.enhanceLevel||0)}dmg</div>
                     </div>
                   </div>
                 );
@@ -930,7 +930,9 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
                     </div>
                     <div className="raid-part-grade-row">
                       <span className="raid-part-grade" style={{ color:GRADE_COLOR[p.cardGrade] }}>{GRADE_LABEL[p.cardGrade]}</span>
-                      <span className="raid-part-dps">{dmgRange(p.cardGrade, p.cardCondition, p.cardBonus||0, p.cardEnhanceLevel||0)}dmg/틱</span>
+                    </div>
+                    <div className="raid-part-dps-row">
+                      <span className="raid-part-dps">{dmgRange(p.cardGrade, p.cardCondition, p.cardBonus||0, p.cardEnhanceLevel||0)}dmg</span>
                     </div>
                     <div className="raid-part-dmg-row"><span className="raid-part-dmg">{(p.damage||0).toLocaleString()}</span></div>
                     <div className="raid-part-bar-wrap"><div className="raid-part-bar" style={{ width:`${barPct}%` }} /></div>

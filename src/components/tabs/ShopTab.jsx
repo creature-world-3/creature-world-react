@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { CARDS } from '../../data/cards.js';
 
 const BONUS_MULT = { n: 0.5, r: 1, sr: 2, ur: 3, lg: 5, raid: 10 };
@@ -21,9 +21,81 @@ function genUid() {
   return `card_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// ── 서부 카드 미리보기 슬라이더 ──
+function WesternPreview({ onClose }) {
+  const [idx, setIdx]       = useState(0);
+  const [dir, setDir]       = useState(null); // 'left' | 'right'
+  const [animKey, setAnimKey] = useState(0);
+  const intervalRef = useRef(null);
+
+  const go = (next, direction) => {
+    setDir(direction);
+    setAnimKey(k => k + 1);
+    setIdx(next);
+  };
+
+  const prev = () => go((idx - 1 + WESTERN_POOL.length) % WESTERN_POOL.length, 'left');
+  const next = () => go((idx + 1) % WESTERN_POOL.length, 'right');
+
+  // 3초마다 자동 슬라이드
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      go(i => {
+        const n = (i + 1) % WESTERN_POOL.length;
+        setDir('right');
+        setAnimKey(k => k + 1);
+        return n;
+      }, 'right');
+    }, 2800);
+    return () => clearInterval(intervalRef.current);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const card = WESTERN_POOL[idx];
+
+  return (
+    <div className="card-zoom-overlay" onClick={onClose}>
+      <div className="wp-wrap" onClick={e => e.stopPropagation()}>
+        <div className="wp-title">서부 시리즈 미리보기</div>
+
+        <div className="wp-slider">
+          <button className="wp-arrow wp-arrow-left" onClick={prev}>‹</button>
+
+          <div className="wp-card-area">
+            <div
+              key={`${animKey}`}
+              className={`wp-card grade-${card.grade} wp-slide-${dir || 'right'}`}
+            >
+              <img src={`/${card.img}`} alt={card.name} />
+              <div className="wp-card-aurora card-aurora" />
+              <div className="wp-card-overlay">
+                <div className="wp-card-name">{card.name}</div>
+              </div>
+            </div>
+          </div>
+
+          <button className="wp-arrow wp-arrow-right" onClick={next}>›</button>
+        </div>
+
+        <div className="wp-dots">
+          {WESTERN_POOL.map((_, i) => (
+            <div
+              key={i}
+              className={`wp-dot${i === idx ? ' active' : ''}`}
+              onClick={() => go(i, i > idx ? 'right' : 'left')}
+            />
+          ))}
+        </div>
+
+        <button className="wp-close" onClick={onClose}>닫기 ✕</button>
+      </div>
+    </div>
+  );
+}
+
 export default function ShopTab({ gs, setGs }) {
   const [toast, setToast]                 = useState(null);
-  const [westernResult, setWesternResult] = useState(null); // { card, condition, raidBonus }
+  const [westernResult, setWesternResult] = useState(null);
+  const [showPreview, setShowPreview]     = useState(false);
   const toastTimer = useRef(null);
 
   const showToast = (msg) => {
@@ -56,14 +128,16 @@ export default function ShopTab({ gs, setGs }) {
     <>
       {toast && <div className="cw-toast">{toast}</div>}
 
+      {showPreview && <WesternPreview onClose={() => setShowPreview(false)} />}
+
       {/* 서부 시리즈 뽑기 결과 오버레이 */}
       {westernResult && (
         <div className="card-zoom-overlay" onClick={() => setWesternResult(null)}>
           <div className="shop-result-wrap" onClick={e => e.stopPropagation()}>
             <div className="shop-result-label">서부 시리즈 뽑기 결과!</div>
-            <div className={`shop-result-front grade-${westernResult.card.grade}`}>
+            <div className={`western-result-card grade-${westernResult.card.grade}`}>
               <img src={`/${westernResult.card.img}`} alt={westernResult.card.name} />
-              <div className="shop-result-front-aurora card-aurora" />
+              <div className="card-aurora" />
               <div className="shop-result-grade-tag">SR</div>
             </div>
             <div className="shop-result-card-name">{westernResult.card.name}</div>
@@ -93,7 +167,10 @@ export default function ShopTab({ gs, setGs }) {
             </div>
           </div>
           <div className="shop-item-right">
-            <div className="shop-item-name">서부 시리즈 뽑기</div>
+            <div className="shop-item-name">
+              서부 시리즈 뽑기
+              <button className="wp-preview-btn" onClick={() => setShowPreview(true)}>미리보기</button>
+            </div>
             <div className="shop-item-desc">
               서부 테마 SR 카드 6종 중 1장을 랜덤으로 획득합니다.<br />
               일반 뽑기에서는 등장하지 않는 한정 카드예요!

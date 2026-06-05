@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   collection, addDoc, deleteDoc, doc,
-  onSnapshot, serverTimestamp, query, orderBy,
+  onSnapshot, serverTimestamp, query, orderBy, where,
   runTransaction,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
@@ -48,10 +48,14 @@ export default function TradeTab({ gs, setGs, user }) {
   };
 
   useEffect(() => {
-    const q1 = query(collection(db, 'trades'),     orderBy('createdAt', 'desc'));
-    const q2 = query(collection(db, 'buyOrders'),  orderBy('createdAt', 'desc'));
+    const q1 = query(collection(db, 'trades'),    orderBy('createdAt', 'desc'));
+    const q2 = query(collection(db, 'buyOrders'), where('status', '==', 'active'));
     const u1 = onSnapshot(q1, snap => setTrades(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const u2 = onSnapshot(q2, snap => setBuyOrders(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const u2 = onSnapshot(q2, snap => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      docs.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+      setBuyOrders(docs);
+    });
     return () => { u1(); u2(); };
   }, []);
 
@@ -538,9 +542,6 @@ export default function TradeTab({ gs, setGs, user }) {
                   </div>
                   <div className="trade-item-cond">컨디션 {trade.cardCondition}</div>
                   <div className="trade-seller">
-                    {trade.sellerPhotoURL && (
-                      <img src={trade.sellerPhotoURL} className="trade-seller-avatar" referrerPolicy="no-referrer" alt="" />
-                    )}
                     <span>{trade.sellerName}</span>
                   </div>
                   <div className="trade-item-price">뽑기권 {trade.price}장</div>
@@ -714,21 +715,21 @@ export default function TradeTab({ gs, setGs, user }) {
                       </span>
                     </div>
                     <div className="trade-seller">
-                      {order.buyerPhotoURL && (
-                        <img src={order.buyerPhotoURL} className="trade-seller-avatar" referrerPolicy="no-referrer" alt="" />
-                      )}
                       <span>{order.buyerName}</span>
                     </div>
                     <div className="trade-item-price trade-buy-order-price">뽑기권 {order.price}장 제시</div>
                   </div>
-                  <button
-                    className={`trade-sell-btn${canSell ? '' : ' disabled'}`}
-                    onClick={() => canSell && handleSellPickerOpen(order)}
-                    disabled={submitting || !canSell}
-                    title={canSell ? '' : '보유한 카드가 없어요'}
-                  >
-                    {canSell ? '판매' : '없음'}
-                  </button>
+                  {canSell ? (
+                    <button
+                      className="trade-sell-btn"
+                      onClick={() => handleSellPickerOpen(order)}
+                      disabled={submitting}
+                    >
+                      판매
+                    </button>
+                  ) : (
+                    <span className="trade-no-card-label">카드 없음</span>
+                  )}
                 </div>
               );
             })}
