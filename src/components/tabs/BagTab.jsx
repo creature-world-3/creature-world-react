@@ -28,6 +28,14 @@ function dmgRangeStr(card, ownedCards, growthMap) {
   return `${Math.floor((mn + bestCond) * mult) + growth}~${Math.floor((mx + bestCond) * mult) + growth}`;
 }
 
+// 특정 인스턴스 기준 데미지 범위
+function instDmgRange(card, inst, growth) {
+  const [mn, mx] = GRADE_RANGE[card.grade] || [1, 10];
+  const mult = 1 + (inst.enhanceLevel || 0) * 0.1;
+  const g = growth || 0;
+  return `${Math.floor((mn + (inst.condition||1)) * mult) + g}~${Math.floor((mx + (inst.condition||1)) * mult) + g}`;
+}
+
 export default function BagTab({ gs, setGs }) {
   const [selectedGrade, setSelectedGrade]     = useState(null);
   const [stoneConfirm, setStoneConfirm]       = useState(null); // { card, inst }
@@ -104,12 +112,35 @@ export default function BagTab({ gs, setGs }) {
         </div>
       )}
 
-      {stoneConfirm && (
+      {stoneConfirm && (() => {
+        const { card, inst } = stoneConfirm;
+        const curGrowth = growthMap[inst.uid] || 0;
+        const beforeDmg = instDmgRange(card, inst, curGrowth);
+        const afterDmg  = instDmgRange(card, inst, curGrowth + 1);
+        return (
         <div className="card-zoom-overlay" onClick={() => setStoneConfirm(null)}>
           <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
             <div className="synth-confirm-title">카드를 성장시키시겠습니까?</div>
-            <div className="synth-confirm-desc">
-              {stoneConfirm.card.name} 성장 +{(growthMap[stoneConfirm.inst.uid] || 0) + 1}
+            <div className="bag-stone-confirm-card">
+              <img src={`/${card.img}`} alt={card.name} className="bag-stone-confirm-img" />
+              <div className="bag-stone-confirm-info">
+                <div className="bag-stone-confirm-name">{card.name}</div>
+                <div className="bag-stone-confirm-grade" style={{color: GRADE_COLOR[card.grade]}}>{GRADE_LABEL[card.grade]}</div>
+                <div className="bag-stone-confirm-stat">
+                  <span className="bag-stone-confirm-label">성장</span>
+                  <span>{curGrowth} → <strong style={{color:'#7c3aed'}}>+{curGrowth + 1}</strong></span>
+                </div>
+                <div className="bag-stone-confirm-stat">
+                  <span className="bag-stone-confirm-label">데미지</span>
+                  <span style={{fontSize:'0.7rem'}}>{beforeDmg} → <strong style={{color:'#7c3aed'}}>{afterDmg}</strong></span>
+                </div>
+                {inst.enhanceLevel > 0 && (
+                  <div className="bag-stone-confirm-stat">
+                    <span className="bag-stone-confirm-label">강화</span>
+                    <span>+{inst.enhanceLevel}</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="synth-confirm-btns">
               <button className="synth-confirm-cancel" onClick={() => setStoneConfirm(null)}>취소</button>
@@ -117,7 +148,8 @@ export default function BagTab({ gs, setGs }) {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
       <div className="bag-header">
         <div className="col-title">가방</div>
         <div className="col-count">인벤토리</div>

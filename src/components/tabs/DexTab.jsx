@@ -165,8 +165,33 @@ function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
   );
 }
 
+function applySort(cards, sortBy, ownedCards, growthMap) {
+  if (sortBy === 'dmg') {
+    const maxDmg = card => {
+      const [,mx] = GRADE_RANGE[card.grade] || [1,10];
+      const insts = ownedCards.filter(c => c.id === card.id);
+      if (!insts.length) return 0;
+      const bestE = Math.max(...insts.map(c => c.enhanceLevel || 0));
+      const bestC = Math.max(...insts.map(c => c.condition || 1));
+      const growth = Math.max(...insts.map(c => growthMap?.[c.uid] || 0), 0);
+      return Math.floor((mx + bestC) * (1 + bestE * 0.1)) + growth;
+    };
+    return [...cards].sort((a, b) => maxDmg(b) - maxDmg(a));
+  }
+  if (sortBy === 'enhance') {
+    const maxEnh = card => {
+      const insts = ownedCards.filter(c => c.id === card.id);
+      return insts.length ? Math.max(...insts.map(c => c.enhanceLevel || 0)) : 0;
+    };
+    return [...cards].sort((a, b) => maxEnh(b) - maxEnh(a));
+  }
+  // 'grade' (default): 레어도 높은 순
+  return [...cards].sort((a, b) => (GRADE_ORDER[b.grade] ?? 0) - (GRADE_ORDER[a.grade] ?? 0));
+}
+
 export default function DexTab({ gs, setGs }) {
   const [gradeTab,    setGradeTab]    = useState('all');
+  const [sortBy,      setSortBy]      = useState('grade');
   const [zoomCard,    setZoomCard]    = useState(null);
   const [pickerCard,  setPickerCard]  = useState(null); // { card, instances }
   const [stoneConfirm, setStoneConfirm] = useState(false);
@@ -204,8 +229,18 @@ export default function DexTab({ gs, setGs }) {
     });
   };
 
+  const growthMap = gs?.cardBonusDmg || {};
+
   const filteredNormal = gradeTab !== 'all' && gradeTab !== 'raid'
-    ? NORMAL_CARDS.filter(c => c.grade === gradeTab)
+    ? applySort(NORMAL_CARDS.filter(c => c.grade === gradeTab), sortBy, ownedCards, growthMap)
+    : [];
+
+  const allCardsSorted = gradeTab === 'all' && sortBy !== 'grade'
+    ? applySort([...NORMAL_CARDS, ...RAID_CARDS], sortBy, ownedCards, growthMap)
+    : null;
+
+  const raidCardsSorted = gradeTab === 'raid'
+    ? applySort(RAID_CARDS, sortBy, ownedCards, growthMap)
     : [];
 
   const handleSingle = (data)   => { setZoomCard(data); setPickerCard(null); };
@@ -249,29 +284,50 @@ export default function DexTab({ gs, setGs }) {
         ))}
       </div>
 
+      {/* 정렬 버튼 */}
+      <div className="dex-sort-row">
+        {[['grade','레어도순'],['dmg','데미지순'],['enhance','강화순']].map(([key,label]) => (
+          <button key={key}
+            className={`dex-sort-btn${sortBy === key ? ' active' : ''}`}
+            onClick={() => setSortBy(key)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       {gradeTab === 'all' && (
         <>
-          {CHARACTERS.map(char => (
-            <div key={char.id} className="dex-character-group">
-              <div className="dex-char-name">{char.name}</div>
-              <div className="card-grid">
-                {NORMAL_CARDS.filter(c => c.id.startsWith(char.id)).sort((a, b) => (GRADE_ORDER[a.grade] ?? 99) - (GRADE_ORDER[b.grade] ?? 99)).map(card => (
-                  <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
-                ))}
-              </div>
+          {allCardsSorted ? (
+            <div className="card-grid dex-grade-grid">
+              {allCardsSorted.map(card => (
+                <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
+              ))}
             </div>
-          ))}
-          {RAID_CARDS.length > 0 && (
-            <div className="dex-raid-group">
-              <div className="dex-char-name dex-raid-title">
-                RAID 한정<span className="dex-raid-hint">레이드 보상으로만 획득 가능</span>
-              </div>
-              <div className="card-grid">
-                {RAID_CARDS.map(card => (
-                  <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
-                ))}
-              </div>
-            </div>
+          ) : (
+            <>
+              {CHARACTERS.map(char => (
+                <div key={char.id} className="dex-character-group">
+                  <div className="dex-char-name">{char.name}</div>
+                  <div className="card-grid">
+                    {NORMAL_CARDS.filter(c => c.id.startsWith(char.id)).sort((a, b) => (GRADE_ORDER[a.grade] ?? 99) - (GRADE_ORDER[b.grade] ?? 99)).map(card => (
+                      <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {RAID_CARDS.length > 0 && (
+                <div className="dex-raid-group">
+                  <div className="dex-char-name dex-raid-title">
+                    RAID 한정<span className="dex-raid-hint">레이드 보상으로만 획득 가능</span>
+                  </div>
+                  <div className="card-grid">
+                    {RAID_CARDS.map(card => (
+                      <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -293,7 +349,7 @@ export default function DexTab({ gs, setGs }) {
             <div className="col-empty">RAID 카드 데이터가 없습니다</div>
           ) : (
             <div className="card-grid">
-              {RAID_CARDS.map(card => (
+              {raidCardsSorted.map(card => (
                 <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
               ))}
             </div>

@@ -236,6 +236,13 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
           const fid = ++floatIdRef.current;
           setDmgFloats(prev => [...prev, { id:fid, dmg }]);
           setTimeout(() => setDmgFloats(prev => prev.filter(f => f.id !== fid)), 1200);
+          // 체력 0 → 즉시 클리어
+          const threshold = STAGES[(battleRef.current.stage||1)-1].threshold;
+          if (totalDmgRef.current >= threshold && !finishedRef.current) {
+            clearInterval(timerRef.current);
+            setTimeout(() => finishBattle(totalDmgRef.current, (battleRef.current.stage||1)-1), 0);
+            return next;
+          }
         }
         if (next >= DUNGEON_DURATION) { clearInterval(timerRef.current); return DUNGEON_DURATION; }
         return next;
