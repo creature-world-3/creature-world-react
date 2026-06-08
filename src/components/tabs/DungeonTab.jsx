@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc, deleteField, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
+import { getGrowth } from '../../utils/growth.js';
 
 const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND', raid:'RAID' };
 const GRADE_COLOR = { n:'#aaa', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b', raid:'#ffd700' };
@@ -76,7 +77,7 @@ function groupByType(cards, bonusDmg) {
   }
   const groups = Object.values(map);
   groups.forEach(g => {
-    const bDmg = bonusDmg[g.instances[0]?.uid] || bonusDmg[g.def.id] || 0;
+    const bDmg = getGrowth(bonusDmg, g.instances[0]) || 0;
     g.instances.sort((a,b) =>
       calcAvgDmg(g.def.grade,b.condition,b.enhanceLevel||0,bDmg) -
       calcAvgDmg(g.def.grade,a.condition,a.enhanceLevel||0,bDmg)
@@ -119,8 +120,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
 
   const today      = todayKST();
   const bonusDmg   = gs?.cardBonusDmg || {};
-  const lockedUid  = gs?.raidCard?.uid;
-  const ownedCards = (gs?.ownedCards||[]).filter(c => c.uid !== lockedUid);
+  const ownedCards = gs?.ownedCards || [];
 
   const dailyCount = (() => {
     const a = gs?.dungeonAttempt;
@@ -154,6 +154,8 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
         dungeonBattle: deleteField(),
       };
       if (reward.type === 'tickets') {
+        // gsRef를 직접 쓰지 않고 setGs 콜백의 prev 값을 Firestore에 반영하기 위해
+        // setGs 내부에서 처리된 tickets 값을 사용
         updates.tickets = (gsRef.current?.tickets||0) + reward.amount;
       }
       updateDoc(doc(db,'users',user.uid), updates).catch(e => console.error('[dungeon finish]', e));
@@ -180,7 +182,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
 
     const restoredCards = [];
     for (const s of (fb.slots||[])) {
-      const inst = gs.ownedCards.find(c => c.uid === s.cardInstUid);
+      const inst = (gs.ownedCards||[]).find(c => c.uid === s.cardInstUid);
       const def  = CARDS.find(c => c.id === s.cardId);
       if (inst && def) restoredCards.push({ cardDef:def, inst });
     }
@@ -188,7 +190,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
 
     const elapsedSec = Math.floor((Date.now() - fb.startTime) / 1000);
     const avgTickDmg = restoredCards.reduce((sum, s) => {
-      const bD = (fb.bonusDmg||{})[s.inst.uid] || (fb.bonusDmg||{})[s.inst.id] || 0;
+      const bD = getGrowth(fb.bonusDmg, s.inst);
       return sum + calcAvgDmg(s.cardDef.grade, s.inst.condition, s.inst.enhanceLevel||0, bD);
     }, 0);
     const stageI = (fb.stage||1) - 1;
@@ -226,7 +228,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
           Object.values(battleRef.current.slots).forEach(slot => {
             if (!slot) return;
             const liveInst = gsRef.current?.ownedCards?.find(c => c.uid === slot.inst.uid) || slot.inst;
-            const liveBDmg = (gsRef.current?.cardBonusDmg?.[liveInst.uid] ?? gsRef.current?.cardBonusDmg?.[liveInst.id]) ?? 0;
+            const liveBDmg = getGrowth(gsRef.current?.cardBonusDmg, liveInst);
             dmg += calcTickDmg(slot.cardDef.grade, liveInst.condition, liveInst.enhanceLevel||0, liveBDmg);
           });
           totalDmgRef.current += dmg;
@@ -239,6 +241,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
           // 체력 0 → 즉시 클리어
           const threshold = STAGES[(battleRef.current.stage||1)-1].threshold;
           if (totalDmgRef.current >= threshold && !finishedRef.current) {
+            finishedRef.current = true; // 즉시 플래그 세팅 (이중 호출 방지)
             clearInterval(timerRef.current);
             setTimeout(() => finishBattle(totalDmgRef.current, (battleRef.current.stage||1)-1), 0);
             return next;
@@ -385,6 +388,10 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
                             <span className="dg-info-ticket-badge">50%</span>
                             <span className="dg-info-ticket-label">뽑기권</span>
                             <span className="dg-info-ticket-val">+{s.tickets}장</span>
+                          </div>
+                          <div className="dg-info-ticket-row" style={{marginBottom:4}}>
+                            <span className="dg-info-ticket-badge">50%</span>
+                            <span className="dg-info-ticket-label">성장석</span>
                           </div>
                           <div className="dg-info-stone-row">
                             {Object.entries(probs).map(([grade, prob]) => {
@@ -651,7 +658,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
             <div className="dg-farm-cards">
               {selectedCards.map(({ cardDef, inst:savedInst }) => {
                 const inst = (gs?.ownedCards||[]).find(c => c.uid === savedInst.uid) || savedInst;
-                const bD = (gs?.cardBonusDmg?.[inst.uid] ?? gs?.cardBonusDmg?.[inst.id]) ?? 0;
+                const bD = getGrowth(gs?.cardBonusDmg, inst);
                 return (
                   <div key={savedInst.uid} className={`dg-farm-card grade-${cardDef.grade}`}>
                     <div className="dg-farm-card-img">
