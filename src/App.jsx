@@ -11,7 +11,6 @@ import Footer from './components/Footer.jsx';
 import GachaTab from './components/tabs/GachaTab.jsx';
 import SynthTab from './components/tabs/SynthTab.jsx';
 import ShopTab from './components/tabs/ShopTab.jsx';
-import DexTab from './components/tabs/DexTab.jsx';
 import DungeonTab from './components/tabs/DungeonTab.jsx';
 import BoardTab from './components/tabs/BoardTab.jsx';
 import TradeTab from './components/tabs/TradeTab.jsx';
@@ -25,8 +24,46 @@ import TermsPage from './pages/TermsPage.jsx';
 import { CARDS, COLLECTIBLE_CARDS, COLLECTIBLE_IDS } from './data/cards.js';
 import './App.css';
 
+// uid 없는 카드에 uid 부여 + card.id 키 성장 데이터 → 인스턴스 uid로 1회 마이그레이션
+let _migUid = 0;
+const genMigUid = () => `m${++_migUid}_${Date.now()}`;
+
+function migrateUserData(state) {
+  const cards   = state.ownedCards   ? [...state.ownedCards]   : [];
+  const growMap = state.cardBonusDmg ? { ...state.cardBonusDmg } : {};
+  let changed = false;
+
+  // 1) uid 없는 카드에 uid 발급
+  for (const inst of cards) {
+    if (!inst.uid) {
+      inst.uid = genMigUid();
+      changed = true;
+    }
+  }
+
+  // 2) card.id 키(구버전)로 저장된 성장값 → best 인스턴스 uid로 이전
+  const cardIdSet = new Set(CARDS.map(c => c.id));
+  for (const [key, value] of Object.entries(growMap)) {
+    if (!cardIdSet.has(key)) continue; // uid 형식 키는 건드리지 않음
+    const instances = cards.filter(c => c.id === key);
+    if (!instances.length) { delete growMap[key]; changed = true; continue; }
+    // 강화 > 컨디션 순으로 best 선택
+    const best = instances.reduce((a, b) =>
+      (b.enhanceLevel || 0) !== (a.enhanceLevel || 0)
+        ? ((b.enhanceLevel || 0) > (a.enhanceLevel || 0) ? b : a)
+        : ((b.condition || 1) > (a.condition || 1) ? b : a)
+    );
+    if (!growMap[best.uid]) growMap[best.uid] = value; // 이미 uid 데이터 있으면 덮지 않음
+    delete growMap[key];
+    changed = true;
+  }
+
+  if (!changed) return state;
+  return { ...state, ownedCards: cards, cardBonusDmg: growMap };
+}
+
 const COLLECTIBLE_CARD_COUNT = COLLECTIBLE_CARDS.length;
-const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'bag', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking', 'dex'];
+const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'bag', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking'];
 
 
 export const BASE_STATE = {
@@ -45,6 +82,7 @@ export const BASE_STATE = {
   dungeonAttempts: {},
   farmingAttempt: null,
   enhanceStones: {},
+  lockedCardUids: [],
 };
 
 function applyDailyReset(state) {
@@ -234,8 +272,30 @@ export default function App() {
     if (snap.exists()) {
       const rawData = snap.data();
       const gotDailyBonus = rawData.dailyBonusDate !== today;
-      const loaded = applyDailyReset({ ...BASE_STATE, ...rawData });
+      const merged   = applyDailyReset({ ...BASE_STATE, ...rawData });
+      const migrated = migrateUserData(merged);
+      const loaded   = migrated;
+      // 마이그레이션 발생 시 즉시 Firestore 반영 (다음 로드부터 불필요)
+      if (migrated !== merged) {
+        updateDoc(doc(db, 'users', uid), {
+          ownedCards:   migrated.ownedCards,
+          cardBonusDmg: migrated.cardBonusDmg,
+        }).catch(console.error);
+      }
       setGs(loaded);
+
+      // raidCard 유효성 체크 — 채널이 없거나 active가 아니면 즉시 해제
+      if (loaded.raidCard?.raidId && loaded.raidCard?.channelId) {
+        getDoc(doc(db, 'raids', loaded.raidCard.raidId, 'channels', loaded.raidCard.channelId))
+          .then(chSnap => {
+            if (!chSnap.exists() || chSnap.data().status !== 'active') {
+              updateDoc(doc(db, 'users', uid), { raidCard: null }).catch(console.error);
+              setGs(prev => ({ ...prev, raidCard: null }));
+            }
+          })
+          .catch(console.error);
+      }
+
       // dailyBonusDate를 즉시 Firestore에 기록 (첫 로드 저장 스킵 우회)
       if (gotDailyBonus) {
         updateDoc(doc(db, 'users', uid), { dailyBonusDate: today, tickets: loaded.tickets }).catch(console.error);
@@ -480,7 +540,6 @@ export default function App() {
     synth:   <SynthTab {...tabProps} isGuest={isGuest} />,
     dungeon: <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} onSubTabChange={handleDungeonSubTabChange} />,
     shop:    <ShopTab {...tabProps} />,
-    dex:     <DexTab gs={gs} setGs={setGs} />,
     board:   <BoardTab gs={gs} user={user} />,
     trade:   <TradeTab gs={gs} setGs={setGs} user={user} />,
     raid:    <RaidTab gs={gs} setGs={setGs} user={user} />,
@@ -594,12 +653,9 @@ export default function App() {
               </div>
               <div className="status-sub">장</div>
             </div>
-            <div className="status-card">
-              <div className="status-label">수집 카드</div>
-              <div className="status-val">
-                {uniqueOwned}
-                <button className="bonus-info-btn" onClick={() => setShowBonusInfo(true)} title="레이드 보너스 안내">ⓘ</button>
-              </div>
+            <div className="status-card" style={{ cursor: 'pointer' }} onClick={() => handleTabChange('gacha')}>
+              <div className="status-label">도감</div>
+              <div className="status-val">{uniqueOwned}</div>
               <div className="status-sub">/ {COLLECTIBLE_CARD_COUNT} 종류</div>
             </div>
             <div className="status-card">

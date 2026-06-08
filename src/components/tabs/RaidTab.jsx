@@ -6,6 +6,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
+import { calcBonus } from '../../utils/growth.js';
 
 // ── 상수 ──
 const BOSS_HP        = 50_000_000;
@@ -18,7 +19,7 @@ const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND', raid:'RAID' }
 const GRADE_COLOR = { n:'#888', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b', raid:'#ffd700' };
 const GRADE_RANGE = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
 const GRADE_ORDER = { n:0, r:1, sr:2, ur:3, lg:4, raid:5 };
-const BONUS_MULT  = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
+
 
 const BOSS_CONFIGS = [
   {
@@ -30,11 +31,32 @@ const BOSS_CONFIGS = [
     maxParticipants: MAX_PARTS,
     durationMs: DURATION_MS,
     schedule:   '매주 월요일',
-    desc:       '저주에 걸린 인형들의 왕. 14일간 도전 가능.',
-    fixedEndDate: new Date('2026-06-07T14:59:00Z'), // 2026-06-07T23:59:00+09:00
-    period:       '월요일 09:00 ~ 일요일 23:59',
+    desc:       '저주에 걸린 인형들의 왕.',
+    period:     '월요일 09:00 ~ 일요일 23:59',
   },
 ];
+
+// ── 주차 키 & 종료일 (KST 기준) ──
+function getCurrentWeekKey() {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const day = kst.getUTCDay(); // 0=일
+  const daysFromMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(kst);
+  monday.setUTCDate(monday.getUTCDate() - daysFromMonday);
+  const y = monday.getUTCFullYear();
+  const m = String(monday.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(monday.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+function getCurrentWeekEndDate() {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const day = kst.getUTCDay(); // 0=일
+  const daysToSunday = day === 0 ? 0 : 7 - day;
+  const sunday = new Date(kst);
+  sunday.setUTCDate(sunday.getUTCDate() + daysToSunday);
+  sunday.setUTCHours(14, 59, 0, 0); // 일요일 23:59 KST = 14:59 UTC
+  return sunday;
+}
 
 // ── 레이드 오픈 시간 체크 (KST 기준) ──
 // 오픈: 월요일 09:00 ~ 일요일 23:59 KST
@@ -60,17 +82,6 @@ function nextOpenKST() {
 }
 
 // ── 유틸 ──
-function calcBonus(ownedCards) {
-  let b = 0;
-  const seen = new Set();
-  for (const o of ownedCards) {
-    if (seen.has(o.id)) continue;
-    seen.add(o.id);
-    const c = CARDS.find(x => x.id === o.id);
-    if (c) b += BONUS_MULT[c.grade] || 0;
-  }
-  return Math.floor(b);
-}
 function calcDmg(grade, cond, bonus = 0, enhanceLevel = 0) {
   const [mn, mx] = GRADE_RANGE[grade] || [1, 10];
   const base = Math.floor(Math.random() * (mx - mn + 1)) + mn;
@@ -120,10 +131,9 @@ const INITIAL_CHANNEL = (boss, channelNum) => ({
   maxHp:        boss.hp,
   participants: {},
   status:       'active',
+  weekKey:      getCurrentWeekKey(),
   startDate:    serverTimestamp(),
-  endDate:      boss.fixedEndDate
-    ? Timestamp.fromDate(boss.fixedEndDate)
-    : Timestamp.fromDate(new Date(Date.now() + boss.durationMs)),
+  endDate:      Timestamp.fromDate(getCurrentWeekEndDate()),
 });
 
 // ══════════════════════════════════════════════
@@ -131,7 +141,6 @@ const INITIAL_CHANNEL = (boss, channelNum) => ({
 // ══════════════════════════════════════════════
 function BossListScreen({ gs, user, onEnter }) {
   const [bossChannels, setBossChannels] = useState({});
-  const [entering, setEntering] = useState({});
   const [toast, setToast] = useState(null);
   const toastRef = useRef(null);
 
@@ -154,63 +163,22 @@ function BossListScreen({ gs, user, onEnter }) {
 
   const getBossStatus = (bossId) => {
     if (!isRaidOpen()) return 'waiting';
-    if (!(bossId in bossChannels)) return 'loading'; // snapshot 아직 미수신
-    const chs  = bossChannels[bossId];
-    const live = chs.filter(c => c.status !== 'waiting'); // 이전 주 waiting 채널 무시
-    if (!live.length) return 'active'; // 채널 없음 → 새 채널 생성 가능
-    if (live.some(c => c.status === 'active'))   return 'active';
-    if (live.some(c => c.status === 'defeated')) return 'defeated';
+    if (!(bossId in bossChannels)) return 'loading';
+    const weekKey = getCurrentWeekKey();
+    const chs = bossChannels[bossId].filter(c => c.weekKey === weekKey);
+    const active = chs.filter(c => c.status === 'active');
+    if (!chs.length) return 'active'; // 이번 주 채널 없음 → 새로 생성 가능
+    if (active.length) return 'active';
+    if (chs.some(c => c.status === 'defeated')) return 'defeated';
     return 'expired';
   };
 
-  const handleBossClick = async (boss) => {
-    if (entering[boss.id]) return;
-
-    // KST 시간 기반 접속 가능 여부 체크 (월요일 00:00~08:59 차단)
+  const handleBossClick = (boss) => {
     if (!isRaidOpen()) {
       showToast(`월요일 오전 9시부터 입장 가능합니다 (${nextOpenKST()})`);
       return;
     }
-
-    // 이미 이 보스에 참여 중이면 그 채널로 바로 입장 (채널 존재 확인)
-    const myBossId    = gs?.raidCard?.raidId;
-    const myChannelId = gs?.raidCard?.channelId;
-    if (myBossId === boss.id && myChannelId) {
-      const channelStillExists = (bossChannels[boss.id] || []).some(c => c.id === myChannelId);
-      if (channelStillExists) {
-        onEnter(boss.id, myChannelId);
-        return;
-      }
-      // 채널이 사라짐 (리셋됨) → 새 채널로 입장
-    }
-
-    setEntering(prev => ({ ...prev, [boss.id]: true }));
-    try {
-      const channels = bossChannels[boss.id] || [];
-
-      // 빈 채널 찾기 (active, 자리 있음)
-      const available = channels.find(c =>
-        c.status === 'active' && Object.keys(c.participants || {}).length < MAX_PARTS,
-      );
-      if (available) {
-        onEnter(boss.id, available.id);
-        return;
-      }
-
-      // 모두 가득 참 or 채널 없음 → 새 채널 자동 생성
-      const maxNum = channels.reduce((m, c) => Math.max(m, c.channelNum || 0), 0);
-      const nextNum = maxNum + 1;
-      const nextId  = `ch_${nextNum}`;
-      await setDoc(
-        doc(db, 'raids', boss.id, 'channels', nextId),
-        INITIAL_CHANNEL(boss, nextNum),
-      );
-      onEnter(boss.id, nextId);
-    } catch (e) {
-      console.error('enter boss error:', e);
-    } finally {
-      setEntering(prev => ({ ...prev, [boss.id]: false }));
-    }
+    onEnter(boss.id);
   };
 
   const myBossId = gs?.raidCard?.raidId;
@@ -225,19 +193,15 @@ function BossListScreen({ gs, user, onEnter }) {
           const channels    = bossChannels[boss.id] || [];
           const activeCount = channels.filter(c => c.status === 'active').length;
           const isMyBoss    = myBossId === boss.id;
-          const isEntering  = !!entering[boss.id];
           return (
             <div
               key={boss.id}
-              className={`raid-boss-select-card${isMyBoss ? ' my-boss' : ''}${isEntering ? ' entering' : ''}`}
+              className={`raid-boss-select-card${isMyBoss ? ' my-boss' : ''}`}
               onClick={() => handleBossClick(boss)}
             >
               <div className="raid-boss-select-img-wrap">
                 <img src={boss.img} alt={boss.name} className="raid-boss-select-img" />
                 <div className="raid-boss-select-img-vignette" />
-                {isEntering && (
-                  <div className="raid-boss-entering-overlay">입장 중...</div>
-                )}
               </div>
               <div className="raid-boss-select-info">
                 <div className="raid-boss-select-name">{boss.name}</div>
@@ -255,7 +219,7 @@ function BossListScreen({ gs, user, onEnter }) {
                 {isMyBoss && <div className="raid-boss-my-badge">레이드 참여 중</div>}
               </div>
               <div className="raid-boss-select-enter">
-                {isEntering ? '...' : isMyBoss ? '내 채널 →' : '입장 →'}
+                {isMyBoss ? '채널 보기 →' : '채널 보기 →'}
               </div>
             </div>
           );
@@ -278,15 +242,17 @@ function BossListScreen({ gs, user, onEnter }) {
 // ══════════════════════════════════════════════
 // 2. 채널 선택 화면
 // ══════════════════════════════════════════════
+
 function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
   const [channels,  setChannels]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [creating,  setCreating]  = useState(false);
   const [toast,     setToast]     = useState(null);
-  const toastRef = useRef(null);
+  const toastRef   = useRef(null);
+  const initedRef  = useRef(false);
 
-  const bossConfig = BOSS_CONFIGS.find(b => b.id === bossId);
-  const myBossId   = gs?.raidCard?.raidId;
+  const bossConfig  = BOSS_CONFIGS.find(b => b.id === bossId);
+  const myBossId    = gs?.raidCard?.raidId;
   const myChannelId = myBossId === bossId ? gs?.raidCard?.channelId : null;
 
   useEffect(() => {
@@ -302,24 +268,48 @@ function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
     return unsub;
   }, [bossId]);
 
+  const weekKey = getCurrentWeekKey();
+  // 이번 주 채널만 사용, defeated/expired는 목록에서 숨김
+  const thisWeekChannels = channels.filter(c => c.weekKey === weekKey);
+  const visibleChannels  = thisWeekChannels.filter(c => c.status === 'active' || c.status === 'waiting');
+
+  // 이번 주 채널이 없으면 ch_1 자동 생성
+  useEffect(() => {
+    if (loading || thisWeekChannels.length > 0 || !bossConfig || initedRef.current) return;
+    initedRef.current = true;
+    const create = async () => {
+      setCreating(true);
+      try {
+        await setDoc(
+          doc(db, 'raids', bossId, 'channels', `ch_w${weekKey}_1`),
+          INITIAL_CHANNEL(bossConfig, 1),
+        );
+      } catch (e) {
+        console.error('channel init error:', e);
+        showToast('채널 생성 중 오류가 발생했어요');
+      }
+      setCreating(false);
+    };
+    create();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, thisWeekChannels.length]);
+
   const showToast = (msg) => {
     clearTimeout(toastRef.current);
     setToast(msg);
     toastRef.current = setTimeout(() => setToast(null), 2500);
   };
 
-  const createAndEnter = async () => {
+  const addChannel = async () => {
     if (!bossConfig || creating) return;
     setCreating(true);
-    const maxNum  = channels.reduce((m, c) => Math.max(m, c.channelNum || 0), 0);
+    const maxNum  = thisWeekChannels.reduce((m, c) => Math.max(m, c.channelNum || 0), 0);
     const nextNum = maxNum + 1;
-    const nextId  = `ch_${nextNum}`;
     try {
       await setDoc(
-        doc(db, 'raids', bossId, 'channels', nextId),
+        doc(db, 'raids', bossId, 'channels', `ch_w${weekKey}_${nextNum}`),
         INITIAL_CHANNEL(bossConfig, nextNum),
       );
-      onEnter(nextId);
     } catch (e) {
       console.error('channel create error:', e);
       showToast('채널 생성 중 오류가 발생했어요');
@@ -328,7 +318,7 @@ function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
   };
 
   const handleEnterChannel = (ch) => {
-    const partCount = Object.keys(ch.participants || {}).length;
+    const partCount   = Object.keys(ch.participants || {}).length;
     const isMyChannel = ch.id === myChannelId;
     if (!isMyChannel && partCount >= MAX_PARTS && ch.status === 'active') {
       showToast('이 채널은 가득 찼어요. 다른 채널을 선택하거나 새 채널을 생성하세요.');
@@ -337,8 +327,8 @@ function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
     onEnter(ch.id);
   };
 
-  const allFull = channels.length > 0 &&
-    channels.every(c => Object.keys(c.participants || {}).length >= MAX_PARTS || c.status !== 'active');
+  const allFull = visibleChannels.length === 0 ||
+    visibleChannels.every(c => Object.keys(c.participants || {}).length >= MAX_PARTS);
 
   return (
     <div className="raid-channel-screen">
@@ -347,19 +337,12 @@ function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
       <div className="raid-channel-screen-title">{bossConfig?.name}</div>
       <div className="raid-channel-screen-sub">채널을 선택해 레이드에 참여하세요</div>
 
-      {loading ? (
-        <div className="raid-loading">채널 불러오는 중...</div>
-      ) : channels.length === 0 ? (
-        <div className="raid-channel-empty">
-          <div className="raid-channel-empty-text">아직 채널이 없어요!</div>
-          <button className="raid-channel-create-btn" onClick={createAndEnter} disabled={creating}>
-            {creating ? '생성 중...' : '채널 1 만들고 입장하기'}
-          </button>
-        </div>
+      {loading || creating ? (
+        <div className="raid-loading">{creating ? '채널 생성 중...' : '채널 불러오는 중...'}</div>
       ) : (
         <>
           <div className="raid-channel-grid">
-            {channels.map((ch, idx) => {
+            {visibleChannels.map((ch, idx) => {
               const partCount   = Object.keys(ch.participants || {}).length;
               const isFull      = partCount >= MAX_PARTS;
               const isMyChannel = ch.id === myChannelId;
@@ -373,7 +356,7 @@ function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
                 >
                   <div className="raid-channel-num">채널 {num}</div>
                   <div className={`raid-status-badge raid-status-${status}`} style={{ fontSize:'0.7rem', padding:'2px 8px' }}>
-                    {status === 'active' ? '진행 중' : status === 'waiting' ? '대기 중' : status === 'defeated' ? '처치 완료' : '종료됨'}
+                    {status === 'active' ? '진행 중' : status === 'waiting' ? '대기 중' : '종료됨'}
                   </div>
                   <div className="raid-channel-parts">
                     <span className={isFull ? 'raid-channel-full-txt' : ''}>{partCount}</span>
@@ -388,9 +371,9 @@ function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
             })}
           </div>
 
-          {allFull && !myChannelId && (
-            <button className="raid-channel-create-btn" onClick={createAndEnter} disabled={creating}>
-              {creating ? '생성 중...' : `새 채널 생성 (채널 ${channels.length + 1})`}
+          {allFull && (
+            <button className="raid-channel-create-btn" onClick={addChannel} disabled={creating}>
+              {creating ? '생성 중...' : `새 채널 추가 (채널 ${thisWeekChannels.length + 1})`}
             </button>
           )}
         </>
@@ -956,34 +939,50 @@ export default function RaidTab({ gs, setGs, user }) {
   const [bossId,    setBossId]    = useState(null);
   const [channelId, setChannelId] = useState(null);
 
-  // 기존 raidCard가 있으면 채널로 자동 진입
+  // 구버전 raidCard(current_boss) 마이그레이션만 수행, 자동 전투 진입 없음
   useEffect(() => {
     const rc = gs?.raidCard;
-    // 구버전 형식(current_boss) 마이그레이션: raidCard 초기화
     if (rc?.raidId === 'current_boss') {
       setGs(prev => ({ ...prev, raidCard: null }));
-      return;
     }
-    if (rc?.raidId && rc?.channelId) {
-      const exists = BOSS_CONFIGS.some(b => b.id === rc.raidId);
-      if (exists) {
-        setBossId(rc.raidId);
-        setChannelId(rc.channelId);
-        setScreen('battle');
-      }
-    }
-  // 마운트 시 1회만
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const goToBossList = () => { setScreen('boss-list'); setBossId(null); setChannelId(null); };
-  const enterBattle  = (bid, cid) => { setBossId(bid); setChannelId(cid); setScreen('battle'); };
+  // 처치 완료 / 종료된 레이드 채널이면 즉시 카드 잠금 해제
+  useEffect(() => {
+    const rc = gs?.raidCard;
+    if (!rc?.raidId || !rc?.channelId || !user) return;
+    const chRef = doc(db, 'raids', rc.raidId, 'channels', rc.channelId);
+    const unsub = onSnapshot(chRef, snap => {
+      if (!snap.exists()) return;
+      const status = snap.data().status;
+      if (status === 'defeated' || status === 'expired') {
+        updateDoc(doc(db, 'users', user.uid), { raidCard: null }).catch(console.error);
+        setGs(prev => ({ ...prev, raidCard: null }));
+      }
+    }, err => console.error('raidCard channel watch:', err));
+    return unsub;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gs?.raidCard?.channelId, user?.uid]);
+
+  const goToBossList    = () => { setScreen('boss-list'); setBossId(null); setChannelId(null); };
+  const goToChannelList = (bid) => { setBossId(bid); setScreen('channel-list'); };
+  const enterBattle     = (cid) => { setChannelId(cid); setScreen('battle'); };
 
   return (
     <div className="raid-wrap">
       <div className="raid-atmosphere" />
       {screen === 'boss-list' && (
-        <BossListScreen gs={gs} user={user} onEnter={enterBattle} />
+        <BossListScreen gs={gs} user={user} onEnter={goToChannelList} />
+      )}
+      {screen === 'channel-list' && bossId && (
+        <ChannelListScreen
+          bossId={bossId}
+          gs={gs}
+          user={user}
+          onBack={goToBossList}
+          onEnter={enterBattle}
+        />
       )}
       {screen === 'battle' && bossId && channelId && (
         <BattleScreen
@@ -992,7 +991,7 @@ export default function RaidTab({ gs, setGs, user }) {
           gs={gs}
           setGs={setGs}
           user={user}
-          onBack={goToBossList}
+          onBack={() => goToChannelList(bossId)}
         />
       )}
     </div>
