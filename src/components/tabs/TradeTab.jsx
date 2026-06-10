@@ -274,7 +274,7 @@ export default function TradeTab({ gs, setGs, user }) {
         const sellerData     = sellerSnap.exists() ? sellerSnap.data() : {};
         const newSellerCards = (sellerData.ownedCards || []).filter(c => c.uid !== cardInst.uid);
         tx.update(sellerRef, { ownedCards: newSellerCards, tickets: (sellerData.tickets || 0) + buyOrder.price });
-        tx.delete(orderRef);
+        tx.update(orderRef, { status: 'filled', filledAt: serverTimestamp() });
         tx.set(mailRef, {
           title:     '거래소 구매 완료',
           message:   `${buyOrder.cardName} 카드가 도착했습니다! (${gs.nickname || user.displayName} 님이 판매)`,
