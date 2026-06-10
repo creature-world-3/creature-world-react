@@ -1,23 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { CARDS, CHARACTERS } from '../../data/cards.js';
+import { CARDS } from '../../data/cards.js';
+import { getGrowth, applyGrowthStone, calcBonus } from '../../utils/growth.js';
+import DexTab from './DexTab.jsx';
 
 const GRADE_WEIGHT = { n: 70, r: 22, sr: 6.9, ur: 1, lg: 0.1 };
 const GRADE_LABEL  = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const FLASH_LABEL  = { sr: 'SUPER RARE!', ur: 'ULTRA RARE!', lg: 'L E G E N D !' };
 const GRADE_COLOR  = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
 const GRADE_RANGE  = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
-const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
-function calcBonus(ownedCards) {
-  let b = 0;
-  const seen = new Set();
-  for (const o of ownedCards) {
-    if (seen.has(o.id)) continue;
-    seen.add(o.id);
-    const c = CARDS.find(x => x.id === o.id);
-    if (c) b += BONUS_MULT[c.grade] || 0;
-  }
-  return Math.floor(b);
-}
 function dmgRange(grade, cond, enhanceLevel = 0, bonus = 0) {
   const [mn, mx] = GRADE_RANGE[grade] || [1, 10];
   const mult = 1 + enhanceLevel * 0.1;
@@ -28,7 +18,6 @@ function condColor(cond) {
   if (cond >= 6) return '#7c3aed';
   return '#888';
 }
-const CARDS_PER_PAGE = 6;
 let _uid = 0;
 const genUid = () => `${++_uid}_${Date.now()}`;
 
@@ -77,74 +66,15 @@ function StarRating({ value }) {
   );
 }
 
-// ── 인스턴스 피커 바텀시트 (수집북 중복 카드 선택) ──
-const INST_SCROLL = 76 * 3;
-
-function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
-  const listRef = useRef(null);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd,   setAtEnd]   = useState(false);
-
-  const onScroll = () => {
-    const el = listRef.current;
-    if (!el) return;
-    setAtStart(el.scrollLeft <= 2);
-    setAtEnd(el.scrollLeft >= el.scrollWidth - el.clientWidth - 2);
-  };
-
-  useEffect(() => {
-    const el = listRef.current;
-    if (el) setAtEnd(el.scrollWidth <= el.clientWidth + 2);
-  }, [instances]);
-
-  const scroll = (dir) => listRef.current?.scrollBy({ left: dir * INST_SCROLL, behavior: 'smooth' });
-  const showArrows = instances.length > 4;
-
-  return (
-    <div className="card-zoom-overlay" onClick={onClose}>
-      <div className="inst-sheet" onClick={e => e.stopPropagation()}>
-        <div className="inst-sheet-title">
-          {cardDef.name} &nbsp;<span className="inst-sheet-count">{instances.length}장 보유</span>
-        </div>
-        <div className="inst-list-wrap">
-          {showArrows && <button className="inst-scroll-btn" disabled={atStart} onClick={() => scroll(-1)}>‹</button>}
-          <div className="inst-list" ref={listRef} onScroll={onScroll}>
-            {instances.map((inst, i) => {
-              const lvl = inst.enhanceLevel || 0;
-              const cond = inst.condition || 1;
-              return (
-                <div
-                  key={inst.uid}
-                  className="inst-item"
-                  style={{ animationDelay: `${i * 50}ms` }}
-                  onClick={() => onSelect(inst)}
-                >
-                  <div className="inst-item-img">
-                    <img src={`/${cardDef.img}`} alt={cardDef.name} />
-                    {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
-                  </div>
-                  <div className="inst-item-meta" style={{ color: condColor(cond) }}>
-                    컨디션 {cond}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {showArrows && <button className="inst-scroll-btn" disabled={atEnd} onClick={() => scroll(1)}>›</button>}
-        </div>
-        <button className="zoom-close" onClick={onClose}>닫기 ✕</button>
-      </div>
-    </div>
-  );
-}
-
 const STONE_GRADES = new Set(['n', 'r', 'sr', 'ur', 'lg', 'raid']);
 
 // ── 카드 상세 모달 (10뽑 + 수집북 공용) ──
 function CardDetailModal({ item, gs, setGs, onClose }) {
   const [localGrowth, setLocalGrowth] = useState(item?.growthBonus || 0);
 
-  useEffect(() => { setLocalGrowth(item?.uid ? (gs?.cardBonusDmg?.[item.uid] || 0) : 0); }, [item, gs]);
+  useEffect(() => {
+    setLocalGrowth(item ? getGrowth(gs?.cardBonusDmg, { uid: item.uid, id: item.card?.id }) : 0);
+  }, [item, gs]);
 
   if (!item) return null;
   const { card, cond, count } = item;
@@ -155,18 +85,16 @@ function CardDetailModal({ item, gs, setGs, onClose }) {
   const canUseStone = stoneCount > 0 && STONE_GRADES.has(card.grade);
 
   const handleUseStone = () => {
-    if (!canUseStone) return;
-    const grade  = card.grade;
-    const instUid = item.uid;
-    if (!instUid) return;
+    if (!canUseStone || !item.uid) return;
+    const inst = { uid: item.uid, id: item.card?.id };
     setGs(prev => {
-      const curStone  = prev.enhanceStones?.[grade] || 0;
+      const curStone = prev.enhanceStones?.[card.grade] || 0;
       if (curStone <= 0) return prev;
-      const newGrowth = (prev.cardBonusDmg?.[instUid] || 0) + 1;
+      const { newMap } = applyGrowthStone(prev.cardBonusDmg, inst);
       return {
         ...prev,
-        enhanceStones: { ...prev.enhanceStones, [grade]: curStone - 1 },
-        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [instUid]: newGrowth },
+        enhanceStones: { ...prev.enhanceStones, [card.grade]: curStone - 1 },
+        cardBonusDmg:  newMap,
       };
     });
     setLocalGrowth(g => g + 1);
@@ -238,13 +166,9 @@ export default function GachaTab({ gs, setGs, isGuest }) {
   const [toast, setToast]           = useState(null);
   const [floats, setFloats]         = useState([]);
   const [draw10Results, setDraw10Results] = useState(null);
-  const [charF, setCharF]           = useState('all');
-  const [gradeF, setGradeF]         = useState('all');
-  const [page, setPage]             = useState(0);
+  const [draw10Key, setDraw10Key]         = useState(0);
   const [zoomItem, setZoomItem]     = useState(null);
-  const [pickerCard, setPickerCard] = useState(null);
   const toastTimer  = useRef(null);
-  const slideDir    = useRef('right'); // 페이지 슬라이드 방향
 
   useEffect(() => {
     if (!flash) return;
@@ -293,6 +217,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
       newOwned.push({ uid: genUid(), id: card.id, condition: cond });
     }
     setGs(prev => ({ ...prev, tickets: prev.tickets - 10, ownedCards: newOwned }));
+    setDraw10Key(k => k + 1);
     setDraw10Results(results);
   };
 
@@ -337,20 +262,6 @@ export default function GachaTab({ gs, setGs, isGuest }) {
     showToast(`출석 완료! 뽑기권 ${amount}장 획득!${bonus ? ' 7일 개근 달성 +100장! 🎉' : ''}`);
   };
 
-  // ── 수집북 필터/페이지 ──
-  let filtered = CARDS;
-  if (charF !== 'all') filtered = filtered.filter(c => c.id.startsWith(charF));
-  if (gradeF !== 'all') filtered = filtered.filter(c => c.grade === gradeF);
-  const ownedIds  = new Set(gs.ownedCards.map(c => c.id));
-  const sorted    = [
-    ...filtered.filter(c =>  ownedIds.has(c.id)),
-    ...filtered.filter(c => !ownedIds.has(c.id)),
-  ];
-  const totalPages = Math.max(1, Math.ceil(sorted.length / CARDS_PER_PAGE));
-  const safePage   = Math.min(page, totalPages - 1);
-  const pageCards  = sorted.slice(safePage * CARDS_PER_PAGE, (safePage + 1) * CARDS_PER_PAGE);
-  const uniqueOwned = ownedIds.size;
-
   const today        = new Date().toDateString();
   const attendDone   = gs.attendDate === today;
   const clickProgress = (gs.clickCount || 0) % 100;
@@ -371,19 +282,6 @@ export default function GachaTab({ gs, setGs, isGuest }) {
 
   return (
     <>
-      {/* 수집북 인스턴스 피커 */}
-      {pickerCard && (
-        <InstanceSheet
-          cardDef={pickerCard.card}
-          instances={pickerCard.instances}
-          onSelect={(inst) => {
-            setZoomItem({ card: pickerCard.card, cond: inst.condition, count: pickerCard.instances.length, enhanceLevel: inst.enhanceLevel || 0, growthBonus: gs.cardBonusDmg?.[pickerCard.card.id] || 0, uid: inst.uid });
-            setPickerCard(null);
-          }}
-          onClose={() => setPickerCard(null)}
-        />
-      )}
-
       {/* 카드 상세 모달 */}
       <CardDetailModal item={zoomItem} gs={gs} setGs={setGs} onClose={() => setZoomItem(null)} />
 
@@ -392,7 +290,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
         <div className="card-zoom-overlay" onClick={() => setDraw10Results(null)}>
           <div className="draw10-wrap" onClick={e => e.stopPropagation()}>
             <div className="draw10-title">10뽑 결과!</div>
-            <div className="draw10-grid">
+            <div className="draw10-grid" key={draw10Key}>
               {draw10Results.map(({ card, cond }, idx) => {
                 const cs = condStyle(card.grade, cond);
                 const hasAurora = ['sr','ur','lg'].includes(card.grade);
@@ -402,7 +300,7 @@ export default function GachaTab({ gs, setGs, isGuest }) {
                     key={idx}
                     className={`draw10-card grade-${card.grade}`}
                     style={getBurstStyle(idx)}
-                    onClick={(e) => { e.stopPropagation(); setZoomItem({ card, cond, growthBonus: gs.cardBonusDmg?.[card.id] || 0 }); }}
+                    onClick={(e) => { e.stopPropagation(); setZoomItem({ card, cond }); }}
                   >
                     <img src={`/${card.img}`} alt={card.name} loading="lazy" />
                     <div className="d10-header">
@@ -543,91 +441,9 @@ export default function GachaTab({ gs, setGs, isGuest }) {
           </div>
         </div>
 
-        {/* ── 오른쪽: 수집북 ── */}
+        {/* ── 오른쪽: 도감 ── */}
         <div className="collection-section">
-          <div className="col-header">
-            <div className="col-title">수집북</div>
-            <div className="col-count">{uniqueOwned} / {CARDS.length}</div>
-          </div>
-
-          <div className="col-filters-wrap">
-            <div className="col-filter-row">
-              {[{ id: 'all', name: '전체' }, ...CHARACTERS].map(c => (
-                <button
-                  key={c.id}
-                  className={`col-filter-pill${charF === c.id ? ' active' : ''}`}
-                  onClick={() => { slideDir.current = 'right'; setCharF(c.id); setPage(0); }}
-                >{c.name}</button>
-              ))}
-            </div>
-            <div className="col-filter-row">
-              {[['all','전체',''],['n','N',GRADE_COLOR.n],['r','R',GRADE_COLOR.r],
-                ['sr','SR',GRADE_COLOR.sr],['ur','UR',GRADE_COLOR.ur],['lg','LEGEND',GRADE_COLOR.lg],
-                ['raid','RAID',GRADE_COLOR.raid],
-              ].map(([val, label, color]) => (
-                <button
-                  key={val}
-                  className={`col-filter-pill${gradeF === val ? ' active' : ''}`}
-                  style={color ? { color } : {}}
-                  onClick={() => { slideDir.current = 'right'; setGradeF(val); setPage(0); }}
-                >{label}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className={`col-page-wrap slide-${slideDir.current}`} key={`p${safePage}`}>
-          <div className="card-grid">
-            {pageCards.length === 0 ? (
-              <div className="col-empty">아직 카드가 없어요!<br />뽑기권을 사용해보세요</div>
-            ) : pageCards.map(card => {
-              const lockedRaidUid = gs?.raidCard?.uid;
-              const myCards = gs.ownedCards.filter(c => c.id === card.id);
-              const locked  = myCards.length === 0;
-              const best    = locked ? null : myCards.reduce((a, b) => b.condition > a.condition ? b : a);
-              const cstyle  = best ? condStyle(card.grade, best.condition) : 'normal';
-              const isRaidLocked = !locked && lockedRaidUid && myCards.some(c => c.uid === lockedRaidUid);
-              return (
-                <div
-                  key={card.id}
-                  className={`col-card grade-${card.grade}${locked ? ' locked' : ''}${isRaidLocked ? ' raid-locked' : ''}`}
-                  onClick={() => {
-                    if (locked || !best) return;
-                    if (myCards.length > 1) {
-                      setPickerCard({ card, instances: myCards });
-                    } else {
-                      setZoomItem({ card, cond: best.condition, count: 1, enhanceLevel: best.enhanceLevel || 0, growthBonus: gs.cardBonusDmg?.[card.id] || 0, uid: best.uid });
-                    }
-                  }}
-                >
-                  {!locked ? (
-                    <>
-                      <img src={`/${card.img}`} alt={card.name} loading="lazy" />
-                      {cstyle === 'gold' && <div className="cond-gold-overlay" />}
-                      {cstyle === 'holo' && <div className="cond-holo-overlay" />}
-                      {card.grade === 'raid' && <div className="col-card-aurora" />}
-                      <div className="col-card-footer">
-                        <div className="col-name">{card.name}</div>
-                        <span className="col-grade">{GRADE_LABEL[card.grade]}</span>
-                      </div>
-                      {myCards.length > 1 && <div className="dup">×{myCards.length}</div>}
-                      {isRaidLocked && <div className="raid-lock-badge">RAID</div>}
-                    </>
-                  ) : (card.raid || card.grade === 'raid') ? (
-                    <img src={`/${card.img}`} alt={card.name} loading="lazy" style={{ filter:'grayscale(1)', opacity:0.4, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%' }} />
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button className="page-arrow" onClick={() => { slideDir.current = 'left'; setPage(p => p - 1); }} disabled={safePage === 0}>← 이전</button>
-              <span className="page-info">{safePage + 1} / {totalPages}</span>
-              <button className="page-arrow" onClick={() => { slideDir.current = 'right'; setPage(p => p + 1); }} disabled={safePage >= totalPages - 1}>다음 →</button>
-            </div>
-          )}
-          </div>
+          <DexTab gs={gs} setGs={setGs} />
         </div>
       </div>
     </>
