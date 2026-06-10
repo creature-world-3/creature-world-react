@@ -48,9 +48,10 @@ export default function MailboxTab({ gs, setGs, user }) {
     } else if (r?.type === 'card') {
       const cardId  = r.cardData?.id || r.cardId;
       const cond    = r.cardData?.condition ?? r.condition ?? 5;
+      const enh     = r.cardData?.enhanceLevel ?? r.enhanceLevel ?? 0;
       const cardDef = CARDS.find(c => c.id === cardId);
       if (cardDef) {
-        next.ownedCards = [...(prev.ownedCards || []), { uid: genUid(), id: cardId, condition: cond }];
+        next.ownedCards = [...(prev.ownedCards || []), { uid: genUid(), id: cardId, condition: cond, enhanceLevel: enh }];
       }
     } else if (r?.type === 'enhanceStone') {
       const grade  = r.grade;

@@ -64,8 +64,8 @@ export default function TradeTab({ gs, setGs, user }) {
   const pendingTotal   = pendingRewards.reduce((s, t) => s + t.price, 0);
   const myActiveBuy    = buyOrders.filter(o => o.uid === user?.uid && o.status === 'active');
 
-  const lockedUid  = gs?.raidCard?.uid;
-  const availInsts = (gs?.ownedCards || []).filter(oc => oc.uid !== lockedUid);
+  const lockedUids = new Set([gs?.raidCard?.uid, ...(gs?.lockedCardUids || [])].filter(Boolean));
+  const availInsts = (gs?.ownedCards || []).filter(oc => !lockedUids.has(oc.uid));
 
   // 판매 폼용 (보유 카드 타입)
   const sellCardTypes = CARDS.filter(
@@ -256,28 +256,37 @@ export default function TradeTab({ gs, setGs, user }) {
   };
 
   // ── 판매하기 (구매 요청 체결) ──
+  // 구매자 doc 직접 수정은 보안 규칙 위반(본인만 write 가능)이므로
+  // 카드는 우편함으로 발송하고 판매자 doc만 트랜잭션에서 처리
   const handleSellToBuyer = async (buyOrder, cardInst) => {
     if (!user || submitting) return;
     setSubmitting(true);
-    const newCardUid = genCardUid();
     try {
       const orderRef  = doc(db, 'buyOrders', buyOrder.id);
       const sellerRef = doc(db, 'users', user.uid);
-      const buyerRef  = doc(db, 'users', buyOrder.uid);
+      const mailRef   = doc(collection(db, 'mailbox'));
 
       await runTransaction(db, async (tx) => {
-        const [orderSnap, sellerSnap, buyerSnap] = await Promise.all([
-          tx.get(orderRef), tx.get(sellerRef), tx.get(buyerRef),
+        const [orderSnap, sellerSnap] = await Promise.all([
+          tx.get(orderRef), tx.get(sellerRef),
         ]);
         if (!orderSnap.exists() || orderSnap.data().status !== 'active') throw new Error('already_filled');
-        const sellerData   = sellerSnap.exists() ? sellerSnap.data() : {};
-        const buyerData    = buyerSnap.exists()  ? buyerSnap.data()  : {};
-        const newCard      = { uid: newCardUid, id: buyOrder.cardId, condition: cardInst.condition, enhanceLevel: cardInst.enhanceLevel || 0 };
+        const sellerData     = sellerSnap.exists() ? sellerSnap.data() : {};
         const newSellerCards = (sellerData.ownedCards || []).filter(c => c.uid !== cardInst.uid);
-        const newBuyerCards  = [...(buyerData.ownedCards || []), newCard];
         tx.update(sellerRef, { ownedCards: newSellerCards, tickets: (sellerData.tickets || 0) + buyOrder.price });
-        tx.update(buyerRef,  { ownedCards: newBuyerCards });
         tx.delete(orderRef);
+        tx.set(mailRef, {
+          title:     '거래소 구매 완료',
+          message:   `${buyOrder.cardName} 카드가 도착했습니다! (${gs.nickname || user.displayName} 님이 판매)`,
+          targetUid: buyOrder.uid,
+          reward: {
+            type:         'card',
+            cardId:       buyOrder.cardId,
+            condition:    cardInst.condition,
+            enhanceLevel: cardInst.enhanceLevel || 0,
+          },
+          createdAt: serverTimestamp(),
+        });
       });
 
       setGs(prev => ({
