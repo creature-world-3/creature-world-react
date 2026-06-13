@@ -67,7 +67,7 @@ const getCard = id => ALL_CARDS.find(c => c.id === id) || { id: 'pass', name: '�
 
 const JOBS = [
   { id: 'warrior',  name: '전사',    img: '/tower/jobs/직업전사.png',    color: '#ef4444', desc: '공격 시 15% 크리티컬 1.5배, 스테이지 클리어마다 +1%' },
-  { id: 'ironbody', name: '금강불괴', img: '/tower/jobs/직업금광불괴.png', color: '#3b82f6', desc: '공격 시 현재 방어력만큼 추가 데미지' },
+  { id: 'ironbody', name: '금강불괴', img: '/tower/jobs/직업금광불괴.png', color: '#3b82f6', desc: '방어 카드 사용 시 적에게 방어력만큼 데미지' },
   { id: 'rogue',    name: '도적',    img: '/tower/jobs/직업도적.png',    color: '#6366f1', desc: '회피 성공 시 다음 기본공격 +30% 공격력' },
   { id: 'mage',     name: '마법사',  img: '/tower/jobs/직업마법사.png',  color: '#a855f7', desc: '스킬 카드 최대 4장 보유 가능' },
   { id: 'vampire',  name: '흡혈귀',  img: '/tower/jobs/직업흡혈귀.png',  color: '#dc2626', desc: '적에게 데미지를 줄 때 데미지의 50% 체력 회복' },
@@ -318,9 +318,9 @@ function resolveTurn(pCard, eCard, run) {
     default: break;
   }
 
-  // ── 금강불괴 패시브: 공격 시 방어력만큼 추가 데미지 ──
-  if (job === 'ironbody' && playerDmg > 0) {
-    playerDmg += pDef; log.push(`금강불괴: +${pDef} 데미지`);
+  // ── 금강불괴 패시브: 방어 카드 사용 시 적에게 방어력만큼 데미지 ──
+  if (job === 'ironbody' && realPCard === 'defend') {
+    playerDmg += effectivePDef; log.push(`금강불괴: ${effectivePDef} 반격 데미지`);
   }
 
   // ── 방어 적용 ──
