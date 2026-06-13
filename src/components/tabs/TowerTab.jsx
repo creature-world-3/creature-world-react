@@ -1441,6 +1441,45 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
     </div>
   );
 
+  // 직업 정보 패널 (스탯 + 스킬 목록)
+  const renderJobInfo = (job) => {
+    const stats = JOB_BASE_STATS[job.id];
+    const commonSkills = SKILL_CARDS.filter(c => c.job === null);
+    const exclusiveSkills = SKILL_CARDS.filter(c => c.job === job.id);
+    return (
+      <div className="job-info-panel">
+        <div className="job-stats-row">
+          {[['체력', stats?.maxHp, '#4ade80'], ['공격', stats?.atk, '#ef4444'], ['방어', stats?.def, '#60a5fa']].map(([label, val, color]) => (
+            <div key={label} className="job-stat-box">
+              <span className="job-stat-label">{label}</span>
+              <span className="job-stat-val" style={{ color }}>{val}</span>
+            </div>
+          ))}
+        </div>
+        <div className="job-skills-section">
+          <div className="job-skills-group-label">공용 스킬 ({commonSkills.length})</div>
+          <div className="job-skills-row">
+            {commonSkills.map(s => (
+              <div key={s.id} className="job-skill-chip" style={{ '--sc': s.color }}>
+                {s.img && <img src={s.img} alt={s.name} />}
+                <span>{s.name}</span>
+              </div>
+            ))}
+          </div>
+          <div className="job-skills-group-label exclusive" style={{ color: job.color }}>직업 고유 스킬 ({exclusiveSkills.length})</div>
+          <div className="job-skills-row">
+            {exclusiveSkills.map(s => (
+              <div key={s.id} className="job-skill-chip exclusive" style={{ '--sc': s.color }}>
+                {s.img && <img src={s.img} alt={s.name} />}
+                <span>{s.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // 멀티 직업 선택 (로비용)
   if (screen === 'multi_job_select' && pendingCardInst) {
     const currentJob = JOBS[jobSlideIdx];
@@ -1469,6 +1508,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
               onClick={() => jobGo(i, i > jobSlideIdx ? 'right' : 'left')} />
           ))}
         </div>
+        {renderJobInfo(currentJob)}
         <button className="sk-pick-btn"
           style={{ background: `linear-gradient(135deg, ${currentJob.color}, ${currentJob.color}99)` }}
           onClick={async () => {
@@ -1513,6 +1553,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
               onClick={() => jobGo(i, i > jobSlideIdx ? 'right' : 'left')} />
           ))}
         </div>
+        {renderJobInfo(currentJob)}
         <button className="sk-pick-btn"
           style={{ background: `linear-gradient(135deg, ${currentJob.color}, ${currentJob.color}99)` }}
           onClick={() => { doStartRun(pendingCardInst, currentJob.id); setJobSlideIdx(0); }}>
@@ -2333,6 +2374,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
               onClick={() => jobGo(i, i > jobSlideIdx ? 'right' : 'left')} />
           ))}
         </div>
+        {renderJobInfo(currentJob)}
         <button className="sk-pick-btn"
           style={{ background: `linear-gradient(135deg, ${currentJob.color}, ${currentJob.color}99)` }}
           onClick={async () => {

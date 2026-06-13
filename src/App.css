@@ -5502,6 +5502,48 @@ body.raid-theme .music-toggle-btn {
   border-radius: inherit;
 }
 
+/* 직업 정보 패널 */
+.job-info-panel {
+  width: min(320px, 92vw);
+  display: flex; flex-direction: column; gap: 10px;
+  margin: 2px 0 4px;
+}
+.job-stats-row {
+  display: flex; gap: 8px;
+}
+.job-stat-box {
+  flex: 1; background: rgba(255,255,255,0.06); border-radius: 10px;
+  padding: 6px 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.job-stat-label { font-size: 0.58rem; color: var(--muted); font-weight: 700; }
+.job-stat-val   { font-size: 1rem; font-weight: 900; font-family: 'Nunito', sans-serif; }
+.job-skills-section { display: flex; flex-direction: column; gap: 5px; }
+.job-skills-group-label {
+  font-size: 0.6rem; font-weight: 700; color: var(--muted);
+  letter-spacing: 0.5px; text-transform: uppercase;
+}
+.job-skills-group-label.exclusive { opacity: 0.9; }
+.job-skills-row {
+  display: flex; flex-wrap: wrap; gap: 5px;
+}
+.job-skill-chip {
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 7px; padding: 3px 6px 3px 3px;
+}
+.job-skill-chip img {
+  width: 22px; height: 29px; object-fit: cover; border-radius: 3px; flex-shrink: 0;
+}
+.job-skill-chip span {
+  font-size: 0.6rem; font-weight: 700; color: rgba(255,255,255,0.7); white-space: nowrap;
+}
+.job-skill-chip.exclusive {
+  background: color-mix(in srgb, var(--sc, #888) 18%, transparent);
+  border-color: color-mix(in srgb, var(--sc, #888) 55%, transparent);
+}
+.job-skill-chip.exclusive span { color: rgba(255,255,255,0.92); }
+
 /* 선택/교체 버튼 */
 .sk-pick-btn {
   width: min(240px, 65vw); padding: 13px 0;
