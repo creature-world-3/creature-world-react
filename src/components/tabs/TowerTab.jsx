@@ -206,6 +206,7 @@ function resolveTurn(pCard, eCard, run) {
   let pThornActive    = false;
   let eThornActive    = false;
   let eThornReflect   = false;
+  let multiHits       = null; // 다단 공격 시 히트별 데미지 배열
 
   // ── 플레이어 카드 ──
   switch (realPCard) {
@@ -264,7 +265,9 @@ function resolveTurn(pCard, eCard, run) {
       ePoisonNext = 3; log.push(`독침: 3턴 독 부여`); break;
     case 'kunai': {
       const hits = 2 + Math.floor(Math.random() * 3);
-      playerDmg = Math.floor(pAtk * 0.5) * hits;
+      const perHit = Math.floor(pAtk * 0.5);
+      playerDmg = perHit * hits;
+      multiHits = Array(hits).fill(perHit);
       log.push(`쿠나이소나기: ${hits}회 공격, ${playerDmg} 데미지`); break;
     }
     // 마법사
@@ -401,6 +404,7 @@ function resolveTurn(pCard, eCard, run) {
     eAtkNextDebuff:  eAtkDebuffNext,
     finalPlayerHeal,
     finalEnemyDmg,
+    multiHits,
     log,
   };
 }
@@ -1141,9 +1145,15 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
         const pHealGain = Math.max(0, r.pHp) - Math.min(prev.player.hp, r.pMaxHp);
 
         if (eDmgDelta > 0) {
-          showFloat(setEFloat, floatERef, eDmgDelta, 'dmg');
           setPLunge(true); setTimeout(() => setPLunge(false), 480);
           setTimeout(() => { setEShake(true); setTimeout(() => setEShake(false), 400); }, 200);
+          if (r.multiHits && r.multiHits.length > 1) {
+            r.multiHits.forEach((dmg, i) => {
+              setTimeout(() => showFloat(setEFloat, floatERef, dmg, 'dmg'), i * 260);
+            });
+          } else {
+            showFloat(setEFloat, floatERef, eDmgDelta, 'dmg');
+          }
         }
         if (pDmgDelta > 0) {
           showFloat(setPFloat, floatPRef, pDmgDelta, 'dmg');
@@ -1901,7 +1911,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
           <div className="sk-slider-wrap">
             <button className="wp-arrow" onClick={() => skGo((replaceIdx - 1 + run.skills.length) % run.skills.length, 'left')}>‹</button>
             <div className="sk-card-area">
-              <div key={skillSlideKey} className={`sk-slide wp-slide-${skillSlideDir}`}
+              <div key={skillSlideKey} className={`sk-slide wp-slide-${skillSlideDir}${replaceCard.job ? ' sk-slide-exclusive' : ''}`}
                 style={{ '--sc': replaceCard.color }}>
                 {replaceCard.img
                   ? <img src={replaceCard.img} alt={replaceCard.name} />
@@ -1949,7 +1959,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
             <div className="sk-slider-wrap">
               <button className="wp-arrow" onClick={() => skGo((safeIdx - 1 + choices.length) % choices.length, 'left')}>‹</button>
               <div className="sk-card-area">
-                <div key={skillSlideKey} className={`sk-slide wp-slide-${skillSlideDir}`}
+                <div key={skillSlideKey} className={`sk-slide wp-slide-${skillSlideDir}${currentCard.job ? ' sk-slide-exclusive' : ''}`}
                   style={{ '--sc': currentCard.color }}>
                   {currentCard.img
                     ? <img src={currentCard.img} alt={currentCard.name} />
@@ -2438,7 +2448,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
         return (
           <div className="sk-screen">
             <div className="sk-header"><div className="sk-title">스킬 카드 획득</div><div className="sk-sub">{isFull2?'교체합니다':'1장 선택'}</div></div>
-            {cur2&&(<><div className="sk-slider-wrap"><button className="wp-arrow" onClick={()=>mbGo((safeIdx2-1+choices2.length)%choices2.length,'left')}>‹</button><div className="sk-card-area"><div key={multiBetweenSkillKey} className={`sk-slide wp-slide-${multiBetweenSkillDir}`} style={{'--sc':cur2.color}}>{cur2.img?<img src={cur2.img} alt=""/>:<div className="sk-slide-noimg">{cur2.name}</div>}<div className="sk-slide-overlay"><div className="sk-slide-name">{cur2.name}</div><div className="sk-slide-desc">{cur2.desc}</div></div></div></div><button className="wp-arrow" onClick={()=>mbGo((safeIdx2+1)%choices2.length,'right')}>›</button></div><div className="wp-dots">{choices2.map((_,i)=><div key={i} className={`wp-dot${i===safeIdx2?' active':''}`} onClick={()=>mbGo(i,i>safeIdx2?'right':'left')}/>)}</div><button className="sk-pick-btn" style={{background:`linear-gradient(135deg,${cur2.color},${cur2.color}99)`}} onClick={()=>{setMultiBetweenSkillIdx(0);isFull2?setMultiBetweenPendingSkill(cur2):setMultiBetweenRun(prev=>({...prev,skills:[...prev.skills,cur2.id]}));if(!isFull2)setMultiBetweenScreen('shop');}}>이 스킬 선택</button></>)}
+            {cur2&&(<><div className="sk-slider-wrap"><button className="wp-arrow" onClick={()=>mbGo((safeIdx2-1+choices2.length)%choices2.length,'left')}>‹</button><div className="sk-card-area"><div key={multiBetweenSkillKey} className={`sk-slide wp-slide-${multiBetweenSkillDir}${cur2.job?' sk-slide-exclusive':''}`} style={{'--sc':cur2.color}}>{cur2.img?<img src={cur2.img} alt=""/>:<div className="sk-slide-noimg">{cur2.name}</div>}<div className="sk-slide-overlay"><div className="sk-slide-name">{cur2.name}</div><div className="sk-slide-desc">{cur2.desc}</div></div></div></div><button className="wp-arrow" onClick={()=>mbGo((safeIdx2+1)%choices2.length,'right')}>›</button></div><div className="wp-dots">{choices2.map((_,i)=><div key={i} className={`wp-dot${i===safeIdx2?' active':''}`} onClick={()=>mbGo(i,i>safeIdx2?'right':'left')}/>)}</div><button className="sk-pick-btn" style={{background:`linear-gradient(135deg,${cur2.color},${cur2.color}99)`}} onClick={()=>{setMultiBetweenSkillIdx(0);isFull2?setMultiBetweenPendingSkill(cur2):setMultiBetweenRun(prev=>({...prev,skills:[...prev.skills,cur2.id]}));if(!isFull2)setMultiBetweenScreen('shop');}}>이 스킬 선택</button></>)}
             <button className="sk-skip-btn" onClick={()=>{setMultiBetweenSkillIdx(0);setMultiBetweenScreen('shop');}}>건너뛰기</button>
           </div>
         );
