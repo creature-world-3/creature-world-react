@@ -1770,10 +1770,16 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
               </div>
               <div className="tw-combatant-stats">
                 <span>⚔{player.atk}</span><span>🛡{player.def}</span>
-                {run.job === 'warrior' && <span className="tw-cbuff" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.16)' }}>크리 {Math.round((0.15 + (run.critBonus || 0)) * 100)}%</span>}
                 {run.job && (() => { const j = JOBS.find(jb => jb.id === run.job); return j ? <span className="tw-cbuff" style={{ color: j.color, background: `${j.color}28` }}>{j.name}</span> : null; })()}
+              </div>
+              <div className="tw-combatant-status">
+                {run.job === 'warrior' && <span className="tw-cbuff" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.16)' }}>크리 {Math.round((0.15 + (run.critBonus || 0)) * 100)}%</span>}
                 {run.pCharge && <span className="tw-cbuff">차지↑</span>}
                 {pStunned && <span className="tw-cbuff stun">기절</span>}
+                {(run.pBattlecryTurns || 0) > 0 && <span className="tw-cbuff" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.16)' }}>함성 {run.pBattlecryTurns}턴</span>}
+                {(run.pIroncladTurns  || 0) > 0 && <span className="tw-cbuff" style={{ color: '#60a5fa', background: 'rgba(96,165,250,0.16)' }}>철갑 {run.pIroncladTurns}턴</span>}
+                {run.pSmokescreenNext && <span className="tw-cbuff" style={{ color: '#94a3b8', background: 'rgba(148,163,184,0.16)' }}>연막</span>}
+                {(run.ePoisonTurns || 0) > 0 && <span className="tw-cbuff" style={{ color: '#86efac', background: 'rgba(134,239,172,0.16)' }}>독 {run.ePoisonTurns}턴</span>}
                 {run.pendingBuffs?.atk_buf && <span className="tw-cbuff">ATK↑</span>}
                 {run.pendingBuffs?.def_buf && <span className="tw-cbuff">DEF↑</span>}
                 {run.pendingBuffs?.hp_buf  && <span className="tw-cbuff">HP↑</span>}
@@ -2780,9 +2786,12 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
                     <span className="tw-mini-hp" style={{color:myCol}}>{myPs.hp}/{myPs.maxHp}</span>
                     <div className="tw-mini-buffs">
                       {myJob && <span className="tw-cbuff" style={{color:myJob.color,background:`${myJob.color}28`,fontSize:'0.5rem'}}>{myJob.name}</span>}
-                      {myPs.job === 'warrior' && <span className="tw-cbuff" style={{color:'#ef4444',background:'rgba(239,68,68,0.16)',fontSize:'0.5rem'}}>크리 {Math.round((0.15 + (myPs.critBonus || 0)) * 100)}%</span>}
                       {myPs.pCharge && <span className="tw-cbuff" style={{fontSize:'0.5rem'}}>차지↑</span>}
                       {myPs.pStunned && <span className="tw-cbuff stun" style={{fontSize:'0.5rem'}}>기절</span>}
+                      {(myPs.pBattlecryTurns||0)>0 && <span className="tw-cbuff" style={{color:'#ef4444',background:'rgba(239,68,68,0.16)',fontSize:'0.5rem'}}>함성{myPs.pBattlecryTurns}</span>}
+                      {(myPs.pIroncladTurns||0)>0  && <span className="tw-cbuff" style={{color:'#60a5fa',background:'rgba(96,165,250,0.16)',fontSize:'0.5rem'}}>철갑{myPs.pIroncladTurns}</span>}
+                      {myPs.pSmokescreenNext && <span className="tw-cbuff" style={{color:'#94a3b8',background:'rgba(148,163,184,0.16)',fontSize:'0.5rem'}}>연막</span>}
+                      {(myPs.ePoisonTurns||0)>0 && <span className="tw-cbuff" style={{color:'#86efac',background:'rgba(134,239,172,0.16)',fontSize:'0.5rem'}}>독{myPs.ePoisonTurns}</span>}
                       {myECardDef && <span className="tw-cbuff" style={{color:myECardDef.color,background:`${myECardDef.color}28`,fontSize:'0.5rem'}}>적:{myECardDef.name}</span>}
                     </div>
                     {phase === 'pick' && <span className="tw-mini-pick-status">{picks[myUid] ? '✓' : '...'}</span>}

@@ -5713,10 +5713,17 @@ body.raid-theme .music-toggle-btn {
 .tw-combatant-hp-row { display: flex; align-items: baseline; gap: 2px; }
 .tw-combatant-hpbar { height: 7px; background: rgba(255,255,255,0.18); border-radius: 99px; overflow: hidden; }
 .tw-combatant-stats {
-  display: flex; gap: 5px; font-size: 0.68rem; color: rgba(255,255,255,0.75); font-weight: 700;
+  display: flex; gap: 4px; font-size: 0.68rem; color: rgba(255,255,255,0.75); font-weight: 700;
+  flex-wrap: nowrap; align-items: center;
 }
 .tw-combatant-stats span { background: rgba(0,0,0,0.35); padding: 2px 6px; border-radius: 6px; }
-.tw-cbuff { color: #06b6d4 !important; background: rgba(6,182,212,0.2) !important; }
+.tw-combatant-status {
+  display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px;
+}
+.tw-cbuff {
+  color: #06b6d4 !important; background: rgba(6,182,212,0.2) !important;
+  padding: 1px 5px; border-radius: 5px; font-size: 0.6rem; font-weight: 700; white-space: nowrap;
+}
 .tw-cbuff.stun { color: #fbbf24 !important; background: rgba(251,191,36,0.2) !important; }
 
 /* 데미지/회복 플로팅 숫자 */
