@@ -19,6 +19,7 @@ import MailboxTab from './components/tabs/MailboxTab.jsx';
 import RankingTab from './components/tabs/RankingTab.jsx';
 import BagTab from './components/tabs/BagTab.jsx';
 import TutorialOverlay from './components/TutorialOverlay.jsx';
+import HomeScreen from './components/HomeScreen.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import { CARDS, COLLECTIBLE_CARDS, COLLECTIBLE_IDS } from './data/cards.js';
@@ -83,6 +84,7 @@ export const BASE_STATE = {
   farmingAttempt: null,
   enhanceStones: {},
   lockedCardUids: [],
+  towerBest: null,
 };
 
 function applyDailyReset(state) {
@@ -102,6 +104,14 @@ function applyDailyReset(state) {
 }
 
 const NOTICES = [
+  {
+    version: 'v1.6', date: '2026.06.11',
+    items: [
+      '도전의 탑 오픈 — 카드 1장으로 층을 올라가며 전투, 주간 랭킹 반영',
+      '월드컵 시리즈 UR 6종 추가 (상점 전용 뽑기, 뽑기권 100장)',
+      '랭킹 — 도전의 탑 카테고리 추가 (주간 최고 층수 기준, 실시간)',
+    ],
+  },
   {
     version: 'v1.5', date: '2026.06.03',
     items: [
@@ -186,6 +196,7 @@ export default function App() {
   const [showInviteModal, setShowInviteModal]     = useState(false);
   const [inviteCopied, setInviteCopied]           = useState(false);
   const [isGuest, setIsGuest]                     = useState(false);
+  const [appPhase, setAppPhase]                   = useState('splash'); // 'splash'|'home'|'content'
   const [referrerInput, setReferrerInput]         = useState(() => {
     const p = new URLSearchParams(window.location.search);
     return decodeURIComponent(p.get('ref') || '');
@@ -206,10 +217,14 @@ export default function App() {
   const saveTimer   = useRef(null);
   const isFirstLoad = useRef(true);
 
-  // ── 레이드 탭 배경 테마 ──
+  // ── 탭별 배경 테마 ──
   useEffect(() => {
-    document.body.classList.toggle('raid-theme', activeTab === 'raid');
-    return () => document.body.classList.remove('raid-theme');
+    document.body.classList.toggle('raid-theme',    activeTab === 'raid');
+    document.body.classList.toggle('dungeon-theme', activeTab === 'dungeon');
+    return () => {
+      document.body.classList.remove('raid-theme');
+      document.body.classList.remove('dungeon-theme');
+    };
   }, [activeTab]);
 
   // ── 첫 접속 공지 (하루 1회) ──
@@ -288,7 +303,7 @@ export default function App() {
       if (loaded.raidCard?.raidId && loaded.raidCard?.channelId) {
         getDoc(doc(db, 'raids', loaded.raidCard.raidId, 'channels', loaded.raidCard.channelId))
           .then(chSnap => {
-            if (!chSnap.exists() || chSnap.data().status !== 'active') {
+            if (!chSnap.exists() || (chSnap.data().status !== 'active' && chSnap.data().status !== 'waiting' && chSnap.data().status !== 'defeated')) {
               updateDoc(doc(db, 'users', uid), { raidCard: null }).catch(console.error);
               setGs(prev => ({ ...prev, raidCard: null }));
             }
@@ -526,6 +541,21 @@ export default function App() {
     setShowInviteModal(true);
   };
 
+  const handleHomeNavigate = (tabId) => {
+    if (!interactedRef.current) {
+      interactedRef.current = true;
+      applyAudio(tabId === 'more' ? 'shop' : tabId, dungeonSubRef.current);
+    }
+    if (tabId === 'more') {
+      setMoreOpen(true);
+      handleTabChange('shop');
+    } else {
+      setMoreOpen(false);
+      handleTabChange(tabId);
+    }
+    setAppPhase('content');
+  };
+
   const uniqueOwned = new Set(gs.ownedCards.map(c => c.id).filter(id => COLLECTIBLE_IDS.has(id))).size;
   const sessionMins = Math.min(gs.sessionMinutes || 0, 60);
   const sessionPct  = (sessionMins / 60) * 100;
@@ -678,13 +708,15 @@ export default function App() {
             </div>
           </div>
 
-          <TabBar
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            moreOpen={moreOpen}
-            onMoreToggle={() => setMoreOpen(p => !p)}
-            hasUnreadMail={hasUnreadMail}
-          />
+          {appPhase === 'content' && (
+            <TabBar
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              moreOpen={moreOpen}
+              onMoreToggle={() => setMoreOpen(p => !p)}
+              hasUnreadMail={hasUnreadMail}
+            />
+          )}
           <div className="tab-slide-wrapper">
             {/* DungeonTab 항상 마운트 유지 → 탭 이동해도 자동사냥 상태 유지 */}
             <div style={{display: activeTab === 'dungeon' ? 'block' : 'none'}}>
@@ -698,6 +730,19 @@ export default function App() {
           </div>
           <Footer />
         </div>
+
+        {appPhase !== 'content' && (
+          <HomeScreen
+            phase={appPhase}
+            onSplashTouch={() => setAppPhase('home')}
+            onNavigate={handleHomeNavigate}
+          />
+        )}
+        {appPhase === 'content' && (
+          <button className="home-return-btn" onClick={() => setAppPhase('home')} title="홈">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          </button>
+        )}
 
         {toast && <div className="cw-toast">{toast}</div>}
         <button

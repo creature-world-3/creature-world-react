@@ -5541,8 +5541,56 @@ body.raid-theme .music-toggle-btn {
 .job-skill-chip.exclusive {
   background: color-mix(in srgb, var(--sc, #888) 18%, transparent);
   border-color: color-mix(in srgb, var(--sc, #888) 55%, transparent);
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.12s;
 }
+.job-skill-chip.exclusive:hover { filter: brightness(1.2); transform: scale(1.06); }
 .job-skill-chip.exclusive span { color: rgba(255,255,255,0.92); }
+
+/* 고유스킬 카드 미리보기 모달 */
+.job-skill-preview-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.82);
+  display: flex; align-items: center; justify-content: center;
+}
+.job-skill-preview-modal {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  gap: 0;
+}
+.job-skill-preview-card-area {
+  position: relative;
+  width: min(200px, 52vw);
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+}
+.job-skill-preview-card-area::after {
+  content: '';
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%);
+  animation: skExclusiveShimmer 2.4s ease-in-out infinite;
+  border-radius: inherit;
+}
+.job-skill-preview-img {
+  width: 100%; aspect-ratio: 2/3;
+  object-fit: contain; border-radius: 14px;
+  display: block;
+}
+.job-skill-preview-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,0.12); border: none;
+  color: #fff; font-size: 2rem; line-height: 1;
+  width: 36px; height: 36px; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  z-index: 1;
+}
+.job-skill-preview-arrow.left  { left: -46px; }
+.job-skill-preview-arrow.right { right: -46px; }
+.job-skill-preview-dots {
+  position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px;
+}
 
 /* 선택/교체 버튼 */
 .sk-pick-btn {
@@ -6312,3 +6360,96 @@ body.raid-theme .music-toggle-btn {
 @keyframes tw-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
 .tw-combatant.targeted { outline: 2px solid #f87171; border-radius: 12px; }
+
+/* ── 홈화면 / 스플래시 ── */
+.home-wrap {
+  position: fixed; inset: 0; z-index: 500;
+  overflow: hidden;
+}
+.home-bg-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  z-index: 0; user-select: none; pointer-events: none;
+}
+
+/* 스플래시 */
+.splash-overlay {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  padding: 18% 0 22%;
+  cursor: pointer; user-select: none;
+}
+.splash-logo {
+  width: min(300px, 78vw);
+  filter: drop-shadow(0 6px 28px rgba(0,0,0,0.55));
+  animation: splashLogoIn 0.7s cubic-bezier(0.2,0.8,0.3,1.1) both;
+}
+@keyframes splashLogoIn {
+  from { transform: translateY(-30px) scale(0.85); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes touchToPlayPulse {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 1; }
+}
+.splash-touch-text {
+  font-size: 1rem; font-weight: 900;
+  color: #fff; letter-spacing: 4px; text-transform: uppercase;
+  text-shadow: 0 2px 14px rgba(0,0,0,0.8);
+  animation: touchToPlayPulse 1.6s ease-in-out infinite;
+}
+
+/* 홈 버튼 목록 */
+.home-btns-wrap {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 28% 0 12%;
+  pointer-events: none;
+}
+.home-btn {
+  border: none; background: none; padding: 0;
+  cursor: pointer; opacity: 0;
+  filter: drop-shadow(0 4px 18px rgba(0,0,0,0.55));
+  pointer-events: all;
+  transition: transform 0.12s, filter 0.12s;
+}
+.home-btn:active { transform: scale(0.93) !important; filter: brightness(0.82) drop-shadow(0 2px 8px rgba(0,0,0,0.5)); }
+.home-btn img { display: block; user-select: none; pointer-events: none; }
+.home-btn-left  { align-self: flex-start; }
+.home-btn-right { align-self: flex-end; }
+.home-btn-normal img { width: min(140px, 38vw); }
+.home-btn-big    img { width: min(172px, 46vw); }
+
+@keyframes homeBtnFlyLeft {
+  from { transform: translateX(-110vw) rotate(-6deg); opacity: 0; }
+  to   { transform: translateX(0) rotate(0deg); opacity: 1; }
+}
+@keyframes homeBtnFlyRight {
+  from { transform: translateX(110vw) rotate(6deg); opacity: 0; }
+  to   { transform: translateX(0) rotate(0deg); opacity: 1; }
+}
+.home-btn-active.home-btn-left {
+  animation: homeBtnFlyLeft 0.42s cubic-bezier(0.2, 0.8, 0.3, 1.12) forwards;
+  animation-delay: var(--hb-delay, 0s);
+}
+.home-btn-active.home-btn-right {
+  animation: homeBtnFlyRight 0.42s cubic-bezier(0.2, 0.8, 0.3, 1.12) forwards;
+  animation-delay: var(--hb-delay, 0s);
+}
+
+/* 홈 복귀 버튼 */
+.home-return-btn {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 400;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(0,0,0,0.45); border: 1.5px solid rgba(255,255,255,0.2);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  transition: background 0.15s, transform 0.12s;
+}
+.home-return-btn:hover { background: rgba(0,0,0,0.65); transform: translateX(-50%) scale(1.08); }
+.home-return-btn svg { width: 22px; height: 22px; }
