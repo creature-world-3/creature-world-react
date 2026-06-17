@@ -6581,3 +6581,17 @@ body.raid-theme .music-toggle-btn {
   transition: background 0.15s;
 }
 .gacha-next-btn:hover { background: rgba(255,255,255,0.32); }
+.gacha-img-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  width: 100%; display: block;
+  transition: transform 0.12s, filter 0.12s;
+}
+.gacha-img-btn:not(:disabled):active { transform: scale(0.95); }
+.gacha-img-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+.gacha-btn-img { width: 100%; display: block; border-radius: 12px; }
+.gacha-dex-tab-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  transition: transform 0.12s;
+}
+.gacha-dex-tab-btn:active { transform: scale(0.93); }
+.gacha-dex-tab-img { height: 36px; display: block; border-radius: 8px; }

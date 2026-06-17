@@ -305,7 +305,9 @@ export default function GachaTab({ gs, setGs, isGuest, onBack }) {
             {screen === 'dex' ? '도감' : `뽑기권 ${gs.tickets}장`}
           </span>
           {screen === 'gacha' ? (
-            <button className="gacha-nav-btn" onClick={() => setScreen('dex')}>도감 →</button>
+            <button className="gacha-dex-tab-btn" onClick={() => setScreen('dex')}>
+              <img src="/gacha/도감탭.png" alt="도감" className="gacha-dex-tab-img" />
+            </button>
           ) : (
             <div style={{ width: 60 }} />
           )}
@@ -329,11 +331,17 @@ export default function GachaTab({ gs, setGs, isGuest, onBack }) {
                 <div className="gacha-guest-msg">로그인이 필요합니다</div>
               ) : (
                 <>
-                  <button className="gacha-btn primary" onClick={doDraw} disabled={gs.tickets <= 0}>
-                    1장 뽑기
+                  <button
+                    className={`gacha-img-btn${gs.tickets <= 0 ? ' disabled' : ''}`}
+                    onClick={doDraw} disabled={gs.tickets <= 0}
+                  >
+                    <img src="/gacha/1장뽑기.png" alt="1장 뽑기" className="gacha-btn-img" />
                   </button>
-                  <button className="gacha-btn secondary" onClick={doDraw10} disabled={gs.tickets < 10}>
-                    10장 뽑기 (10장)
+                  <button
+                    className={`gacha-img-btn${gs.tickets < 10 ? ' disabled' : ''}`}
+                    onClick={doDraw10} disabled={gs.tickets < 10}
+                  >
+                    <img src="/gacha/10장뽑기.png" alt="10장 뽑기" className="gacha-btn-img" />
                   </button>
                 </>
               )}
