@@ -97,7 +97,7 @@ function applyDailyReset(state) {
     s.sessionMinutes = 0; s.sessionBonus = false; s.sessionDate = today;
   }
   if (s.dailyBonusDate !== today) {
-    s.tickets = (s.tickets || 0) + 50;
+    s.tickets = (s.tickets || 0) + 100;
     s.dailyBonusDate = today;
   }
   return s;
@@ -226,6 +226,16 @@ export default function App() {
       document.body.classList.remove('dungeon-theme');
     };
   }, [activeTab]);
+
+  // ── 홈/스플래시일 때 body 스크롤 방지 ──
+  useEffect(() => {
+    if (appPhase !== 'content') {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [appPhase]);
 
   // ── 첫 접속 공지 (하루 1회) ──
   useEffect(() => {
@@ -566,7 +576,7 @@ export default function App() {
   );
 
   const TABS = {
-    gacha:   <GachaTab {...tabProps} isGuest={isGuest} />,
+    gacha:   <GachaTab {...tabProps} isGuest={isGuest} onBack={() => setAppPhase('home')} />,
     synth:   <SynthTab {...tabProps} isGuest={isGuest} />,
     dungeon: <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} onSubTabChange={handleDungeonSubTabChange} />,
     shop:    <ShopTab {...tabProps} />,
