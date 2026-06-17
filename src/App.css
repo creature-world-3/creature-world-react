@@ -6476,14 +6476,29 @@ body.raid-theme .music-toggle-btn {
 .grade-border-overlay {
   position: absolute !important; inset: 0 !important;
   width: 100% !important; height: 100% !important;
-  object-fit: fill !important; object-position: center !important;
-  pointer-events: none; z-index: 5;
+  object-fit: fill !important; object-position: center center !important;
+  pointer-events: none !important; z-index: 5 !important;
 }
+/* col-card 내 카드 이미지는 테두리 안쪽으로 */
+.col-card > img:first-child { z-index: 1; }
+.col-card .grade-border-overlay { z-index: 4 !important; }
+/* draw-front 내 테두리 */
+.draw-front .grade-border-overlay,
+.gacha-draw-wrap .grade-border-overlay {
+  inset: 0 !important; border-radius: 14px;
+}
+/* zoom-card 내 테두리 */
+.zoom-card > .grade-border-overlay { border-radius: 18px; }
 
 /* ── 뽑기 전체화면 ── */
+@keyframes gachaEnter {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
 .gacha-screen {
   position: fixed; inset: 0; z-index: 50;
   display: flex; flex-direction: column; overflow: hidden;
+  animation: gachaEnter 0.32s cubic-bezier(0.2, 0.8, 0.3, 1.05) both;
 }
 .gacha-bg-img {
   position: absolute; inset: 0; width: 100%; height: 100%;
@@ -6514,8 +6529,9 @@ body.raid-theme .music-toggle-btn {
 .gacha-main {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: space-between;
-  padding: 24px 20px;
-  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  padding: 16px 20px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  overflow: hidden;
 }
 .gacha-card-center {
   flex: 1; display: flex; align-items: center; justify-content: center;
@@ -6527,17 +6543,53 @@ body.raid-theme .music-toggle-btn {
 .gacha-card-back-wrap:active:not(.empty) { transform: scale(0.96); }
 .gacha-card-back-wrap.empty { cursor: default; opacity: 0.6; }
 .gacha-card-back-img {
-  width: 200px; border-radius: 14px;
+  width: min(160px, 38vw); border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.15);
   filter: drop-shadow(0 0 18px rgba(255,220,100,0.25));
 }
+/* 뽑기 플립 카드 */
+.gacha-draw-wrap {
+  width: min(190px, 42vw); aspect-ratio: 2/3; perspective: 1000px; cursor: pointer;
+}
+.gacha-draw-wrap.empty { opacity: 0.5; cursor: default; }
+.gacha-draw-wrap .draw-card-inner {
+  width: 100%; height: 100%;
+}
+/* 뒷면: 이미지로 교체 */
+.gacha-flip-back {
+  overflow: hidden; border-radius: 14px;
+  background: none; border: none; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding-bottom: 10px; gap: 6px;
+}
+.gacha-flip-back::before, .gacha-flip-back::after { display: none; }
+.gacha-card-back-img-real {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; border-radius: 14px; z-index: 0;
+}
+.gacha-tap-hint-on-card {
+  position: relative; z-index: 1;
+  font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.85);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+  animation: hintBlink 1.5s ease-in-out infinite;
+}
+/* 앞면 border-radius 조정 */
+.gacha-draw-wrap .draw-front { border-radius: 14px; }
+/* 다음 뽑기 버튼 (결과 후 하단) */
+.gacha-next-btn-bar {
+  width: 100%; padding: 13px; border-radius: 12px;
+  background: rgba(255,255,255,0.18); color: #fff;
+  font-size: 1rem; font-weight: 800; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.35); transition: background 0.15s;
+}
+.gacha-next-btn-bar:hover { background: rgba(255,255,255,0.28); }
 .gacha-tap-hint {
   font-size: 0.82rem; font-weight: 700; color: rgba(255,255,255,0.85);
   text-shadow: 0 1px 6px rgba(0,0,0,0.8);
   letter-spacing: 0.5px;
 }
 .gacha-actions {
-  width: 100%; display: flex; flex-direction: column; gap: 10px;
+  width: 100%; display: flex; flex-direction: row; gap: 10px;
 }
 .gacha-btn {
   width: 100%; padding: 14px; border: none; border-radius: 12px;
@@ -6583,15 +6635,15 @@ body.raid-theme .music-toggle-btn {
 .gacha-next-btn:hover { background: rgba(255,255,255,0.32); }
 .gacha-img-btn {
   background: none; border: none; padding: 0; cursor: pointer;
-  width: 100%; display: block;
+  flex: 1; display: block;
   transition: transform 0.12s, filter 0.12s;
 }
 .gacha-img-btn:not(:disabled):active { transform: scale(0.95); }
 .gacha-img-btn.disabled { opacity: 0.4; cursor: not-allowed; }
-.gacha-btn-img { width: 100%; display: block; border-radius: 12px; }
+.gacha-btn-img { width: 100%; display: block; border-radius: 12px; max-height: 60px; object-fit: contain; }
 .gacha-dex-tab-btn {
   background: none; border: none; padding: 0; cursor: pointer;
   transition: transform 0.12s;
 }
 .gacha-dex-tab-btn:active { transform: scale(0.93); }
-.gacha-dex-tab-img { height: 36px; display: block; border-radius: 8px; }
+.gacha-dex-tab-img { height: 52px; display: block; border-radius: 8px; }

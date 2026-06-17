@@ -150,6 +150,7 @@ function CardDetailModal({ item, gs, setGs, onClose }) {
 
 export default function GachaTab({ gs, setGs, isGuest, onBack }) {
   const [screen, setScreen]             = useState('gacha');
+  const [flipped, setFlipped]           = useState(false);
   const [drawn, setDrawn]               = useState(null);
   const [flash, setFlash]               = useState(null);
   const [toast, setToast]               = useState(null);
@@ -172,7 +173,7 @@ export default function GachaTab({ gs, setGs, isGuest, onBack }) {
 
   const doDraw = () => {
     if (gs.tickets <= 0) { showToast('뽑기권이 없어요'); return; }
-    if (drawn) return;
+    if (flipped) return;
     const card = randomCard();
     const cond = randomCondition();
     const isNew = !gs.ownedCards.some(c => c.id === card.id);
@@ -182,9 +183,16 @@ export default function GachaTab({ gs, setGs, isGuest, onBack }) {
       ownedCards: [...prev.ownedCards, { uid: genUid(), id: card.id, condition: cond }],
     }));
     setDrawn({ card, cond });
-    if (['sr', 'ur', 'lg'].includes(card.grade)) setFlash(card.grade);
     showToast((isNew ? 'NEW! ' : '') + card.name + ' 획득!');
+    if (['sr', 'ur', 'lg'].includes(card.grade)) {
+      setFlash(card.grade);
+      setTimeout(() => setFlipped(true), 400);
+    } else {
+      setFlipped(true);
+    }
   };
+
+  const resetDraw = () => { setFlipped(false); setDrawn(null); };
 
   const doDraw10 = () => {
     if (gs.tickets < 10) { showToast('뽑기권이 부족해요! 10장이 필요해요'); return; }
@@ -273,27 +281,6 @@ export default function GachaTab({ gs, setGs, isGuest, onBack }) {
         </div>
       )}
 
-      {/* 1뽑 결과 모달 */}
-      {drawn && (
-        <div className="gacha-result-overlay" onClick={() => setDrawn(null)}>
-          <div className="gacha-result-inner" onClick={e => e.stopPropagation()}>
-            <div className={`zoom-card grade-${drawn.card.grade}`} style={{ width: 220, height: 320 }}>
-              <div className="card-header">
-                <span className="card-name">{drawn.card.name}</span>
-                <span className="grade-badge">{GRADE_LABEL[drawn.card.grade]}</span>
-              </div>
-              <div className="card-art">
-                <img src={`/${drawn.card.img}`} alt={drawn.card.name} />
-              </div>
-              {GRADE_BORDER[drawn.card.grade] && <img src={GRADE_BORDER[drawn.card.grade]} className="grade-border-overlay" alt="" />}
-              <div className="card-aurora" />
-              <div className={`draw-cond-badge cond-badge-${condStyle(drawn.card.grade, drawn.cond)}`}>{drawn.cond}</div>
-            </div>
-            <button className="gacha-next-btn" onClick={() => setDrawn(null)}>다음 뽑기</button>
-          </div>
-        </div>
-      )}
-
       {/* 본문 */}
       <div className="gacha-content">
         {/* 네브바 */}
@@ -316,19 +303,53 @@ export default function GachaTab({ gs, setGs, isGuest, onBack }) {
         {screen === 'gacha' ? (
           <div className="gacha-main">
             <div className="gacha-card-center">
+              {/* 플립 카드 */}
               <div
-                className={`gacha-card-back-wrap${gs.tickets <= 0 ? ' empty' : ''}`}
-                onClick={() => !drawn && gs.tickets > 0 && !isGuest && doDraw()}
+                className={`gacha-draw-wrap${!flipped && gs.tickets <= 0 ? ' empty' : ''}`}
+                onClick={() => { if (!flipped && gs.tickets > 0 && !isGuest) doDraw(); else if (flipped) resetDraw(); }}
               >
-                <img src="/gacha/카드 뒷면.png" className="gacha-card-back-img" alt="카드 뒷면" />
-                <div className="gacha-tap-hint">
-                  {isGuest ? '로그인 필요' : gs.tickets > 0 ? '탭해서 뽑기' : '뽑기권 없음'}
+                <div className={`draw-card-inner${flipped ? ' flipped' : ''}`}>
+                  {/* 뒷면: 카드 뒷면 이미지 */}
+                  <div className="draw-face gacha-flip-back">
+                    <img src="/gacha/카드 뒷면.png" alt="카드 뒷면" className="gacha-card-back-img-real" />
+                    <div className="gacha-tap-hint-on-card">
+                      {isGuest ? '로그인 필요' : gs.tickets > 0 ? '탭해서 뽑기' : '뽑기권 없음'}
+                    </div>
+                  </div>
+                  {/* 앞면: 뽑힌 카드 */}
+                  {(() => {
+                    const dc = drawn?.card;
+                    const cs = drawn ? condStyle(drawn.card.grade, drawn.cond) : 'normal';
+                    return (
+                      <div className={`draw-face draw-front${dc ? ` grade-${dc.grade}` : ''}`}>
+                        {dc && (
+                          <>
+                            <div className="card-header">
+                              <span className="card-name">{dc.name}</span>
+                              <span className="grade-badge">{GRADE_LABEL[dc.grade]}</span>
+                            </div>
+                            <div className="card-art">
+                              <img src={`/${dc.img}`} alt={dc.name} />
+                            </div>
+                            {GRADE_BORDER[dc.grade] && <img src={GRADE_BORDER[dc.grade]} className="grade-border-overlay" alt="" />}
+                            <div className="card-aurora" />
+                            <div className={`draw-cond-badge cond-badge-${cs}`}>{drawn.cond}</div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
+              {flipped && (
+                <div className="gacha-tap-hint" style={{ marginTop: 12 }}>탭해서 다음 뽑기</div>
+              )}
             </div>
             <div className="gacha-actions">
               {isGuest ? (
                 <div className="gacha-guest-msg">로그인이 필요합니다</div>
+              ) : flipped ? (
+                <button className="gacha-next-btn gacha-next-btn-bar" onClick={resetDraw}>다음 뽑기 →</button>
               ) : (
                 <>
                   <button
