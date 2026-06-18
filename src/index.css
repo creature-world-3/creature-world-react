@@ -32,7 +32,24 @@
   --color-text-secondary: #9B8B7A;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+  outline: none;
+}
+
+a {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
 
 body {
   font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
