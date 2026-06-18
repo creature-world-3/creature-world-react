@@ -1,14 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { CARDS, CHARACTERS, COLLECTIBLE_IDS } from '../../data/cards.js';
-import { getGrowth, applyGrowthStone, calcBonus } from '../../utils/growth.js';
-import { GRADE_BORDER } from './GachaTab.jsx';
 
 const GRADE_ORDER = { n: 0, r: 1, sr: 2, ur: 3, lg: 4, raid: 5 };
 const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const GRADE_COLOR = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
-const RAID_CARDS     = CARDS.filter(c => c.raid === true || c.grade === 'raid' || c.grade === 'RAID');
-const WORLDCUP_CARDS = CARDS.filter(c => c.special === 'worldcup');
-const NORMAL_CARDS   = CARDS.filter(c => !c.raid && c.grade !== 'raid' && c.grade !== 'RAID' && c.special !== 'worldcup');
+const RAID_CARDS   = CARDS.filter(c => c.raid === true || c.grade === 'raid' || c.grade === 'RAID');
+const NORMAL_CARDS = CARDS.filter(c => !c.raid && c.grade !== 'raid' && c.grade !== 'RAID');
 
 const GRADE_TABS = [
   { key: 'all',  label: '전체'   },
@@ -22,6 +19,18 @@ const GRADE_TABS = [
 
 const GRADE_RANGE   = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
 const STONE_GRADES  = new Set(['n', 'r', 'sr', 'ur', 'lg', 'raid']);
+const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
+function calcBonus(ownedCards) {
+  let b = 0;
+  const seen = new Set();
+  for (const o of ownedCards) {
+    if (seen.has(o.id)) continue;
+    seen.add(o.id);
+    const c = CARDS.find(x => x.id === o.id);
+    if (c) b += BONUS_MULT[c.grade] || 0;
+  }
+  return Math.floor(b);
+}
 function dmgRange(grade, cond, enhanceLevel = 0, bonus = 0) {
   const [mn, mx] = GRADE_RANGE[grade] || [1, 10];
   const mult = 1 + enhanceLevel * 0.1;
@@ -42,12 +51,11 @@ function condColor(cond) {
   return '#888';
 }
 
-function CardItem({ card, ownedCards, onSingle, onMulti, lockedUids }) {
+function CardItem({ card, ownedCards, onSingle, onMulti }) {
   const myCards = ownedCards.filter(c => c.id === card.id);
   const owned   = myCards.length > 0;
   const best    = owned ? myCards.reduce((a, b) => b.condition > a.condition ? b : a) : null;
   const cs      = best ? condStyle(card.grade, best.condition) : 'normal';
-  const hasLocked = owned && myCards.some(c => lockedUids?.has(c.uid));
 
   const handleClick = () => {
     if (!owned || !best) return;
@@ -64,11 +72,9 @@ function CardItem({ card, ownedCards, onSingle, onMulti, lockedUids }) {
       onClick={handleClick}
     >
       <img src={`/${card.img}`} alt={card.name} loading="lazy" />
-      {GRADE_BORDER[card.grade] && <img src={GRADE_BORDER[card.grade]} className="grade-border-overlay" alt="" loading="lazy" />}
       {owned && cs === 'gold' && <div className="cond-gold-overlay" />}
       {owned && cs === 'holo' && <div className="cond-holo-overlay" />}
       {owned && card.grade === 'raid' && <div className="col-card-aurora" />}
-      {owned && hasLocked && <div className="card-lock-badge" />}
       {owned && (
         <div className="col-card-footer">
           <div className="col-name">{card.name}</div>
@@ -101,7 +107,7 @@ function StarRating({ value }) {
 // ── 공통 인스턴스 피커 바텀시트 ──
 const INST_SCROLL = 76 * 3;
 
-function InstanceSheet({ cardDef, instances, onSelect, onClose, lockedUids }) {
+function InstanceSheet({ cardDef, instances, onSelect, onClose }) {
   const listRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd,   setAtEnd]   = useState(false);
@@ -133,7 +139,6 @@ function InstanceSheet({ cardDef, instances, onSelect, onClose, lockedUids }) {
             {instances.map((inst, i) => {
               const lvl = inst.enhanceLevel || 0;
               const cond = inst.condition || 1;
-              const isLocked = lockedUids?.has(inst.uid);
               return (
                 <div
                   key={inst.uid}
@@ -144,7 +149,6 @@ function InstanceSheet({ cardDef, instances, onSelect, onClose, lockedUids }) {
                   <div className="inst-item-img">
                     <img src={`/${cardDef.img}`} alt={cardDef.name} />
                     {lvl > 0 && <div className="inst-item-badge">+{lvl}</div>}
-                    {isLocked && <div className="inst-lock-icon" />}
                   </div>
                   <div className="inst-item-meta" style={{ color: condColor(cond) }}>
                     컨디션 {cond}
@@ -169,7 +173,7 @@ function applySort(cards, sortBy, ownedCards, growthMap) {
       if (!insts.length) return 0;
       const bestE = Math.max(...insts.map(c => c.enhanceLevel || 0));
       const bestC = Math.max(...insts.map(c => c.condition || 1));
-      const growth = Math.max(...insts.map(c => getGrowth(growthMap, c)), 0);
+      const growth = Math.max(...insts.map(c => growthMap?.[c.uid] || 0), 0);
       return Math.floor((mx + bestC) * (1 + bestE * 0.1)) + growth;
     };
     return [...cards].sort((a, b) => maxDmg(b) - maxDmg(a));
@@ -195,22 +199,10 @@ export default function DexTab({ gs, setGs }) {
   const ownedCards  = gs?.ownedCards || [];
   const ownedIds    = new Set(ownedCards.map(c => c.id));
   const uniqueOwned = new Set([...ownedIds].filter(id => COLLECTIBLE_IDS.has(id))).size;
-  const lockedUids  = new Set(gs?.lockedCardUids || []);
 
   const zoomCs      = zoomCard ? condStyle(zoomCard.card.grade, zoomCard.best.condition) : null;
   const zoomBonus   = calcBonus(ownedCards);
-  const zoomGrowth  = zoomCard ? getGrowth(gs?.cardBonusDmg, zoomCard.best) : 0;
-  const isZoomLocked = zoomCard ? lockedUids.has(zoomCard.best.uid) : false;
-
-  const handleToggleLock = () => {
-    if (!zoomCard?.best?.uid) return;
-    const uid = zoomCard.best.uid;
-    setGs(prev => {
-      const locked = prev.lockedCardUids || [];
-      const next = locked.includes(uid) ? locked.filter(u => u !== uid) : [...locked, uid];
-      return { ...prev, lockedCardUids: next };
-    });
-  };
+  const zoomGrowth  = zoomCard ? (gs?.cardBonusDmg?.[zoomCard.best?.uid] || 0) : 0;
 
   const handleUseStone = () => {
     if (!zoomCard) return;
@@ -222,17 +214,17 @@ export default function DexTab({ gs, setGs }) {
 
   const executeUseStone = () => {
     setStoneConfirm(false);
-    if (!zoomCard?.best?.uid) return;
-    const grade = zoomCard.card.grade;
-    const inst  = zoomCard.best;
+    if (!zoomCard) return;
+    const grade   = zoomCard.card.grade;
+    const instUid = zoomCard.best?.uid;
+    if (!instUid) return;
     setGs(prev => {
       const curStone = prev.enhanceStones?.[grade] || 0;
       if (curStone <= 0) return prev;
-      const { newMap } = applyGrowthStone(prev.cardBonusDmg, inst);
       return {
         ...prev,
         enhanceStones: { ...prev.enhanceStones, [grade]: curStone - 1 },
-        cardBonusDmg:  newMap,
+        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [instUid]: (prev.cardBonusDmg?.[instUid] || 0) + 1 },
       };
     });
   };
@@ -265,7 +257,7 @@ export default function DexTab({ gs, setGs }) {
         <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
           <div className="synth-confirm-title">성장석을 사용하시겠습니까?</div>
           <div className="synth-confirm-desc">
-            {zoomCard?.card.name} 성장 +{getGrowth(gs?.cardBonusDmg, zoomCard?.best) + 1}
+            {zoomCard?.card.name} 성장 +{(gs?.cardBonusDmg?.[zoomCard?.best?.uid] || 0) + 1}
           </div>
           <div className="synth-confirm-btns">
             <button className="synth-confirm-cancel" onClick={() => setStoneConfirm(false)}>취소</button>
@@ -308,7 +300,7 @@ export default function DexTab({ gs, setGs }) {
           {allCardsSorted ? (
             <div className="card-grid dex-grade-grid">
               {allCardsSorted.map(card => (
-                <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} lockedUids={lockedUids} />
+                <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
               ))}
             </div>
           ) : (
@@ -318,23 +310,11 @@ export default function DexTab({ gs, setGs }) {
                   <div className="dex-char-name">{char.name}</div>
                   <div className="card-grid">
                     {NORMAL_CARDS.filter(c => c.id.startsWith(char.id)).sort((a, b) => (GRADE_ORDER[a.grade] ?? 99) - (GRADE_ORDER[b.grade] ?? 99)).map(card => (
-                      <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} lockedUids={lockedUids} />
+                      <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
                     ))}
                   </div>
                 </div>
               ))}
-              {WORLDCUP_CARDS.length > 0 && (
-                <div className="dex-raid-group">
-                  <div className="dex-char-name dex-raid-title">
-                    월드컵 시리즈<span className="dex-raid-hint">상점 한정 UR 카드</span>
-                  </div>
-                  <div className="card-grid">
-                    {WORLDCUP_CARDS.map(card => (
-                      <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} lockedUids={lockedUids} />
-                    ))}
-                  </div>
-                </div>
-              )}
               {RAID_CARDS.length > 0 && (
                 <div className="dex-raid-group">
                   <div className="dex-char-name dex-raid-title">
@@ -342,7 +322,7 @@ export default function DexTab({ gs, setGs }) {
                   </div>
                   <div className="card-grid">
                     {RAID_CARDS.map(card => (
-                      <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} lockedUids={lockedUids} />
+                      <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
                     ))}
                   </div>
                 </div>
@@ -355,7 +335,7 @@ export default function DexTab({ gs, setGs }) {
       {gradeTab !== 'all' && gradeTab !== 'raid' && (
         <div className="card-grid dex-grade-grid">
           {filteredNormal.map(card => (
-            <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} lockedUids={lockedUids} />
+            <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
           ))}
         </div>
       )}
@@ -370,7 +350,7 @@ export default function DexTab({ gs, setGs }) {
           ) : (
             <div className="card-grid">
               {raidCardsSorted.map(card => (
-                <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} lockedUids={lockedUids} />
+                <CardItem key={card.id} card={card} ownedCards={ownedCards} onSingle={handleSingle} onMulti={handleMulti} />
               ))}
             </div>
           )}
@@ -385,7 +365,6 @@ export default function DexTab({ gs, setGs }) {
         instances={pickerCard.instances}
         onSelect={handleInstSelect}
         onClose={() => setPickerCard(null)}
-        lockedUids={lockedUids}
       />
     )}
 
@@ -403,7 +382,6 @@ export default function DexTab({ gs, setGs }) {
               <div className="card-art">
                 <img src={`/${zoomCard.card.img}`} alt={zoomCard.card.name} />
               </div>
-              {GRADE_BORDER[zoomCard.card.grade] && <img src={GRADE_BORDER[zoomCard.card.grade]} className="grade-border-overlay" alt="" />}
               <div className="card-aurora" />
               {zoomCs === 'gold' && <div className="cond-gold-overlay" />}
               {zoomCs === 'holo' && <div className="cond-holo-overlay" />}
@@ -460,12 +438,6 @@ export default function DexTab({ gs, setGs }) {
               </button>
             );
           })()}
-          <button
-            className={`card-lock-btn${isZoomLocked ? ' locked' : ''}`}
-            onClick={handleToggleLock}
-          >
-            {isZoomLocked ? '잠금 해제 (판매·교환·합성 허용)' : '잠금 설정 (판매·교환·합성 방지)'}
-          </button>
           <button className="zoom-close" onClick={() => setZoomCard(null)}>닫기 ✕</button>
         </div>
       </div>

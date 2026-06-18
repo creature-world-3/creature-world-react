@@ -1,13 +1,34 @@
 import { useState, useRef } from 'react';
 import { CARDS } from '../../data/cards.js';
-import { getGrowth, applyGrowthStone } from '../../utils/growth.js';
-import { GRADE_BORDER } from './GachaTab.jsx';
 
 const GRADES = ['n', 'r', 'sr', 'ur', 'lg', 'raid'];
 const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const GRADE_COLOR = { n: '#aaa', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
 const GRADE_RANGE = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
 
+// 카드의 최대 데미지(upper bound) 계산 — 정렬 기준
+function calcMaxDmg(card, ownedCards, growthMap) {
+  const [, mx] = GRADE_RANGE[card.grade] || [1, 10];
+  const instances = ownedCards.filter(c => c.id === card.id);
+  const bestEnhance = instances.length ? Math.max(...instances.map(c => c.enhanceLevel || 0)) : 0;
+  const bestCond    = instances.length ? Math.max(...instances.map(c => c.condition || 1))    : 1;
+  const growth      = growthMap[card.id] || 0;
+  const mult        = 1 + bestEnhance * 0.1;
+  return Math.floor((mx + bestCond) * mult) + growth;
+}
+
+// 화면에 표시할 데미지 범위 문자열
+function dmgRangeStr(card, ownedCards, growthMap) {
+  const [mn, mx] = GRADE_RANGE[card.grade] || [1, 10];
+  const instances = ownedCards.filter(c => c.id === card.id);
+  const bestEnhance = instances.length ? Math.max(...instances.map(c => c.enhanceLevel || 0)) : 0;
+  const bestCond    = instances.length ? Math.max(...instances.map(c => c.condition || 1))    : 1;
+  const growth      = growthMap[card.id] || 0;
+  const mult        = 1 + bestEnhance * 0.1;
+  return `${Math.floor((mn + bestCond) * mult) + growth}~${Math.floor((mx + bestCond) * mult) + growth}`;
+}
+
+// 특정 인스턴스 기준 데미지 범위
 function instDmgRange(card, inst, growth) {
   const [mn, mx] = GRADE_RANGE[card.grade] || [1, 10];
   const mult = 1 + (inst.enhanceLevel || 0) * 0.1;
@@ -15,39 +36,16 @@ function instDmgRange(card, inst, growth) {
   return `${Math.floor((mn + (inst.condition||1)) * mult) + g}~${Math.floor((mx + (inst.condition||1)) * mult) + g}`;
 }
 
-function bestInstDmgRange(card, ownedCards, cardBonusDmg) {
-  const [mn, mx] = GRADE_RANGE[card.grade] || [1, 10];
-  const insts = ownedCards.filter(c => c.id === card.id);
-  if (!insts.length) return '—';
-  const bestEnh  = Math.max(...insts.map(c => c.enhanceLevel || 0));
-  const bestCond = Math.max(...insts.map(c => c.condition || 1));
-  const growth   = Math.max(...insts.map(c => getGrowth(cardBonusDmg, c)));
-  const mult = 1 + bestEnh * 0.1;
-  return `${Math.floor((mn + bestCond) * mult) + growth}~${Math.floor((mx + bestCond) * mult) + growth}`;
-}
-
-function calcMaxDmg(card, ownedCards, cardBonusDmg) {
-  const [, mx] = GRADE_RANGE[card.grade] || [1, 10];
-  const insts = ownedCards.filter(c => c.id === card.id);
-  if (!insts.length) return 0;
-  const bestEnh  = Math.max(...insts.map(c => c.enhanceLevel || 0));
-  const bestCond = Math.max(...insts.map(c => c.condition || 1));
-  const growth   = Math.max(...insts.map(c => getGrowth(cardBonusDmg, c)));
-  return Math.floor((mx + bestCond) * (1 + bestEnh * 0.1)) + growth;
-}
-
 export default function BagTab({ gs, setGs }) {
-  const [selectedGrade, setSelectedGrade] = useState(null);
-  const [stoneConfirm, setStoneConfirm]   = useState(null); // { card, inst }
-  const [stoneInstPick, setStoneInstPick] = useState(null); // card def — 복수 장일 때 인스턴스 선택
-  const [carouselIdx, setCarouselIdx]     = useState(0);
-  const [toast, setToast]                 = useState(null);
-  const toastTimer  = useRef(null);
-  const touchStartX = useRef(null);
+  const [selectedGrade, setSelectedGrade]     = useState(null);
+  const [stoneConfirm, setStoneConfirm]       = useState(null); // { card, inst }
+  const [stoneInstPick, setStoneInstPick]     = useState(null); // card def — 복수 장일 때 인스턴스 선택
+  const [toast, setToast]                     = useState(null);
+  const toastTimer = useRef(null);
 
-  const stones        = gs?.enhanceStones || {};
-  const ownedCards    = gs?.ownedCards    || [];
-  const cardBonusDmg  = gs?.cardBonusDmg  || {};
+  const stones     = gs?.enhanceStones || {};
+  const ownedCards = gs?.ownedCards || [];
+  const growthMap  = gs?.cardBonusDmg || {};
 
   const showToast = (msg) => {
     clearTimeout(toastTimer.current);
@@ -58,28 +56,30 @@ export default function BagTab({ gs, setGs }) {
   const gradeCards = selectedGrade
     ? CARDS
         .filter(c => c.grade === selectedGrade && ownedCards.some(oc => oc.id === c.id))
-        .sort((a, b) => calcMaxDmg(b, ownedCards, cardBonusDmg) - calcMaxDmg(a, ownedCards, cardBonusDmg))
+        .sort((a, b) => calcMaxDmg(b, ownedCards, growthMap) - calcMaxDmg(a, ownedCards, growthMap))
     : [];
 
   const useStone = (card) => {
-    if ((stones[card.grade] || 0) <= 0) { showToast('성장석이 없습니다'); return; }
+    const stoneCount = stones[card.grade] || 0;
+    if (stoneCount <= 0) { showToast('성장석이 없습니다'); return; }
     const insts = ownedCards.filter(c => c.id === card.id);
-    if (insts.length > 1) { setCarouselIdx(0); setStoneInstPick(card); return; }
+    if (insts.length > 1) { setStoneInstPick(card); return; }
     setStoneConfirm({ card, inst: insts[0] });
   };
 
   const executeUseStone = () => {
     const { card, inst } = stoneConfirm;
     setStoneConfirm(null);
+    if ((stones[card.grade] || 0) <= 0) { showToast('성장석이 없습니다'); return; }
     setGs(prev => {
-      const curStone = prev.enhanceStones?.[card.grade] || 0;
+      const curStone  = prev.enhanceStones?.[card.grade] || 0;
       if (curStone <= 0) return prev;
-      const { newMap, newGrowth } = applyGrowthStone(prev.cardBonusDmg, inst);
+      const newGrowth = (prev.cardBonusDmg?.[inst.uid] || 0) + 1;
       showToast(`${card.name} 성장 +${newGrowth} 달성!`);
       return {
         ...prev,
         enhanceStones: { ...prev.enhanceStones, [card.grade]: curStone - 1 },
-        cardBonusDmg:  newMap,
+        cardBonusDmg:  { ...(prev.cardBonusDmg || {}), [inst.uid]: newGrowth },
       };
     });
   };
@@ -88,125 +88,68 @@ export default function BagTab({ gs, setGs }) {
     <div className="bag-wrap">
       {toast && <div className="cw-toast">{toast}</div>}
 
-      {/* 복수 인스턴스 캐러셀 선택 */}
-      {stoneInstPick && (() => {
-        const instances = [...ownedCards.filter(c => c.id === stoneInstPick.id)]
-          .sort((a, b) => getGrowth(cardBonusDmg, b) - getGrowth(cardBonusDmg, a));
-        const idx    = Math.min(carouselIdx, instances.length - 1);
-        const inst   = instances[idx];
-        const growth = getGrowth(cardBonusDmg, inst);
-        const dmg    = instDmgRange(stoneInstPick, inst, growth);
-        const canPrev = idx > 0;
-        const canNext = idx < instances.length - 1;
-        const arrowBtn = (enabled) => ({
-          width: 36, height: 36, borderRadius: '50%', border: 'none', flexShrink: 0,
-          background: enabled ? 'rgba(124,58,237,0.15)' : 'rgba(0,0,0,0.05)',
-          color: enabled ? '#7c3aed' : '#ccc', fontSize: '1.4rem',
-          cursor: enabled ? 'pointer' : 'default',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        });
-        return (
-          <div className="card-zoom-overlay" onClick={() => setStoneInstPick(null)}>
-            <div className="synth-confirm-box" onClick={e => e.stopPropagation()}
-              onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
-              onTouchEnd={e => {
-                if (touchStartX.current === null) return;
-                const dx = e.changedTouches[0].clientX - touchStartX.current;
-                if (dx < -40 && canNext) setCarouselIdx(i => i + 1);
-                if (dx >  40 && canPrev) setCarouselIdx(i => i - 1);
-                touchStartX.current = null;
-              }}
-            >
-              <div className="synth-confirm-title" style={{ marginBottom: 4 }}>
-                성장시킬 카드 선택
-                <span style={{ fontSize: '0.75rem', color: '#888', marginLeft: 8, fontWeight: 400 }}>
-                  {idx + 1} / {instances.length}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 0' }}>
-                <button style={arrowBtn(canPrev)} onClick={() => canPrev && setCarouselIdx(i => i - 1)}>‹</button>
-
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ position: 'relative', display: 'inline-block' }}>
-                    <img src={`/${stoneInstPick.img}`} alt="" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 10, border: '2px solid #e5e7eb' }} />
-                    {inst.enhanceLevel > 0 && (
-                      <div style={{ position: 'absolute', top: 3, right: 3, fontSize: '0.65rem', fontWeight: 900, color: '#f97316', background: 'rgba(255,255,255,0.92)', borderRadius: 4, padding: '0 3px' }}>
-                        +{inst.enhanceLevel}
-                      </div>
-                    )}
+      {stoneInstPick && (
+        <div className="card-zoom-overlay" onClick={() => setStoneInstPick(null)}>
+          <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
+            <div className="synth-confirm-title">성장시킬 카드를 선택하세요</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', margin: '10px 0' }}>
+              {ownedCards.filter(c => c.id === stoneInstPick.id).map((inst, i) => {
+                const growth = growthMap[inst.uid] || 0;
+                return (
+                  <div key={inst.uid} style={{ textAlign: 'center', cursor: 'pointer' }}
+                    onClick={() => { setStoneInstPick(null); setStoneConfirm({ card: stoneInstPick, inst }); }}>
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                      <img src={`/${stoneInstPick.img}`} alt="" style={{ width: 54, height: 54, objectFit: 'contain', borderRadius: 8, border: '2px solid #e5e7eb' }} />
+                      {inst.enhanceLevel > 0 && <div style={{ position: 'absolute', top: 2, right: 2, fontSize: '0.6rem', fontWeight: 900, color: '#f97316', background: 'rgba(255,255,255,0.9)', borderRadius: 4, padding: '0 3px' }}>+{inst.enhanceLevel}</div>}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#666', marginTop: 2 }}>#{i + 1}{growth > 0 ? ` 성장+${growth}` : ''}</div>
                   </div>
-                  <div style={{ marginTop: 6, fontSize: '0.85rem', fontWeight: 700 }}>{stoneInstPick.name}</div>
-                  {growth > 0
-                    ? <div style={{ fontSize: '0.8rem', color: '#7c3aed', fontWeight: 700 }}>성장 +{growth}</div>
-                    : <div style={{ fontSize: '0.75rem', color: '#aaa' }}>성장 없음</div>
-                  }
-                  <div style={{ fontSize: '0.72rem', color: '#888', marginTop: 2 }}>데미지 {dmg}</div>
-                </div>
-
-                <button style={arrowBtn(canNext)} onClick={() => canNext && setCarouselIdx(i => i + 1)}>›</button>
-              </div>
-
-              {instances.length > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 10 }}>
-                  {instances.map((_, i) => (
-                    <div key={i} onClick={() => setCarouselIdx(i)} style={{
-                      width: 7, height: 7, borderRadius: '50%', cursor: 'pointer',
-                      background: i === idx ? '#7c3aed' : '#ddd', transition: 'background 0.2s',
-                    }} />
-                  ))}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="synth-confirm-cancel" onClick={() => setStoneInstPick(null)} style={{ flex: 1 }}>취소</button>
-                <button className="synth-confirm-ok" onClick={() => { setStoneInstPick(null); setStoneConfirm({ card: stoneInstPick, inst }); }} style={{ flex: 1 }}>선택</button>
-              </div>
+                );
+              })}
             </div>
+            <button className="synth-confirm-cancel" onClick={() => setStoneInstPick(null)} style={{ width: '100%' }}>취소</button>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
-      {/* 성장 최종 확인 */}
       {stoneConfirm && (() => {
         const { card, inst } = stoneConfirm;
-        const curGrowth = getGrowth(cardBonusDmg, inst);
+        const curGrowth = growthMap[inst.uid] || 0;
+        const beforeDmg = instDmgRange(card, inst, curGrowth);
+        const afterDmg  = instDmgRange(card, inst, curGrowth + 1);
         return (
-          <div className="card-zoom-overlay" onClick={() => setStoneConfirm(null)}>
-            <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
-              <div className="synth-confirm-title">카드를 성장시키시겠습니까?</div>
-              <div className="bag-stone-confirm-card">
-                <img src={`/${card.img}`} alt={card.name} className="bag-stone-confirm-img" />
-                <div className="bag-stone-confirm-info">
-                  <div className="bag-stone-confirm-name">{card.name}</div>
-                  <div className="bag-stone-confirm-grade" style={{ color: GRADE_COLOR[card.grade] }}>{GRADE_LABEL[card.grade]}</div>
-                  <div className="bag-stone-confirm-stat">
-                    <span className="bag-stone-confirm-label">성장</span>
-                    <span>{curGrowth} → <strong style={{ color: '#7c3aed' }}>+{curGrowth + 1}</strong></span>
-                  </div>
-                  <div className="bag-stone-confirm-stat">
-                    <span className="bag-stone-confirm-label">데미지</span>
-                    <span style={{ fontSize: '0.7rem' }}>
-                      {instDmgRange(card, inst, curGrowth)} → <strong style={{ color: '#7c3aed' }}>{instDmgRange(card, inst, curGrowth + 1)}</strong>
-                    </span>
-                  </div>
-                  {inst.enhanceLevel > 0 && (
-                    <div className="bag-stone-confirm-stat">
-                      <span className="bag-stone-confirm-label">강화</span>
-                      <span>+{inst.enhanceLevel}</span>
-                    </div>
-                  )}
+        <div className="card-zoom-overlay" onClick={() => setStoneConfirm(null)}>
+          <div className="synth-confirm-box" onClick={e => e.stopPropagation()}>
+            <div className="synth-confirm-title">카드를 성장시키시겠습니까?</div>
+            <div className="bag-stone-confirm-card">
+              <img src={`/${card.img}`} alt={card.name} className="bag-stone-confirm-img" />
+              <div className="bag-stone-confirm-info">
+                <div className="bag-stone-confirm-name">{card.name}</div>
+                <div className="bag-stone-confirm-grade" style={{color: GRADE_COLOR[card.grade]}}>{GRADE_LABEL[card.grade]}</div>
+                <div className="bag-stone-confirm-stat">
+                  <span className="bag-stone-confirm-label">성장</span>
+                  <span>{curGrowth} → <strong style={{color:'#7c3aed'}}>+{curGrowth + 1}</strong></span>
                 </div>
-              </div>
-              <div className="synth-confirm-btns">
-                <button className="synth-confirm-cancel" onClick={() => setStoneConfirm(null)}>취소</button>
-                <button className="synth-confirm-ok" onClick={executeUseStone}>확인</button>
+                <div className="bag-stone-confirm-stat">
+                  <span className="bag-stone-confirm-label">데미지</span>
+                  <span style={{fontSize:'0.7rem'}}>{beforeDmg} → <strong style={{color:'#7c3aed'}}>{afterDmg}</strong></span>
+                </div>
+                {inst.enhanceLevel > 0 && (
+                  <div className="bag-stone-confirm-stat">
+                    <span className="bag-stone-confirm-label">강화</span>
+                    <span>+{inst.enhanceLevel}</span>
+                  </div>
+                )}
               </div>
             </div>
+            <div className="synth-confirm-btns">
+              <button className="synth-confirm-cancel" onClick={() => setStoneConfirm(null)}>취소</button>
+              <button className="synth-confirm-ok" onClick={executeUseStone}>확인</button>
+            </div>
           </div>
+        </div>
         );
       })()}
-
       <div className="bag-header">
         <div className="col-title">가방</div>
         <div className="col-count">인벤토리</div>
@@ -232,7 +175,9 @@ export default function BagTab({ gs, setGs }) {
                 }}
                 onClick={() => setSelectedGrade(prev => prev === grade ? null : grade)}
               >
-                <div className="bag-stone-card-header" style={{ color: GRADE_COLOR[grade] }}>{GRADE_LABEL[grade]}</div>
+                <div className="bag-stone-card-header" style={{ color: GRADE_COLOR[grade] }}>
+                  {GRADE_LABEL[grade]}
+                </div>
                 <div className="bag-stone-card-gem-wrap">
                   <div className="bag-stone-card-gem" style={{
                     background: `radial-gradient(circle at 35% 35%, white, ${GRADE_COLOR[grade]})`,
@@ -261,9 +206,9 @@ export default function BagTab({ gs, setGs }) {
             ) : (
               <div className="bag-stone-card-grid">
                 {gradeCards.map(card => {
-                  const myCards = ownedCards.filter(c => c.id === card.id);
-                  const growth  = Math.max(...myCards.map(c => getGrowth(cardBonusDmg, c)), 0);
-                  const canUse  = (stones[selectedGrade] || 0) > 0;
+                  const myCards   = ownedCards.filter(c => c.id === card.id);
+                  const growth    = Math.max(...myCards.map(c => growthMap[c.uid] || 0), 0);
+                  const canUse    = (stones[selectedGrade] || 0) > 0;
                   return (
                     <div
                       key={card.id}
@@ -271,13 +216,12 @@ export default function BagTab({ gs, setGs }) {
                       onClick={() => canUse && useStone(card)}
                     >
                       <img src={`/${card.img}`} alt={card.name} loading="lazy" />
-                      {GRADE_BORDER[card.grade] && <img src={GRADE_BORDER[card.grade]} className="grade-border-overlay" alt="" loading="lazy" />}
                       {growth > 0 && <div className="bag-stone-card-badge">성장+{growth}</div>}
                       <div className="bag-stone-card-footer">
                         <div className="bag-stone-card-name">{card.name}</div>
                         {myCards.length > 1 && <div className="bag-stone-card-dup">×{myCards.length}</div>}
                       </div>
-                      <div className="bag-stone-card-dmg">{bestInstDmgRange(card, ownedCards, cardBonusDmg)}</div>
+                      <div className="bag-stone-card-dmg">{dmgRangeStr(card, ownedCards, growthMap)}</div>
                       {canUse && <div className="bag-stone-card-use">+1</div>}
                     </div>
                   );

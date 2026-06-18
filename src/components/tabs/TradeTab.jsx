@@ -6,7 +6,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
-import { GRADE_BORDER } from './GachaTab.jsx';
 
 const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
 const GRADE_COLOR = { n: '#888', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
@@ -398,7 +397,6 @@ export default function TradeTab({ gs, setGs, user }) {
                               onClick={() => isSelected ? (setSelectedCard(null), setTradePicker(null)) : handleTradeCardTypeClick(cardDef)}
                             >
                               <img src={`/${cardDef.img}`} alt={cardDef.name} />
-                              {GRADE_BORDER[cardDef.grade] && <img src={GRADE_BORDER[cardDef.grade]} className="grade-border-overlay" alt="" loading="lazy" />}
                               {instances.length > 1 && <div className="trade-card-cond">×{instances.length}</div>}
                             </div>
                             <div className="trade-card-tooltip">{cardDef.name} · {GRADE_LABEL[cardDef.grade]}</div>
@@ -496,9 +494,8 @@ export default function TradeTab({ gs, setGs, user }) {
               <div className="trade-list">
                 {myActiveSell.map(trade => (
                   <div key={trade.id} className="trade-item">
-                    <div className={`trade-card-img grade-${trade.cardGrade}`} style={{ position: 'relative' }}>
+                    <div className={`trade-card-img grade-${trade.cardGrade}`}>
                       <img src={`/${trade.cardImg}`} alt={trade.cardName} />
-                      {GRADE_BORDER[trade.cardGrade] && <img src={GRADE_BORDER[trade.cardGrade]} className="grade-border-overlay" alt="" loading="lazy" />}
                     </div>
                     <div className="trade-item-info">
                       <div className="trade-item-name">
@@ -670,9 +667,8 @@ export default function TradeTab({ gs, setGs, user }) {
               <div className="trade-list">
                 {myActiveBuy.map(order => (
                   <div key={order.id} className="trade-item">
-                    <div className={`trade-card-img grade-${order.cardGrade}`} style={{ position: 'relative' }}>
+                    <div className={`trade-card-img grade-${order.cardGrade}`}>
                       <img src={`/${order.cardImg}`} alt={order.cardName} />
-                      {GRADE_BORDER[order.cardGrade] && <img src={GRADE_BORDER[order.cardGrade]} className="grade-border-overlay" alt="" loading="lazy" />}
                     </div>
                     <div className="trade-item-info">
                       <div className="trade-item-name">

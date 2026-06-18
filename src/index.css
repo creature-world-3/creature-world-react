@@ -1,4 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+KR:wght@400;700;900&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap');
+
+/* BM JUA - loaded only, not applied */
+@font-face {
+  font-family: 'BM JUA';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/BMJua.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --sky: #e8f4fd;
@@ -9,12 +20,22 @@
   --muted: #7a9ab5;
   --white: #ffffff;
   --card-bg: rgba(255,255,255,0.7);
+  --card: rgba(255,255,255,0.92);
+
+  /* Visual Renewal Phase 1 - Color Variables */
+  --color-bg-base: #FFF8EC;
+  --color-bg-panel: #FFFCF5;
+  --color-accent-primary: #FF8C5A;
+  --color-accent-secondary: #8FCB9B;
+  --color-accent-point: #FFC93C;
+  --color-text-primary: #4A3728;
+  --color-text-secondary: #9B8B7A;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
   background: linear-gradient(160deg, #e8f6ff 0%, #f0f9ff 40%, #e0f0ff 100%);
   min-height: 100vh;
   color: var(--text);

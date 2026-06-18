@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { CARDS } from '../../data/cards.js';
-import { getGrowth, calcBonus } from '../../utils/growth.js';
-import { GRADE_BORDER } from './GachaTab.jsx';
 
 const GRADES      = ['n', 'r', 'sr', 'ur', 'lg'];
 const ALL_GRADES  = ['n', 'r', 'sr', 'ur', 'lg', 'raid'];
@@ -26,6 +24,19 @@ function getEnhanceCost(grade, currentLevel) {
 }
 const ENHANCE_RATE = { 1: 90, 2: 80, 3: 70, 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10, 10: 5 };
 const GRADE_RANGE  = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
+const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
+
+function calcBonus(ownedCards) {
+  let b = 0;
+  const seen = new Set();
+  for (const o of ownedCards) {
+    if (seen.has(o.id)) continue;
+    seen.add(o.id);
+    const c = CARDS.find(x => x.id === o.id);
+    if (c) b += BONUS_MULT[c.grade] || 0;
+  }
+  return Math.floor(b);
+}
 
 let _uid = 0;
 const genUid = () => `${++_uid}_${Date.now()}`;
@@ -141,8 +152,8 @@ function SynthSubTab({ gs, setGs, isGuest }) {
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   };
 
-  const lockedUids = new Set([gs?.raidCard?.uid, ...(gs?.lockedCardUids || [])].filter(Boolean));
-  const ownedCards = (gs?.ownedCards || []).filter(c => !lockedUids.has(c.uid));
+  const lockedUid  = gs?.raidCard?.uid;
+  const ownedCards = (gs?.ownedCards || []).filter(c => c.uid !== lockedUid);
 
   const addInstToSlot = (cardDef, inst) => {
     const emptyIdx = slots.findIndex(s => s === null);
@@ -166,7 +177,7 @@ function SynthSubTab({ gs, setGs, isGuest }) {
     const gradeInsts = [];
     for (const c of ownedCards) {
       const def = CARDS.find(x => x.id === c.id);
-      if (!def || def.grade !== synthGrade || def.raid || def.special) continue;
+      if (!def || def.grade !== synthGrade || def.raid) continue;
       gradeInsts.push({ inst: c, cardDef: def });
     }
     if (gradeInsts.length < 3) { showToast('카드가 3장 미만이에요'); setAutoFillOpen(false); return; }
@@ -192,13 +203,16 @@ function SynthSubTab({ gs, setGs, isGuest }) {
     setSynthConfirm(null);
     const grade    = slots[0].cardDef.grade;
     const gradeIdx = GRADES.indexOf(grade);
-    const removeUids = new Set(slots.map(s => s.inst.uid));
-    const newOwned = (gs.ownedCards || []).filter(c => !removeUids.has(c.uid));
+    const newOwned = [...(gs.ownedCards || [])];
+    for (const slot of slots) {
+      const idx = newOwned.findIndex(c => c.uid === slot.inst.uid);
+      if (idx !== -1) newOwned.splice(idx, 1);
+    }
     let resultGrade = grade;
     if (gradeIdx < GRADES.length - 1 && Math.random() < 0.1) {
       resultGrade = GRADES[gradeIdx + 1]; showToast('등급 업그레이드 성공!');
     }
-    const pool = CARDS.filter(c => c.grade === resultGrade && !c.raid && !c.special);
+    const pool = CARDS.filter(c => c.grade === resultGrade && !c.raid && c.special !== 'western');
     const card  = pool[Math.floor(Math.random() * pool.length)] ?? CARDS[0];
     const cond  = randomCondition();
     newOwned.push({ uid: genUid(), id: card.id, condition: cond, enhanceLevel: 0 });
@@ -349,7 +363,6 @@ function SynthSubTab({ gs, setGs, isGuest }) {
               return (
                 <div key={card.id} className={`synth-card grade-${card.grade}${avail <= 0 ? ' disabled' : ''}`} onClick={() => avail > 0 && handleCardTypeClick(card)}>
                   <img src={`/${card.img}`} alt={card.name} loading="lazy" />
-                  {GRADE_BORDER[card.grade] && <img src={GRADE_BORDER[card.grade]} className="grade-border-overlay" alt="" loading="lazy" />}
                   <div className="sc-footer">
                     <div className="sc-name">{card.name}</div>
                     <span className="sc-grade" style={{ background: GRADE_BG[card.grade], color: GRADE_COL[card.grade] }}>{GRADE_LABEL[card.grade]}</span>
@@ -390,7 +403,8 @@ function EnhanceSubTab({ gs, setGs, isGuest }) {
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   };
 
-  const ownedCards = gs?.ownedCards || [];
+  const lockedUid  = gs?.raidCard?.uid;
+  const ownedCards = (gs?.ownedCards || []).filter(c => c.uid !== lockedUid);
 
   const cardTypesInGrade = CARDS.filter(c =>
     c.grade === filterGrade && ownedCards.some(oc => oc.id === c.id),
@@ -484,18 +498,15 @@ function EnhanceSubTab({ gs, setGs, isGuest }) {
   const cond         = selectedInst?.condition || 1;
   const currentLevel = selectedInst ? (selectedInst.enhanceLevel || 0) : 0;
   const nextLevel    = currentLevel + 1;
+  const [curMin, curMax] = selectedCardDef ? calcDmgRange(selectedCardDef.grade, cond, currentLevel) : [0, 0];
+  const [nxtMin, nxtMax] = selectedCardDef ? calcDmgRange(selectedCardDef.grade, cond, nextLevel)    : [0, 0];
+
   const cost       = selectedCardDef ? getEnhanceCost(selectedCardDef.grade, currentLevel) : 0;
   const costTier   = currentLevel <= 4 ? '+1~+5' : currentLevel <= 9 ? '+6~+10' : '+11 이상';
   const rate       = currentLevel >= 10 ? 1 : (ENHANCE_RATE[nextLevel] ?? 1);
   const isAurora   = displayLevel >= 8;
   const isBusy     = enhancePhase !== 'idle';
-  const cardGrowth = selectedInst ? getGrowth(gs?.cardBonusDmg, selectedInst) : 0;
-  const [rawCurMin, rawCurMax] = selectedCardDef ? calcDmgRange(selectedCardDef.grade, cond, currentLevel) : [0, 0];
-  const [rawNxtMin, rawNxtMax] = selectedCardDef ? calcDmgRange(selectedCardDef.grade, cond, nextLevel)    : [0, 0];
-  const curMin = rawCurMin + cardGrowth;
-  const curMax = rawCurMax + cardGrowth;
-  const nxtMin = rawNxtMin + cardGrowth;
-  const nxtMax = rawNxtMax + cardGrowth;
+  const cardGrowth = selectedInst ? (gs?.cardBonusDmg?.[selectedInst.uid] || gs?.cardBonusDmg?.[selectedInst.id] || 0) : 0;
   const cardBonus  = calcBonus(ownedCards);
 
   return (
@@ -708,8 +719,8 @@ function ExchangeSubTab({ gs, setGs, isGuest }) {
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   }, []);
 
-  const lockedUids = new Set([gs?.raidCard?.uid, ...(gs?.lockedCardUids || [])].filter(Boolean));
-  const ownedCards = (gs?.ownedCards || []).filter(c => !lockedUids.has(c.uid));
+  const lockedUid  = gs?.raidCard?.uid;
+  const ownedCards = (gs?.ownedCards || []).filter(c => c.uid !== lockedUid);
 
   const countById = {};
   ownedCards.forEach(oc => { countById[oc.id] = (countById[oc.id] || 0) + 1; });
