@@ -308,18 +308,33 @@
   font-family:'Noto Sans KR',sans-serif; font-size:0.82rem; font-weight:700;
   cursor:pointer; transition:all 0.2s;
 }
-.draw-btn.primary { background:linear-gradient(135deg,#4a9eff,#1a6fd4); color:white; box-shadow:0 4px 16px rgba(74,158,255,0.35); }
-.draw-btn.primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(74,158,255,0.45); }
+.draw-btn.primary {
+  background: var(--color-accent-primary); color: white;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 #D9713F;
+}
+.draw-btn.primary:hover { transform:translateY(-1px); }
+.draw-btn.primary:active { transform:scale(0.96) translateY(2px); box-shadow:0 2px 0 #D9713F; transition:all 120ms ease-out; }
 .draw-btn.primary:disabled { background:#c0d8ee; box-shadow:none; cursor:not-allowed; transform:none; color:#8ab0cc; }
 .draw-btn.secondary { background:white; color:var(--blue-dark); border:1.5px solid #c0ddf5; }
 .draw-btn.secondary:hover { background:#e8f4fd; }
 .draw-btn.draw-btn-10 {
-  background:linear-gradient(135deg,#7c3aed,#4d96ff); color:white;
+  background: var(--color-accent-primary); color:white;
   margin-top:2px; font-size:0.82rem;
-  box-shadow:0 4px 14px rgba(124,58,237,0.3);
+  border-radius: 999px;
+  box-shadow: 0 4px 0 #D9713F;
 }
-.draw-btn.draw-btn-10:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 18px rgba(124,58,237,0.4); }
-.draw-btn.draw-btn-10:disabled { cursor:not-allowed; }
+.draw-btn.draw-btn-10:hover:not(:disabled) { transform:translateY(-1px); }
+.draw-btn.draw-btn-10:active:not(:disabled) { transform:scale(0.96) translateY(2px); box-shadow:0 2px 0 #D9713F; transition:all 120ms ease-out; }
+.draw-btn.draw-btn-10:disabled { cursor:not-allowed; opacity:0.5; }
+
+/* 출석체크 버튼 - green accent */
+.click-section .draw-btn.primary {
+  background: var(--color-accent-secondary);
+  box-shadow: 0 4px 0 #5FA47A;
+}
+.click-section .draw-btn.primary:active { box-shadow:0 2px 0 #5FA47A; }
+.click-section .draw-btn.primary:disabled { background:#b0ccb4; box-shadow:none; color:#fff; }
 
 /* ── CLICK & ATTENDANCE ── */
 .click-section {
@@ -2199,9 +2214,25 @@ body.raid-theme .more-drawer-btn {
   border-color: rgba(255,255,255,0.15) !important;
   color: rgba(255,255,255,0.7) !important;
 }
+body.raid-theme .cw-header .help-btn,
+body.raid-theme .header-login-btn {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.72) !important;
+}
+body.raid-theme .header-logout-btn {
+  border-color: rgba(255,255,255,0.15) !important;
+  color: rgba(255,255,255,0.45) !important;
+}
+body.raid-theme .header-username { color: rgba(255,255,255,0.75) !important; }
+body.raid-theme .share-btn {
+  background: linear-gradient(135deg, rgba(200,0,80,0.7), rgba(120,0,180,0.7)) !important;
+  box-shadow: 0 2px 8px rgba(200,0,80,0.3) !important;
+}
 body.raid-theme .logo {
   background: linear-gradient(135deg, #ff6b9d, #c084fc, #ff9dd1) !important;
-  -webkit-background-clip: text; background-clip: text;
+  -webkit-background-clip: text !important; background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 /* ═══════════════════════════════════════
@@ -6312,3 +6343,34 @@ body.raid-theme .music-toggle-btn {
 @keyframes tw-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
 .tw-combatant.targeted { outline: 2px solid #f87171; border-radius: 12px; }
+
+/* ── 레이드: 후퇴 버튼 ── */
+.raid-withdraw-btn {
+  width: 100%; margin-top: 8px; padding: 8px; border-radius: 10px;
+  border: 1px solid rgba(255,100,100,0.3); background: rgba(255,80,80,0.08);
+  color: rgba(255,120,120,0.8); font-size: 0.75rem; font-weight: 600;
+  font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: all 0.2s;
+}
+.raid-withdraw-btn:hover { background: rgba(255,80,80,0.15); }
+.raid-withdraw-confirm {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 8px; padding: 8px 10px; border-radius: 10px;
+  background: rgba(255,80,80,0.1); border: 1px solid rgba(255,100,100,0.25);
+  font-size: 0.72rem; color: rgba(255,160,160,0.85);
+}
+.raid-withdraw-confirm span { flex: 1; min-width: 0; }
+.raid-withdraw-ok {
+  padding: 5px 12px; border-radius: 8px; border: none;
+  background: rgba(255,80,80,0.4); color: #fff;
+  font-size: 0.72rem; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+}
+.raid-withdraw-cancel {
+  padding: 5px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);
+  background: transparent; color: rgba(255,255,255,0.5);
+  font-size: 0.72rem; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+}
+
+/* ── 레이드: 처치 완료 채널 ── */
+.raid-channel-card.defeated { border-color:rgba(100,220,120,0.4); opacity:0.85; }
+.raid-channel-card.defeated:hover { border-color:rgba(100,220,120,0.8); transform:translateY(-2px); }
+.raid-channel-total-dmg { font-size:0.65rem; color:rgba(100,220,120,0.7); font-weight:600; }
