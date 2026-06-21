@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  doc, setDoc, updateDoc, getDoc, addDoc, collection,
+  doc, setDoc, updateDoc, getDoc, getDocs, addDoc, collection,
   onSnapshot, serverTimestamp, query, orderBy,
-  increment, Timestamp,
+  increment, Timestamp, deleteField,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
@@ -269,25 +269,30 @@ function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
   }, [bossId]);
 
   const weekKey = getCurrentWeekKey();
-  // 이번 주 채널만 사용, defeated/expired는 목록에서 숨김
   const thisWeekChannels = channels.filter(c => c.weekKey === weekKey);
-  const visibleChannels  = thisWeekChannels.filter(c => c.status === 'active' || c.status === 'waiting');
+  // expired만 숨김; defeated는 결과 확인·보상 수령을 위해 표시
+  const visibleChannels  = thisWeekChannels.filter(c => c.status !== 'expired');
 
-  // 이번 주 채널이 없으면 ch_1 자동 생성
+  // 진행 중인 채널이 없으면 자동 생성 (첫 채널 or 클리어 후 다음 채널)
   useEffect(() => {
-    if (loading || thisWeekChannels.length > 0 || !bossConfig || initedRef.current) return;
+    if (loading || !bossConfig || initedRef.current) return;
+    const hasActive = thisWeekChannels.some(c => c.status === 'active' || c.status === 'waiting');
+    if (hasActive) return;
     initedRef.current = true;
     const create = async () => {
       setCreating(true);
       try {
+        const maxNum  = thisWeekChannels.reduce((m, c) => Math.max(m, c.channelNum || 0), 0);
+        const nextNum = maxNum + 1;
         await setDoc(
-          doc(db, 'raids', bossId, 'channels', `ch_w${weekKey}_1`),
-          INITIAL_CHANNEL(bossConfig, 1),
+          doc(db, 'raids', bossId, 'channels', `ch_w${weekKey}_${nextNum}`),
+          INITIAL_CHANNEL(bossConfig, nextNum),
         );
       } catch (e) {
         console.error('channel init error:', e);
         showToast('채널 생성 중 오류가 발생했어요');
       }
+      initedRef.current = false; // 다음 클리어 시 재생성 허용
       setCreating(false);
     };
     create();
@@ -328,7 +333,9 @@ function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
   };
 
   const allFull = visibleChannels.length === 0 ||
-    visibleChannels.every(c => Object.keys(c.participants || {}).length >= MAX_PARTS);
+    visibleChannels.every(c =>
+      c.status === 'defeated' || Object.keys(c.participants || {}).length >= MAX_PARTS
+    );
 
   return (
     <div className="raid-channel-screen">
@@ -347,24 +354,31 @@ function ChannelListScreen({ bossId, gs, user, onBack, onEnter }) {
               const isFull      = partCount >= MAX_PARTS;
               const isMyChannel = ch.id === myChannelId;
               const status      = ch.status || 'active';
+              const isDefeated  = status === 'defeated';
               const num         = ch.channelNum || (idx + 1);
+              const totalDmg    = isDefeated
+                ? Object.values(ch.participants || {}).reduce((s, p) => s + (p.damage || 0), 0)
+                : 0;
               return (
                 <div
                   key={ch.id}
-                  className={`raid-channel-card${isMyChannel ? ' my-channel' : ''}${isFull && !isMyChannel ? ' full' : ''}`}
+                  className={`raid-channel-card${isMyChannel ? ' my-channel' : ''}${isFull && !isMyChannel && !isDefeated ? ' full' : ''}${isDefeated ? ' defeated' : ''}`}
                   onClick={() => handleEnterChannel(ch)}
                 >
                   <div className="raid-channel-num">채널 {num}</div>
                   <div className={`raid-status-badge raid-status-${status}`} style={{ fontSize:'0.7rem', padding:'2px 8px' }}>
-                    {status === 'active' ? '진행 중' : status === 'waiting' ? '대기 중' : '종료됨'}
+                    {status === 'active' ? '진행 중' : status === 'waiting' ? '대기 중' : status === 'defeated' ? '처치 완료' : '종료됨'}
                   </div>
                   <div className="raid-channel-parts">
-                    <span className={isFull ? 'raid-channel-full-txt' : ''}>{partCount}</span>
+                    <span className={isFull && !isDefeated ? 'raid-channel-full-txt' : ''}>{partCount}</span>
                     <span className="raid-channel-max">/{MAX_PARTS}명</span>
                   </div>
+                  {isDefeated && totalDmg > 0 && (
+                    <div className="raid-channel-total-dmg">{totalDmg.toLocaleString()} dmg</div>
+                  )}
                   {isMyChannel && <div className="raid-channel-my-tag">내 채널</div>}
-                  <div className={`raid-channel-enter-btn${isFull && !isMyChannel ? ' disabled' : ''}`}>
-                    {isMyChannel ? '내 채널 입장' : isFull ? '가득 참' : '입장'}
+                  <div className={`raid-channel-enter-btn${isFull && !isMyChannel && !isDefeated ? ' disabled' : ''}`}>
+                    {isMyChannel ? '내 채널 입장' : isDefeated ? '결과 보기' : isFull ? '가득 참' : '입장'}
                   </div>
                 </div>
               );
@@ -400,8 +414,9 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
   const [showRewardInfo,setShowRewardInfo]= useState(false);
   const [nicknames,     setNicknames]     = useState({});
   const [startCountdown,setStartCountdown]= useState('');
-  const [rewardPhase,   setRewardPhase]   = useState(null);
-  const [rewardResult,  setRewardResult]  = useState(null);
+  const [rewardPhase,     setRewardPhase]     = useState(null);
+  const [rewardResult,    setRewardResult]    = useState(null);
+  const [withdrawConfirm, setWithdrawConfirm] = useState(false);
 
   const toastRef    = useRef(null);
   const tickRef     = useRef(null);
@@ -492,6 +507,70 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
   const hasClaimed = !!(gs?.claimedRaids?.[raidKey] || myPart?.rewardClaimed);
   const canShowReward = raid?.status === 'defeated' && myDmg >= MIN_REWARD_DMG && !hasClaimed;
 
+  // ── 보스 처치 시 자동 보상 + 새 채널 생성 ──
+  const autoClaimDoneRef = useRef(false);
+  useEffect(() => {
+    if (raid?.status !== 'defeated' || !user) return;
+
+    // 자동 보상
+    if (myDmg >= MIN_REWARD_DMG && !hasClaimed && !autoClaimDoneRef.current) {
+      autoClaimDoneRef.current = true;
+      const rcName = raid?.rewardCard;
+      const cardDef = rcName
+        ? CARDS.find(c => c.grade === 'raid' && c.name.replace(/\s+/g, '_') === rcName)
+        : CARDS.find(c => c.id === bossConfig?.raidCardId);
+      const raidCardId = cardDef?.id;
+      const alreadyHas = raidCardId && (gs?.ownedCards || []).some(c => c.id === raidCardId);
+      const rewardResult = (alreadyHas || Math.random() >= 0.3)
+        ? { type: 'tickets', amount: randInt(200, 400) }
+        : { type: 'card', cardId: raidCardId };
+
+      const run = async () => {
+        try {
+          await updateDoc(doc(db, 'users', user.uid), {
+            [`claimedRaids.${raidKey}`]: true,
+            raidCard: null,
+          });
+          await addDoc(collection(db, 'mailbox'), {
+            title: '레이드 토벌 보상',
+            message: rewardResult.type === 'tickets'
+              ? `${bossConfig?.name || '보스'} 토벌 성공! 뽑기권 ${rewardResult.amount}장을 드립니다.`
+              : `${bossConfig?.name || '보스'} 토벌 성공! RAID 한정 카드를 드립니다.`,
+            targetUid: user.uid,
+            reward: rewardResult.type === 'tickets'
+              ? { type: 'tickets', amount: rewardResult.amount }
+              : { type: 'card', cardId: rewardResult.cardId, condition: 10 },
+            createdAt: serverTimestamp(),
+          });
+          setGs(prev => ({
+            ...prev,
+            raidCard: null,
+            claimedRaids: { ...(prev.claimedRaids || {}), [raidKey]: true },
+          }));
+          showToast('보스 처치! 보상이 우편함으로 전송됐습니다.');
+        } catch (e) { console.error('auto reward error:', e); }
+      };
+      run();
+    }
+
+    // 새 채널 자동 생성 (참여자 중 uid가 가장 앞인 한 명만 실행)
+    const sortedUids = Object.keys(raid?.participants || {}).sort();
+    if (sortedUids[0] === user.uid && bossConfig) {
+      const weekKey = getCurrentWeekKey();
+      const chRef = collection(db, 'raids', bossId, 'channels');
+      getDocs(query(chRef, orderBy('channelNum'))).then(snap => {
+        const activeThisWeek = snap.docs.filter(d =>
+          d.data().weekKey === weekKey && (d.data().status === 'active' || d.data().status === 'waiting')
+        );
+        if (activeThisWeek.length > 0) return;
+        const allNums = snap.docs.filter(d => d.data().weekKey === weekKey).map(d => d.data().channelNum || 0);
+        const nextNum = (allNums.length ? Math.max(...allNums) : 0) + 1;
+        setDoc(doc(db, 'raids', bossId, 'channels', `ch_w${weekKey}_${nextNum}`), INITIAL_CHANNEL(bossConfig, nextNum)).catch(console.error);
+      }).catch(console.error);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raid?.status, user?.uid]);
+
   // ── 자동 데미지 틱 ──
   useEffect(() => {
     clearInterval(tickRef.current);
@@ -577,6 +656,20 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
       setShowPicker(false); setIsChanging(false);
       showToast(isChanging ? `${card.name}으로 카드 교체!` : `${card.name} (${GRADE_LABEL[card.grade]})로 레이드 참여!`);
     } catch (e) { console.error('join error:', e); showToast('오류가 발생했어요'); }
+  };
+
+  // ── 후퇴 (카드 반환) ──
+  const handleWithdraw = async () => {
+    if (!user || !myPart) return;
+    try {
+      await Promise.all([
+        updateDoc(channelRef, { [`participants.${user.uid}`]: deleteField() }),
+        updateDoc(doc(db, 'users', user.uid), { raidCard: null }),
+      ]);
+      setGs(prev => ({ ...prev, raidCard: null }));
+      setWithdrawConfirm(false);
+      showToast('레이드에서 후퇴했습니다. 카드가 반환됐습니다.');
+    } catch (e) { console.error('withdraw error:', e); showToast('오류가 발생했어요'); }
   };
 
   // ── 보상 ──
@@ -812,7 +905,20 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
                 ? <button className="raid-reward-btn" onClick={handleStartReward}>보상 받기</button>
                 : <button className="raid-reward-btn raid-reward-btn-disabled" disabled>보상 수령 불가 (데미지 부족)</button>
           )}
-          {raid.status === 'active' && <div className="raid-lock-notice">참여 카드는 보스 처치까지 잠금됩니다</div>}
+          {raid.status === 'active' && (
+            <>
+              <div className="raid-lock-notice">참여 카드는 보스 처치까지 잠금됩니다</div>
+              {!withdrawConfirm ? (
+                <button className="raid-withdraw-btn" onClick={() => setWithdrawConfirm(true)}>후퇴 (카드 반환)</button>
+              ) : (
+                <div className="raid-withdraw-confirm">
+                  <span>정말 후퇴할까요? 데미지 기록이 삭제됩니다.</span>
+                  <button className="raid-withdraw-ok" onClick={handleWithdraw}>확인</button>
+                  <button className="raid-withdraw-cancel" onClick={() => setWithdrawConfirm(false)}>취소</button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       ) : (
         <div className="raid-join-area">
@@ -956,7 +1062,7 @@ export default function RaidTab({ gs, setGs, user }) {
     const unsub = onSnapshot(chRef, snap => {
       if (!snap.exists()) return;
       const status = snap.data().status;
-      if (status === 'defeated' || status === 'expired') {
+      if (status === 'expired') {
         updateDoc(doc(db, 'users', user.uid), { raidCard: null }).catch(console.error);
         setGs(prev => ({ ...prev, raidCard: null }));
       }
