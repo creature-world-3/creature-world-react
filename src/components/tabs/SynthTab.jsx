@@ -403,8 +403,7 @@ function EnhanceSubTab({ gs, setGs, isGuest }) {
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   };
 
-  const lockedUid  = gs?.raidCard?.uid;
-  const ownedCards = (gs?.ownedCards || []).filter(c => c.uid !== lockedUid);
+  const ownedCards = gs?.ownedCards || [];
 
   const cardTypesInGrade = CARDS.filter(c =>
     c.grade === filterGrade && ownedCards.some(oc => oc.id === c.id),
