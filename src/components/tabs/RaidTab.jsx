@@ -534,7 +534,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
           await addDoc(collection(db, 'mailbox'), {
             title: '레이드 토벌 보상',
             message: rewardResult.type === 'tickets'
-              ? `${bossConfig?.name || '보스'} 토벌 성공! 뽑기권 ${rewardResult.amount}장을 드립니다.`
+              ? `${bossConfig?.name || '보스'} 토벌 성공! 도토리 ${rewardResult.amount}장을 드립니다.`
               : `${bossConfig?.name || '보스'} 토벌 성공! RAID 한정 카드를 드립니다.`,
             targetUid: user.uid,
             reward: rewardResult.type === 'tickets'
@@ -705,7 +705,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
       await addDoc(collection(db, 'mailbox'), {
         title: '레이드 토벌 보상',
         message: rewardResult.type === 'tickets'
-          ? `${bossConfig?.name || '보스'} 토벌 성공! 뽑기권 ${rewardResult.amount}장을 드립니다.`
+          ? `${bossConfig?.name || '보스'} 토벌 성공! 도토리 ${rewardResult.amount}장을 드립니다.`
           : `${bossConfig?.name || '보스'} 토벌 성공! RAID 한정 카드를 드립니다.`,
         targetUid: user.uid,
         reward: rewardResult.type === 'tickets'
@@ -775,7 +775,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
             {rewardPhase === 'revealed' && rewardResult && (
               <div className="raid-reward-revealed">
                 <div className="raid-reward-result-title">
-                  {rewardResult.type === 'card' ? 'RAID 한정 카드 획득!' : `뽑기권 ${rewardResult.amount}장!`}
+                  {rewardResult.type === 'card' ? 'RAID 한정 카드 획득!' : `도토리 ${rewardResult.amount}장!`}
                 </div>
                 {rewardResult.type === 'card' && raidCardDef ? (
                   <div className="raid-reward-result-card">
@@ -811,7 +811,7 @@ function BattleScreen({ bossId, channelId, gs, setGs, user, onBack }) {
               <div className="raid-reward-info-title">클리어 보상 안내</div>
               <div className="raid-reward-info-row"><span>300만 데미지 이상 기여 시 수령 가능</span></div>
               <div className="raid-reward-info-row"><span>RAID 카드 미보유 → 30% 확률로 카드 획득</span></div>
-              <div className="raid-reward-info-row"><span>해당 보스 RAID 카드 보유 시 → 뽑기권 200~400장 랜덤 지급</span></div>
+              <div className="raid-reward-info-row"><span>해당 보스 RAID 카드 보유 시 → 도토리 200~400장 랜덤 지급</span></div>
               <div className="raid-reward-info-row"><span>레이드 도전 횟수는 무제한</span></div>
               <div className="raid-reward-info-row"><span>보상은 채널당 1회만 수령 가능</span></div>
             </div>

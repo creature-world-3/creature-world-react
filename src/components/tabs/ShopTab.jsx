@@ -115,11 +115,11 @@ export default function ShopTab({ gs, setGs }) {
   const doTestEvent = () => {
     if (testDone) { showToast('오늘 이미 받았어요! 내일 다시 와요'); return; }
     setGs(prev => ({ ...prev, tickets: prev.tickets + 100, testEventDate: today }));
-    showToast('테스트 이벤트! 뽑기권 +100장 획득!');
+    showToast('테스트 이벤트! 도토리 +100장 획득!');
   };
 
   const doWorldcupDraw = () => {
-    if (tickets < WORLDCUP_COST) { showToast(`뽑기권이 부족해요! ${WORLDCUP_COST}장이 필요해요`); return; }
+    if (tickets < WORLDCUP_COST) { showToast(`도토리가 부족해요! ${WORLDCUP_COST}장이 필요해요`); return; }
     const card = WORLDCUP_POOL[Math.floor(Math.random() * WORLDCUP_POOL.length)];
     const condition = Math.floor(Math.random() * 10) + 1;
     const { newOwned, isNew, isDupe, progress } = addCardOrLevelUp(gs?.ownedCards || [], card, condition);
@@ -128,7 +128,7 @@ export default function ShopTab({ gs, setGs }) {
   };
 
   const doWesternDraw = () => {
-    if (tickets < WESTERN_COST) { showToast(`뽑기권이 부족해요! ${WESTERN_COST}장이 필요해요`); return; }
+    if (tickets < WESTERN_COST) { showToast(`도토리가 부족해요! ${WESTERN_COST}장이 필요해요`); return; }
     const card = WESTERN_POOL[Math.floor(Math.random() * WESTERN_POOL.length)];
     const condition = Math.floor(Math.random() * 10) + 1;
     const { newOwned, isNew, isDupe, progress } = addCardOrLevelUp(gs?.ownedCards || [], card, condition);
@@ -182,7 +182,7 @@ export default function ShopTab({ gs, setGs }) {
       <div className="shop-wrap">
         <div className="shop-header">
           <div className="col-title">상점</div>
-          <div className="col-count">보유 뽑기권 {tickets}장</div>
+          <div className="col-count">보유 도토리 {tickets}장</div>
         </div>
 
         {/* 서부 시리즈 뽑기 */}
@@ -207,13 +207,13 @@ export default function ShopTab({ gs, setGs }) {
                 <img key={c.id} src={`/${c.img}`} alt={c.name} className="shop-item-pool-thumb" title={c.name} />
               ))}
             </div>
-            <div className="shop-item-price">뽑기권 {WESTERN_COST}장</div>
+            <div className="shop-item-price">도토리 {WESTERN_COST}장</div>
             <button
               className="shop-buy-btn shop-buy-btn-western"
               onClick={doWesternDraw}
               disabled={tickets < WESTERN_COST}
             >
-              {tickets < WESTERN_COST ? `뽑기권 부족 (${tickets}/${WESTERN_COST})` : `뽑기 (${WESTERN_COST}장)`}
+              {tickets < WESTERN_COST ? `도토리 부족 (${tickets}/${WESTERN_COST})` : `뽑기 (${WESTERN_COST}장)`}
             </button>
           </div>
         </div>
@@ -240,13 +240,13 @@ export default function ShopTab({ gs, setGs }) {
                 <img key={c.id} src={`/${c.img}`} alt={c.name} className="shop-item-pool-thumb" title={c.name} />
               ))}
             </div>
-            <div className="shop-item-price">뽑기권 {WORLDCUP_COST}장</div>
+            <div className="shop-item-price">도토리 {WORLDCUP_COST}장</div>
             <button
               className="shop-buy-btn shop-buy-btn-western"
               onClick={doWorldcupDraw}
               disabled={tickets < WORLDCUP_COST}
             >
-              {tickets < WORLDCUP_COST ? `뽑기권 부족 (${tickets}/${WORLDCUP_COST})` : `뽑기 (${WORLDCUP_COST}장)`}
+              {tickets < WORLDCUP_COST ? `도토리 부족 (${tickets}/${WORLDCUP_COST})` : `뽑기 (${WORLDCUP_COST}장)`}
             </button>
           </div>
         </div>
@@ -261,7 +261,7 @@ export default function ShopTab({ gs, setGs }) {
           </div>
           <div className="shop-item-right">
             <div className="shop-item-name shop-item-name-event">테스트 이벤트</div>
-            <div className="shop-item-desc">테스트 서버 한정! 뽑기권 100장을 드려요. 하루 1회.</div>
+            <div className="shop-item-desc">테스트 서버 한정! 도토리 100장을 드려요. 하루 1회.</div>
             <div className="shop-item-price shop-item-price-event">무료 (하루 1회)</div>
             <button
               className="shop-buy-btn shop-buy-btn-event"

@@ -75,7 +75,7 @@ export default function MailboxTab({ gs, setGs, user }) {
         const next = applyReward(prev, mail);
         const r = mail.reward;
         if (r?.type === 'tickets') {
-          showToast(`뽑기권 ${r.amount}장 수령 완료!`);
+          showToast(`도토리 ${r.amount}장 수령 완료!`);
         } else if (r?.type === 'card') {
           const cardId  = r.cardData?.id || r.cardId;
           const cardDef = CARDS.find(c => c.id === cardId);
@@ -134,7 +134,7 @@ export default function MailboxTab({ gs, setGs, user }) {
 
   const rewardLabel = (r) => {
     if (!r) return null;
-    if (r.type === 'tickets') return `뽑기권 ${r.amount}장`;
+    if (r.type === 'tickets') return `도토리 ${r.amount}장`;
     if (r.type === 'card') {
       const cardId  = r.cardData?.id || r.cardId;
       const cardDef = CARDS.find(c => c.id === cardId);

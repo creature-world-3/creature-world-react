@@ -9,7 +9,7 @@ const STEPS = [
   },
   {
     target: '[data-tut="tickets"]',
-    text: '뽑기권으로 카드를 뽑을 수 있어. 매일 접속하면 뽑기권을 받을 수 있어!',
+    text: '도토리로 카드를 뽑을 수 있어. 매일 접속하면 도토리를 받을 수 있어!',
   },
   {
     target: '[data-tut="synth"]',
@@ -17,7 +17,7 @@ const STEPS = [
   },
   {
     target: '[data-tut="dungeon"]',
-    text: '던전에서 카드를 성장시키고 뽑기권을 파밍할 수 있어!',
+    text: '던전에서 카드를 성장시키고 도토리를 파밍할 수 있어!',
   },
   {
     target: '[data-tut="raid"]',
@@ -138,7 +138,7 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
               borderRadius: 12, padding: '10px 14px', marginBottom: 14,
             }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#d97706' }}>튜토리얼 완료 보상</div>
-              <div style={{ fontSize: '0.78rem', color: '#92400e' }}>뽑기권 50장 지급!</div>
+              <div style={{ fontSize: '0.78rem', color: '#92400e' }}>도토리 50장 지급!</div>
             </div>
           )}
 

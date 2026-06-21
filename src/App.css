@@ -270,12 +270,46 @@
 .grade-awakened .card-sep { background:linear-gradient(90deg,transparent,#b347ff,#6a00cc,#b347ff,transparent); }
 @keyframes awakenBadge { 0%{background-position:0%} 100%{background-position:300%} }
 .grade-awakened .card-aurora {
-  background:repeating-linear-gradient(120deg,rgba(179,71,255,0.4) 0%,rgba(80,160,255,0.3) 25%,rgba(255,80,200,0.3) 50%,rgba(179,71,255,0.4) 75%);
-  background-size:200% 200%; animation:awakenAurora 2s ease-in-out infinite; opacity:1;
+  background:repeating-linear-gradient(120deg,
+    rgba(255,255,255,0.55) 0%,
+    rgba(179,71,255,0.45) 12%,
+    rgba(80,160,255,0.4) 25%,
+    rgba(255,255,255,0.5) 37%,
+    rgba(255,80,200,0.4) 50%,
+    rgba(255,255,255,0.55) 62%,
+    rgba(179,71,255,0.45) 75%,
+    rgba(80,200,255,0.4) 87%,
+    rgba(255,255,255,0.55) 100%);
+  background-size:300% 300%;
+  animation:awakenAurora 2.5s ease-in-out infinite;
+  opacity:1;
+  mix-blend-mode:screen;
 }
-@keyframes awakenAurora { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-.draw-front.grade-awakened .card-aurora { background:inherit; opacity:1; }
-.zoom-card.grade-awakened .card-aurora { background:repeating-linear-gradient(120deg,rgba(179,71,255,0.35) 0%,rgba(80,160,255,0.25) 25%,rgba(255,80,200,0.25) 50%,rgba(179,71,255,0.35) 75%); background-size:200% 200%; animation:awakenAurora 2s ease-in-out infinite; opacity:1; }
+@keyframes awakenAurora {
+  0%   { background-position:0% 50% }
+  50%  { background-position:100% 50% }
+  100% { background-position:0% 50% }
+}
+.draw-front.grade-awakened .card-aurora {
+  background:repeating-linear-gradient(120deg,
+    rgba(255,255,255,0.55) 0%, rgba(179,71,255,0.45) 15%,
+    rgba(80,160,255,0.4) 30%, rgba(255,255,255,0.6) 45%,
+    rgba(255,80,200,0.4) 60%, rgba(255,255,255,0.55) 75%,
+    rgba(179,71,255,0.45) 90%, rgba(255,255,255,0.55) 100%);
+  background-size:300% 300%;
+  animation:awakenAurora 2.5s ease-in-out infinite;
+  opacity:1; mix-blend-mode:screen;
+}
+.zoom-card.grade-awakened .card-aurora {
+  background:repeating-linear-gradient(120deg,
+    rgba(255,255,255,0.5) 0%, rgba(179,71,255,0.4) 15%,
+    rgba(80,160,255,0.35) 30%, rgba(255,255,255,0.5) 45%,
+    rgba(255,80,200,0.35) 60%, rgba(255,255,255,0.5) 75%,
+    rgba(179,71,255,0.4) 90%, rgba(255,255,255,0.5) 100%);
+  background-size:300% 300%;
+  animation:awakenAurora 2.5s ease-in-out infinite;
+  opacity:1; mix-blend-mode:screen;
+}
 
 /* ── 각성 뽑기 UI ── */
 .awaken-wrap { padding:12px 8px; max-width:720px; margin:0 auto; }

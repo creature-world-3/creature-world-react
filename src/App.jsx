@@ -109,16 +109,16 @@ const NOTICES = [
       '각성 뽑기 시스템 추가 — 뽑기 탭 내 각성 뽑기 서브탭, 도토리 100장 소모, 0.01% 확률 각성카드 획득, 나머지는 캐릭터별 각성조각 10~50개 획득',
       '각성조각 10,000개 모으면 해당 캐릭터 각성카드 교환 가능',
       '공방 탭 개편 — 합성/교환 제거, 강화만 유지',
-      '컨디션 재설정 추가 — 강화 화면에서 뽑기권 250장으로 컨디션 무작위 재설정',
+      '컨디션 재설정 추가 — 강화 화면에서 도토리 250장으로 컨디션 무작위 재설정',
       '거래소 탭 제거',
-      '기존 중복 카드 정리 보상 — 중복 카드 수만큼 뽑기권 우편 발송 완료',
+      '기존 중복 카드 정리 보상 — 중복 카드 수만큼 도토리 우편 발송 완료',
     ],
   },
   {
     version: 'v1.5', date: '2026.06.03',
     items: [
       '성장 던전 오픈 — 등급별 보스 처치 시 성장석 획득, 가방에서 카드에 사용하면 데미지 영구 +1 (하루 3회)',
-      '파밍 던전 오픈 — 카드 배치 후 10분 자동 전투, 뽑기권 획득 (하루 1회)',
+      '파밍 던전 오픈 — 카드 배치 후 10분 자동 전투, 도토리 획득 (하루 1회)',
       '서부 시리즈 SR 6종 추가 (상점 전용 뽑기)',
       '거래소 삽니다 탭 추가',
     ],
@@ -168,9 +168,9 @@ const NOTICES = [
 ];
 
 const HELP_ITEMS = [
-  { icon: '', title: '매일 뽑기권',    desc: '매일 처음 접속하면 뽑기권 50장을 자동으로 드려요!' },
+  { icon: '', title: '매일 도토리',    desc: '매일 처음 접속하면 도토리 50장을 자동으로 드려요!' },
   { icon: '', title: '1시간 접속 보너스', desc: '오늘 1시간 이상 접속하면 추가로 30장을 드려요.' },
-  { icon: '', title: '클릭 뽑기',      desc: '100번 클릭할 때마다 뽑기권 1장! 하루 최대 10장까지!' },
+  { icon: '', title: '클릭 뽑기',      desc: '100번 클릭할 때마다 도토리 1장! 하루 최대 10장까지!' },
   { icon: '', title: '출석체크',       desc: '하루 1회 출석체크로 5~15장을 받아요. 7일 개근 시 보너스 100장!' },
   { icon: '', title: '카드 합성',      desc: '같은 등급 카드 3장을 합성하면 새 카드가 나와요. 10% 확률로 상위 등급!' },
   { icon: '', title: '카드 수집',      desc: '카드를 수집북에 모아보세요. 도감에서 전체 카드를 확인할 수 있어요!' },
@@ -182,9 +182,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('gacha');
   const [slideDir, setSlideDir]   = useState(null);
   const prevTabRef = useRef('gacha');
-  const [showNotice, setShowNotice]       = useState(false);
-  const [showHelp, setShowHelp]           = useState(false);
-  const [showBonusInfo, setShowBonusInfo] = useState(false);
+  const [showNotice, setShowNotice]           = useState(false);
+  const [showHelp, setShowHelp]               = useState(false);
+  const [showBonusInfo, setShowBonusInfo]     = useState(false);
+  const [showUpdateNotice, setShowUpdateNotice] = useState(false);
   const [toast, setToast]           = useState(null);
   const [user, setUser]             = useState(null);
   const [authReady, setAuthReady]   = useState(false);
@@ -231,6 +232,14 @@ export default function App() {
     if (localStorage.getItem('welcome_notice_date') !== today) {
       setShowWelcomeNotice(true);
       localStorage.setItem('welcome_notice_date', today);
+    }
+  }, [user]);
+
+  // ── 카드 시스템 개편 공지 (1회) ──
+  useEffect(() => {
+    if (!user) return;
+    if (!localStorage.getItem('updateNoticeV2_confirmed')) {
+      setShowUpdateNotice(true);
     }
   }, [user]);
 
@@ -312,7 +321,7 @@ export default function App() {
       if (gotDailyBonus) {
         updateDoc(doc(db, 'users', uid), { dailyBonusDate: today, tickets: loaded.tickets }).catch(console.error);
         clearTimeout(toastTimer.current);
-        setToast('매일 접속 보너스! 뽑기권 +50장!');
+        setToast('매일 접속 보너스! 도토리 +50장!');
         toastTimer.current = setTimeout(() => setToast(null), 2500);
       }
       if (!loaded.nickname) setShowNicknameModal(true);
@@ -433,7 +442,7 @@ export default function App() {
           // 신규 유저 우편 (500장)
           await addDoc(collection(db, 'mailbox'), {
             title: '친구 초대 보상',
-            message: `${referrer} 님의 초대로 가입하셨습니다! 뽑기권 500장을 드립니다.`,
+            message: `${referrer} 님의 초대로 가입하셨습니다! 도토리 500장을 드립니다.`,
             targetUid: user.uid,
             reward: { type: 'tickets', amount: 500 },
             createdAt: now,
@@ -442,7 +451,7 @@ export default function App() {
           // 추천인 우편 (100장)
           await addDoc(collection(db, 'mailbox'), {
             title: '친구 초대 보상',
-            message: `${trimmed} 님이 초대로 가입했습니다! 뽑기권 100장을 드립니다.`,
+            message: `${trimmed} 님이 초대로 가입했습니다! 도토리 100장을 드립니다.`,
             targetUid: referrerUid,
             reward: { type: 'tickets', amount: 100 },
             createdAt: now,
@@ -469,7 +478,7 @@ export default function App() {
         const newMins = (prev.sessionMinutes || 0) + 1;
         if (newMins >= 60 && !prev.sessionBonus) {
           clearTimeout(toastTimer.current);
-          setToast('1시간 접속 달성! 뽑기권 +30장!');
+          setToast('1시간 접속 달성! 도토리 +30장!');
           toastTimer.current = setTimeout(() => setToast(null), 2500);
           return { ...prev, sessionMinutes: newMins, sessionBonus: true, tickets: prev.tickets + 30 };
         }
@@ -657,7 +666,7 @@ export default function App() {
 
           <div className="status-bar">
             <div className="status-card" data-tut="tickets">
-              <div className="status-label">보유 뽑기권</div>
+              <div className="status-label">보유 도토리</div>
               <div className="status-val">
                 {gs.tickets}
                 <button className="ticket-refresh-btn" onClick={handleRefreshTickets} title="새로고침">↻</button>
@@ -799,7 +808,7 @@ export default function App() {
                   onChange={e => setReferrerInput(e.target.value.slice(0, 10))}
                   maxLength={10}
                 />
-                <div className="referrer-hint">입력 시 신규 가입 보상 뽑기권 500장 지급</div>
+                <div className="referrer-hint">입력 시 신규 가입 보상 도토리 500장 지급</div>
               </div>
 
               <button
@@ -820,12 +829,12 @@ export default function App() {
               <div className="invite-reward-grid">
                 <div className="invite-reward-card invite-reward-me">
                   <div className="invite-reward-role">나 (추천인)</div>
-                  <div className="invite-reward-amount">뽑기권 100장</div>
+                  <div className="invite-reward-amount">도토리 100장</div>
                   <div className="invite-reward-desc">친구가 가입하면 지급</div>
                 </div>
                 <div className="invite-reward-card invite-reward-friend">
                   <div className="invite-reward-role">초대받은 친구</div>
-                  <div className="invite-reward-amount">뽑기권 500장</div>
+                  <div className="invite-reward-amount">도토리 500장</div>
                   <div className="invite-reward-desc">닉네임 설정 시 지급</div>
                 </div>
               </div>
@@ -893,6 +902,28 @@ export default function App() {
             </div>
           </div>
         )}
+        {showUpdateNotice && (
+          <div className="modal-overlay show" style={{ zIndex: 9999 }} onClick={() => { setShowUpdateNotice(false); localStorage.setItem('updateNoticeV2_confirmed', '1'); }}>
+            <div className="modal modal-scroll" onClick={e => e.stopPropagation()}>
+              <div className="modal-title" style={{ color:'#b347ff' }}>카드 시스템 대규모 개편 안내</div>
+              <div style={{ fontSize:'0.85rem', color:'#333', lineHeight:1.9 }}>
+                카드 보유 방식이 캐릭터당 1장으로 개편되었습니다.
+                <ul style={{ paddingLeft:18, marginTop:8 }}>
+                  <li>중복 카드는 더 이상 쌓이지 않고, 같은 카드를 100장 모으면 레벨업됩니다.</li>
+                  <li>보유 중이던 중복 카드는 정리되었고, 그만큼 도토리를 우편함으로 보상 드렸습니다.</li>
+                  <li>합성/교환/거래소 기능이 제거되었습니다.</li>
+                  <li>새로운 <strong>각성 뽑기</strong>가 추가되었습니다. (뽑기 탭에서 확인)</li>
+                  <li>카드 컨디션을 도토리로 재설정할 수 있는 기능이 추가되었습니다.</li>
+                </ul>
+                이용에 불편을 드려 죄송하며, 더 재미있는 크리쳐 월드를 위해 계속 노력하겠습니다.
+              </div>
+              <button className="modal-close" style={{ background:'#7c3aed', color:'#fff' }}
+                onClick={() => { setShowUpdateNotice(false); localStorage.setItem('updateNoticeV2_confirmed', '1'); }}>
+                확인
+              </button>
+            </div>
+          </div>
+        )}
         {showWelcomeNotice && (
           <div className="modal-overlay show" onClick={() => setShowWelcomeNotice(false)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
@@ -915,7 +946,7 @@ export default function App() {
               if (!gs.tutorialCompleted) {
                 setGs(prev => ({ ...prev, tickets: prev.tickets + 50, tutorialCompleted: true }));
                 clearTimeout(toastTimer.current);
-                setToast('튜토리얼 완료! 뽑기권 +50장 지급!');
+                setToast('튜토리얼 완료! 도토리 +50장 지급!');
                 toastTimer.current = setTimeout(() => setToast(null), 3000);
               }
             }}

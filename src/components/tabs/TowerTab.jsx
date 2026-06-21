@@ -31,8 +31,7 @@ const SKILL_CARDS = [
   // 공용
   { id: 'drain',        name: '흡혈',       desc: '공격 데미지의 50% 체력 회복',                  type: 'skill', job: null,       color: '#a855f7', img: '/tower/cards/흡혈카드.png' },
   { id: 'pierce',       name: '관통',       desc: '적 방어력 무시하고 공격',                      type: 'skill', job: null,       color: '#f43f5e', img: '/tower/cards/관통카드.png' },
-  { id: 'charge',       name: '차지',       desc: '이번 턴 패스, 다음 공격 카드 2배 데미지',       type: 'skill', job: null,       color: '#06b6d4', img: '/tower/cards/차지카드.png' },
-  { id: 'thorn',        name: '가시',       desc: '적이 공격하면 그 데미지만큼 반격',              type: 'skill', job: null,       color: '#84cc16', img: '/tower/cards/가시카드.png' },
+  { id: 'thorn',        name: '가시',       desc: '적이 공격하면 그 데미지의 30% 반격, 나는 피해 없음', type: 'skill', job: null,       color: '#84cc16', img: '/tower/cards/가시카드.png' },
   { id: 'taunt',        name: '도발',       desc: '이번 턴 적 공격 데미지 50% 감소',              type: 'skill', job: null,       color: '#f59e0b', img: '/tower/cards/도발카드.png' },
   { id: 'explode',      name: '폭발',       desc: '공격력 2배, 다음 턴 카드 사용 불가',           type: 'skill', job: null,       color: '#b91c1c', img: '/tower/cards/폭발카드.png' },
   // 전사
@@ -53,7 +52,7 @@ const SKILL_CARDS = [
   // 마법사
   { id: 'fireball',     name: '파이어볼',   desc: '공격력 2.5배, 내 체력 30% 감소',              type: 'skill', job: 'mage',     color: '#f97316', img: '/tower/cards/파이어볼.png' },
   { id: 'manashield',   name: '마나실드',   desc: '이번 턴 방어력 = 공격력의 80%',                type: 'skill', job: 'mage',     color: '#38bdf8', img: '/tower/cards/마나실드.png' },
-  { id: 'lightning',    name: '번개',       desc: '적 최대체력의 20% 고정 데미지',               type: 'skill', job: 'mage',     color: '#a3e635', img: '/tower/cards/번개.png' },
+  { id: 'lightning',    name: '번개',       desc: '적 현재체력의 20% 고정 데미지',               type: 'skill', job: 'mage',     color: '#a3e635', img: '/tower/cards/번개.png' },
   { id: 'magicabsorb',  name: '마력흡수',   desc: '공격 데미지의 70% 체력 회복',                 type: 'skill', job: 'mage',     color: '#7c3aed', img: '/tower/cards/마력흡수.png' },
   // 흡혈귀
   { id: 'bloodfeast',   name: '피의향연',   desc: '공격력 150% 데미지 + 데미지의 80% 체력 회복', type: 'skill', job: 'vampire',  color: '#dc2626', img: '/tower/cards/피의향연.png' },
@@ -68,9 +67,9 @@ const getCard = id => ALL_CARDS.find(c => c.id === id) || { id: 'pass', name: '�
 const JOBS = [
   { id: 'warrior',  name: '전사',    img: '/tower/jobs/직업전사.png',    color: '#ef4444', desc: '공격 시 15% 크리티컬 1.5배, 스테이지 클리어마다 +1%' },
   { id: 'ironbody', name: '금강불괴', img: '/tower/jobs/직업금광불괴.png', color: '#3b82f6', desc: '방어 카드 사용 시 적에게 방어력만큼 데미지' },
-  { id: 'rogue',    name: '도적',    img: '/tower/jobs/직업도적.png',    color: '#6366f1', desc: '회피 성공 시 다음 기본공격 +30% 공격력' },
+  { id: 'rogue',    name: '도적',    img: '/tower/jobs/직업도적.png',    color: '#6366f1', desc: '회피 성공 시 다음 공격 데미지 +30%' },
   { id: 'mage',     name: '마법사',  img: '/tower/jobs/직업마법사.png',  color: '#a855f7', desc: '스킬 카드 최대 4장 보유 가능' },
-  { id: 'vampire',  name: '흡혈귀',  img: '/tower/jobs/직업흡혈귀.png',  color: '#dc2626', desc: '적에게 데미지를 줄 때 데미지의 50% 체력 회복' },
+  { id: 'vampire',  name: '흡혈귀',  img: '/tower/jobs/직업흡혈귀.png',  color: '#dc2626', desc: '적에게 데미지를 줄 때 데미지의 30% 체력 회복' },
 ];
 
 const ATTACK_IDS = new Set([
@@ -84,7 +83,7 @@ const ATTACK_IDS = new Set([
 ]);
 const isAttackCard = id => ATTACK_IDS.has(id);
 
-const ALL_BOSS_SKILL_IDS = ['drain', 'pierce', 'charge', 'thorn', 'taunt', 'explode'];
+const ALL_BOSS_SKILL_IDS = ['drain', 'pierce', 'thorn', 'taunt', 'explode'];
 
 const SHOP_ITEMS = [
   { id: 'potion',  name: '체력 포션',   desc: '체력 30% 즉시 회복',        price: 5,  icon: '🧪', once: false },
@@ -110,9 +109,9 @@ function getMonster(floor) {
   else if (floor <= 24)  { name = '구름 고래';     img = '/tower/21-24.png'; }
   else if (floor === 25) { name = '다크 다이트론'; img = '/tower/25보스.png'; }
   else                   { name = '다크 미스티';   img = '/tower/레벨 ???.png'; }
-  const hp  = Math.floor((30 + floor * 15) * mult);
-  const atk = Math.floor((12 + floor * 4)  * atkMult);
-  const def = Math.floor((floor * 2)        * mult);
+  const hp  = Math.floor((30 + floor * 15) * mult  * 0.65);
+  const atk = Math.floor((12 + floor * 4)  * atkMult * 0.65);
+  const def = Math.floor((floor * 2)        * mult  * 0.65);
   return { name, img, isBoss, hp, maxHp: hp, atk, def };
 }
 
@@ -161,8 +160,8 @@ function resolveTurn(pCard, eCard, run) {
   const job = run.job || null;
   const log = [];
 
-  let pCharge          = run.pCharge          || false;
-  let eCharge          = run.eCharge          || false;
+  let pCharge          = false;
+  let eCharge          = false;
   let rogueReady       = run.rogueReady       || false;
   let pBattlecryTurns  = run.pBattlecryTurns  || 0;
   let pIroncladTurns   = run.pIroncladTurns   || 0;
@@ -187,11 +186,9 @@ function resolveTurn(pCard, eCard, run) {
   if (pBattlecryTurns > 0) { pAtk = Math.floor(pAtk * 1.2); pBattlecryTurns--; log.push(`전투함성: 공격력 +20% (${pBattlecryTurns}턴 남음)`); }
   if (pIroncladTurns  > 0) { pDef = Math.floor(pDef * 1.5); pIroncladTurns--;  }
 
-  if (pCharge && isAttackCard(realPCard) && realPCard !== 'charge') { pAtk *= 2; pCharge = false; }
-  if (eCharge && isAttackCard(realECard) && realECard !== 'charge') { eAtk *= 2; eCharge = false; }
 
   if (eAtkNextDebuff > 0) { eAtk = Math.floor(eAtk * (1 - eAtkNextDebuff)); eAtkNextDebuff = 0; }
-  if (rogueReady && realPCard === 'attack') { pAtk = Math.floor(pAtk * 1.3); rogueReady = false; log.push(`도적 기회: 공격력 +30%`); }
+  if (rogueReady && isAttackCard(realPCard)) { pAtk = Math.floor(pAtk * 1.3); rogueReady = false; log.push(`도적 기회: 공격력 +30%`); }
 
   let playerDmg  = 0, enemyDmg  = 0, playerHeal = 0, enemyHeal = 0;
   let pBattlecryNext  = pBattlecryTurns;
@@ -225,8 +222,6 @@ function resolveTurn(pCard, eCard, run) {
       log.push(`흡혈: ${pAtk} 데미지, +${Math.floor(pAtk * 0.5)} 흡수`); break;
     case 'pierce':
       playerDmg = pAtk; log.push(`관통: ${pAtk} 데미지 (방어 무시)`); break;
-    case 'charge':
-      pCharge = true; log.push(`차지: 다음 공격 2배`); break;
     case 'thorn':
       pThornActive = true; log.push(`가시: 반격 대기`); break;
     case 'taunt':
@@ -279,7 +274,7 @@ function resolveTurn(pCard, eCard, run) {
     case 'manashield':
       pManashieldDef = Math.floor(pAtk * 0.8); log.push(`마나실드: 방어력 +${pManashieldDef}`); break;
     case 'lightning':
-      playerDmg = Math.floor(eMaxHp * 0.2); log.push(`번개: ${Math.floor(eMaxHp * 0.2)} 고정 데미지`); break;
+      playerDmg = Math.floor(eHp * 0.2); log.push(`번개: ${Math.floor(eHp * 0.2)} 고정 데미지`); break;
     case 'magicabsorb':
       playerDmg = pAtk; playerHeal = Math.floor(pAtk * 0.7);
       log.push(`마력흡수: ${pAtk} 데미지, +${Math.floor(pAtk * 0.7)} 흡수`); break;
@@ -311,23 +306,22 @@ function resolveTurn(pCard, eCard, run) {
     }
     case 'drain':   enemyDmg = eAtk; enemyHeal = Math.floor(eAtk * 0.5); log.push(`적 흡혈 공격`); break;
     case 'pierce':  enemyDmg = eAtk; log.push(`적 관통 공격`); break;
-    case 'charge':  eCharge = true; log.push(`적 차지`); break;
     case 'thorn':   eThornActive = true; break;
     case 'taunt':   pAtk = Math.floor(pAtk * 0.5); log.push(`적 도발: 내 공격력 50% 감소`); break;
     case 'explode': enemyDmg = eAtk * 2; eStunnedNext = true; log.push(`적 폭발!`); break;
     default: break;
   }
 
+  // ── 방어 적용 ──
+  const effectivePDef = pDef + pManashieldDef;
+  if (realPCard === 'defend' || realPCard === 'shieldsmash') enemyDmg = Math.max(0, enemyDmg - effectivePDef);
+
   // ── 금강불괴 패시브: 방어 카드 사용 시 적에게 방어력만큼 데미지 ──
   if (job === 'ironbody' && realPCard === 'defend') {
     playerDmg += effectivePDef; log.push(`금강불괴: ${effectivePDef} 반격 데미지`);
   }
-
-  // ── 방어 적용 ──
-  const effectivePDef = pDef + pManashieldDef;
-  if (realPCard === 'defend' || realPCard === 'shieldsmash') enemyDmg = Math.max(0, enemyDmg - effectivePDef);
   else if (pManashieldDef > 0) enemyDmg = Math.max(0, enemyDmg - pManashieldDef);
-  if (realECard === 'defend' && realPCard !== 'pierce') playerDmg = Math.max(0, playerDmg - eDef);
+  if (realECard === 'defend' && realPCard !== 'pierce' && realPCard !== 'lightning') playerDmg = Math.max(0, playerDmg - eDef);
 
   // ── 회피 ──
   if (playerDodged) enemyDmg = 0;
@@ -337,7 +331,7 @@ function resolveTurn(pCard, eCard, run) {
 
   // ── 가시 반격 ──
   if (pThornActive && isAttackCard(realECard)) {
-    const reflect = enemyDmg;
+    const reflect = Math.floor(enemyDmg * 0.3);
     playerDmg += reflect; enemyDmg = 0;
     log.push(`가시 반격: ${reflect} 데미지`);
   }
@@ -351,7 +345,7 @@ function resolveTurn(pCard, eCard, run) {
   // ── 적 가시 반격 ──
   if (eThornActive && isAttackCard(realPCard)) {
     eThornReflect = true;
-    const eReflect = playerDmg;
+    const eReflect = Math.floor(playerDmg * 0.3);
     enemyDmg += eReflect; playerDmg = 0;
     log.push(`적 가시 반격: ${eReflect} 데미지`);
   }
@@ -374,7 +368,7 @@ function resolveTurn(pCard, eCard, run) {
     playerDmg += crit; log.push(`크리티컬! +${crit}`);
   }
   if (job === 'vampire' && playerDmg > 0) {
-    const vHeal = Math.floor(playerDmg * 0.5);
+    const vHeal = Math.floor(playerDmg * 0.3);
     playerHeal += vHeal; log.push(`흡혈귀: +${vHeal} 회복`);
   }
 
@@ -486,7 +480,7 @@ function resolveMultiTurn(battleState, picks, players) {
     // 1v1 전투 계산
     const fakeRun = {
       player: { hp: ps.hp, maxHp: ps.maxHp, atk: ps.atk, def: ps.def },
-      enemy:  { ...enemy, hp: 999999, maxHp: 999999 },
+      enemy:  { ...enemy, hp: runningEnemyHp, maxHp: enemy.maxHp },
       job: ps.job || null,
       critBonus: ps.critBonus || 0,
       rogueReady: ps.rogueReady || false,
@@ -506,7 +500,7 @@ function resolveMultiTurn(battleState, picks, players) {
     };
 
     const r = resolveTurn(pCard, eCard, fakeRun);
-    const dmgDealt = Math.min(Math.max(0, 999999 - r.eHp), runningEnemyHp);
+    const dmgDealt = Math.max(0, runningEnemyHp - r.eHp);
     totalDmgToEnemy += dmgDealt;
     dmgToEnemyPerPlayer[uid] = dmgDealt;
     runningEnemyHp = Math.max(0, runningEnemyHp - dmgDealt);
@@ -614,6 +608,9 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
   const fightSeqTimersRef = useRef([]);
   // 멀티 사이 화면
   const [multiBetweenScreen, setMultiBetweenScreen] = useState(null); // 'stat'|'skill'|'shop'
+  const [jobSkillPreview, setJobSkillPreview] = useState(null); // 고유스킬 미리보기 인덱스
+  const [jobSkillPreviewDir, setJobSkillPreviewDir] = useState('right');
+  const [jobSkillPreviewKey, setJobSkillPreviewKey] = useState(0);
   const [multiBetweenRun, setMultiBetweenRun]       = useState(null);
   const [multiBetweenStatDraft, setMultiBetweenStatDraft] = useState({ hp:0,atk:0,def:0 });
   const [multiBetweenPendingSkill, setMultiBetweenPendingSkill] = useState(null);
@@ -1052,6 +1049,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
     setJobSlideDir(dir);
     setJobSlideKey(k => k + 1);
     setJobSlideIdx(nextIdx);
+    setJobSkillPreview(null);
   };
 
   // ── 런 시작 ──
@@ -1112,12 +1110,13 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
       return;
     }
 
-    const ePick = enemyPickCard(run.eBasicUsed, run.bossSkills, run.eBossSkillsUsed, run.enemyPicked);
-    const ePickIsBossSkill = !!(run.bossSkills?.includes(ePick));
+    const eStunned = run.eStunned;
+    const ePick = eStunned ? 'pass' : enemyPickCard(run.eBasicUsed, run.bossSkills, run.eBossSkillsUsed, run.enemyPicked);
+    const ePickIsBossSkill = !eStunned && !!(run.bossSkills?.includes(ePick));
 
     const newBasicUsed      = source === 'basic'  ? { ...run.basicUsed,  [cardId]: true } : run.basicUsed;
     const newSkillsUsed     = source === 'skill'  ? { ...run.skillsUsed, [cardId]: true } : run.skillsUsed;
-    const newEBasicUsed     = ePickIsBossSkill ? run.eBasicUsed : { ...run.eBasicUsed, [ePick]: true };
+    const newEBasicUsed     = (eStunned || ePickIsBossSkill) ? run.eBasicUsed : { ...run.eBasicUsed, [ePick]: true };
     const newEBossSkillsUsed = ePickIsBossSkill ? { ...(run.eBossSkillsUsed || {}), [ePick]: true } : (run.eBossSkillsUsed || {});
 
     setPickedId(cardId);
@@ -1441,10 +1440,9 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
     </div>
   );
 
-  // 직업 정보 패널 (스탯 + 스킬 목록)
+  // 직업 정보 패널 (스탯 + 고유스킬 목록)
   const renderJobInfo = (job) => {
     const stats = JOB_BASE_STATS[job.id];
-    const commonSkills = SKILL_CARDS.filter(c => c.job === null);
     const exclusiveSkills = SKILL_CARDS.filter(c => c.job === job.id);
     return (
       <div className="job-info-panel">
@@ -1457,24 +1455,55 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
           ))}
         </div>
         <div className="job-skills-section">
-          <div className="job-skills-group-label">공용 스킬 ({commonSkills.length})</div>
-          <div className="job-skills-row">
-            {commonSkills.map(s => (
-              <div key={s.id} className="job-skill-chip" style={{ '--sc': s.color }}>
-                {s.img && <img src={s.img} alt={s.name} />}
-                <span>{s.name}</span>
-              </div>
-            ))}
-          </div>
           <div className="job-skills-group-label exclusive" style={{ color: job.color }}>직업 고유 스킬 ({exclusiveSkills.length})</div>
           <div className="job-skills-row">
-            {exclusiveSkills.map(s => (
-              <div key={s.id} className="job-skill-chip exclusive" style={{ '--sc': s.color }}>
+            {exclusiveSkills.map((s, i) => (
+              <div key={s.id} className="job-skill-chip exclusive" style={{ '--sc': s.color }}
+                onClick={() => { setJobSkillPreview(i); setJobSkillPreviewKey(k => k + 1); }}>
                 {s.img && <img src={s.img} alt={s.name} />}
                 <span>{s.name}</span>
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  // 고유스킬 카드 슬라이더 모달
+  const renderSkillPreviewModal = (exclusiveSkills) => {
+    if (jobSkillPreview === null) return null;
+    const idx = jobSkillPreview;
+    const skill = exclusiveSkills[idx];
+    if (!skill) return null;
+    const go = (nextIdx, dir) => {
+      setJobSkillPreviewDir(dir);
+      setJobSkillPreviewKey(k => k + 1);
+      setJobSkillPreview(nextIdx);
+    };
+    return (
+      <div className="job-skill-preview-overlay" onClick={() => setJobSkillPreview(null)}>
+        <div className="job-skill-preview-modal" onClick={e => e.stopPropagation()}>
+          {exclusiveSkills.length > 1 && (
+            <button className="job-skill-preview-arrow left"
+              onClick={e => { e.stopPropagation(); go((idx - 1 + exclusiveSkills.length) % exclusiveSkills.length, 'left'); }}>‹</button>
+          )}
+          <div className="job-skill-preview-card-area">
+            <img key={jobSkillPreviewKey} src={skill.img} alt={skill.name}
+              className={`job-skill-preview-img wp-slide-${jobSkillPreviewDir}`} />
+          </div>
+          {exclusiveSkills.length > 1 && (
+            <button className="job-skill-preview-arrow right"
+              onClick={e => { e.stopPropagation(); go((idx + 1) % exclusiveSkills.length, 'right'); }}>›</button>
+          )}
+          {exclusiveSkills.length > 1 && (
+            <div className="job-skill-preview-dots">
+              {exclusiveSkills.map((_, i) => (
+                <div key={i} className={`wp-dot${i === idx ? ' active' : ''}`}
+                  onClick={e => { e.stopPropagation(); go(i, i > idx ? 'right' : 'left'); }} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1521,6 +1550,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
           {currentJob.name} 선택
         </button>
         <button className="sk-skip-btn" onClick={() => setScreen('select')}>← 카드 다시 선택</button>
+        {renderSkillPreviewModal(SKILL_CARDS.filter(c => c.job === currentJob.id))}
       </div>
     );
   }
@@ -1560,6 +1590,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
           {currentJob.name} 선택
         </button>
         <button className="sk-skip-btn" onClick={() => setScreen('select')}>← 카드 다시 선택</button>
+        {renderSkillPreviewModal(SKILL_CARDS.filter(c => c.job === currentJob.id))}
       </div>
     );
   }
@@ -2388,6 +2419,7 @@ const [statDraft, setStatDraft]     = useState({ hp: 0, atk: 0, def: 0 });
           }}>
           {currentJob.name} 선택
         </button>
+        {renderSkillPreviewModal(SKILL_CARDS.filter(c => c.job === currentJob.id))}
       </div>
     );
   }

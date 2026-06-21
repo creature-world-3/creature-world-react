@@ -3,6 +3,7 @@ import { doc, updateDoc, deleteField, addDoc, collection, serverTimestamp } from
 import { db } from '../../firebase/config.js';
 import { CARDS } from '../../data/cards.js';
 import { getGrowth } from '../../utils/growth.js';
+import TowerTab from './TowerTab.jsx';
 
 const GRADE_LABEL = { n:'N', r:'R', sr:'SR', ur:'UR', lg:'LEGEND', raid:'RAID' };
 const GRADE_COLOR = { n:'#aaa', r:'#4a9eff', sr:'#c084fc', ur:'#fbbf24', lg:'#ff6b6b', raid:'#ffd700' };
@@ -89,6 +90,8 @@ function groupByType(cards, bonusDmg) {
 }
 
 export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _unused }) {
+  const [dungeonSub, setDungeonSub] = useState('farming'); // 'farming' | 'tower'
+
   const [stageIdx, setStageIdx]           = useState(0);
   const [selectedCards, setSelectedCards] = useState([]);
   const [pickGrade, setPickGrade]         = useState(null);
@@ -330,6 +333,25 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
 
   return (
     <div className="dungeon-sub-wrap">
+      {/* 서브탭 */}
+      <div className="subtab-bar dungeon-subtab-bar">
+        <button
+          className={`subtab-btn${dungeonSub === 'farming' ? ' active' : ''}`}
+          onClick={() => setDungeonSub('farming')}
+        >파밍 던전</button>
+        <button
+          className={`subtab-btn${dungeonSub === 'tower' ? ' active tower-sub' : ''}`}
+          onClick={() => setDungeonSub('tower')}
+        >도전의 탑</button>
+      </div>
+
+      {/* 도전의 탑 */}
+      {dungeonSub === 'tower' && (
+        <TowerTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} />
+      )}
+
+      {/* 파밍 던전 */}
+      {dungeonSub === 'farming' && <>
       {/* 이미지 프리로드 */}
       <div style={{display:'none'}}>
         {STAGES.map(s => <img key={s.stage} src={s.img} alt="" />)}
@@ -351,7 +373,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
                     '단계를 선택하고 카드를 출격시켜 10분간 자동 전투합니다.',
                     '카드는 1장 이상이면 시작 가능. 등급별 최대 1장, 총 6장까지.',
                     '10분 안에 목표 데미지를 달성하면 클리어 보상을 드려요.',
-                    '실패해도 위로 보상으로 뽑기권 30장을 드립니다.',
+                    '실패해도 위로 보상으로 도토리 30장을 드립니다.',
                     '앱을 꺼도 전투는 자동으로 진행돼요. 클리어 후 재시작은 없어요.',
                     '하루 총 3회 도전 가능. 성공·실패 모두 차감됩니다.',
                   ].map((rule, i) => (
@@ -386,7 +408,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
                         <div className="dg-info-stage-body">
                           <div className="dg-info-ticket-row">
                             <span className="dg-info-ticket-badge">50%</span>
-                            <span className="dg-info-ticket-label">뽑기권</span>
+                            <span className="dg-info-ticket-label">도토리</span>
                             <span className="dg-info-ticket-val">+{s.tickets}장</span>
                           </div>
                           <div className="dg-info-ticket-row" style={{marginBottom:4}}>
@@ -698,19 +720,20 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
               <span className="farming-done-stat-label">획득 보상</span>
               <span className="farming-done-stat-val">
                 {result.type === 'tickets'
-                  ? `뽑기권 +${result.amount}장`
+                  ? `도토리 +${result.amount}장`
                   : `${GRADE_LABEL[result.grade]} 성장석 ×1`}
               </span>
             </div>
             {!result.success && (
               <div style={{fontSize:'0.78rem',color:'var(--muted)',textAlign:'center'}}>
-                위로 보상으로 뽑기권 30장을 드렸어요
+                위로 보상으로 도토리 30장을 드렸어요
               </div>
             )}
           </div>
           <button className="dungeon-primary-btn" onClick={handleReset} style={{marginTop:16}}>확인</button>
         </div>
       )}
+      </>}
     </div>
   );
 }

@@ -183,7 +183,7 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
   };
 
   const doDraw = () => {
-    if (gs.tickets <= 0) { showToast('뽑기권이 없어요'); return; }
+    if (gs.tickets <= 0) { showToast('도토리가 없어요'); return; }
     if (flipped) return;
     const card = randomCard();
     const cond = randomCondition();
@@ -203,7 +203,7 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
   const resetDraw = () => { setFlipped(false); setDrawn(null); };
 
   const doDraw10 = () => {
-    if (gs.tickets < 10) { showToast('뽑기권이 부족해요! 10장이 필요해요'); return; }
+    if (gs.tickets < 10) { showToast('도토리가 부족해요! 10장이 필요해요'); return; }
     const results = [];
     let currentOwned = [...gs.ownedCards];
     for (let i = 0; i < 10; i++) {
@@ -229,7 +229,7 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
         const newRound = (prev.clickRound || 0) + 1;
         const done = newRound >= 10;
         setTimeout(() => showToast(
-          done ? '오늘 클릭 뽑기 완료! 총 10장 획득!' : `${newRound}번째 100클릭 달성! 뽑기권 +1장!`
+          done ? '오늘 클릭 뽑기 완료! 총 10장 획득!' : `${newRound}번째 100클릭 달성! 도토리 +1장!`
         ), 0);
         return { ...prev, tickets: prev.tickets + 1, clickCount: newCount, clickRound: newRound, clickDone: done };
       }
@@ -253,7 +253,7 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
       attendDate: today,
       attendStreak: finalStreak,
     }));
-    showToast(`출석 완료! 뽑기권 ${amount}장 획득!${bonus ? ' 7일 개근 달성 +100장!' : ''}`);
+    showToast(`출석 완료! 도토리 ${amount}장 획득!${bonus ? ' 7일 개근 달성 +100장!' : ''}`);
   };
 
   const today        = new Date().toDateString();
@@ -361,7 +361,7 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
                 <div className="draw-face draw-back">
                   <div className="draw-back-logo">CREATURE WORLD</div>
                   <div className="draw-back-hint">
-                    {gs.tickets > 0 ? '탭해서 뽑기' : '뽑기권 없음'}
+                    {gs.tickets > 0 ? '탭해서 뽑기' : '도토리 없음'}
                   </div>
                 </div>
                 <div className={`draw-face draw-front${dc ? ` grade-${dc.grade}` : ''}`}>
@@ -392,7 +392,7 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
                 </div>
               ) : !flipped ? (
                 <button className="draw-btn primary" onClick={doDraw} disabled={gs.tickets <= 0}>
-                  {gs.tickets > 0 ? `뽑기권 사용 (${gs.tickets}장 보유)` : '뽑기권이 없어요'}
+                  {gs.tickets > 0 ? `도토리 사용 (${gs.tickets}장 보유)` : '도토리가 없어요'}
                 </button>
               ) : (
                 <button className="draw-btn secondary" onClick={resetDraw}>다음 뽑기 →</button>
@@ -472,7 +472,7 @@ function AwakenGachaSubTab({ gs, setGs, isGuest }) {
 
   const doAwakenDraw = () => {
     if (!selectedChar) { showToast('캐릭터를 선택해주세요'); return; }
-    if ((gs.tickets || 0) < AWAKEN_COST) { showToast(`뽑기권이 부족해요! ${AWAKEN_COST}장이 필요해요`); return; }
+    if ((gs.tickets || 0) < AWAKEN_COST) { showToast(`도토리가 부족해요! ${AWAKEN_COST}장이 필요해요`); return; }
 
     const awCardId = AWAKENED_CARD_MAP[selectedChar.id];
     const awCard = CARDS.find(c => c.id === awCardId);
@@ -632,7 +632,7 @@ function AwakenGachaSubTab({ gs, setGs, isGuest }) {
                 {selectedChar.name} 각성 뽑기
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 8 }}>
-                보유 뽑기권: {gs.tickets}장
+                보유 도토리: {gs.tickets}장
               </div>
             </>
           ) : (
