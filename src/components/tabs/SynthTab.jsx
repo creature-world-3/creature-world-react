@@ -209,7 +209,7 @@ function EnhanceSubTab({ gs, setGs, isGuest }) {
                   <div style={{ color:'#f87171', fontSize:'0.72rem', fontWeight:700 }}>실패 시 -1단계</div>
                 )}
                 <div style={{ color:'rgba(255,255,255,0.55)', fontSize:'0.75rem' }}>
-                  보유 <strong style={{ color:'white' }}>{gs.tickets}장</strong>
+                  보유 <strong style={{ color:'white' }}>{gs.tickets}개</strong>
                 </div>
                 <button
                   className="enhance-btn-main"
@@ -321,7 +321,7 @@ function ConditionSubTab({ gs, setGs, isGuest }) {
   const doReset = () => {
     if (!confirmData) return;
     if ((gs.tickets || 0) < CONDITION_RESET_COST) {
-      showToast(`도토리가 부족합니다! ${CONDITION_RESET_COST}장이 필요해요`);
+      showToast(`도토리가 부족합니다! ${CONDITION_RESET_COST}개가 필요해요`);
       setConfirmData(null);
       return;
     }
@@ -357,11 +357,11 @@ function ConditionSubTab({ gs, setGs, isGuest }) {
               </div>
             </div>
             <div className="synth-confirm-desc" style={{ textAlign:'center', fontSize:'0.82rem' }}>
-              도토리 <strong>{CONDITION_RESET_COST}장</strong>을 소모해<br />
+              도토리 <strong>{CONDITION_RESET_COST}개</strong>를 소모해<br />
               컨디션을 1~10 사이로 무작위 재설정합니다.
             </div>
             <div style={{ fontSize:'0.75rem', color:'rgba(255,255,255,0.5)', textAlign:'center', marginBottom:4 }}>
-              보유 도토리: {gs.tickets}장
+              보유 도토리: {gs.tickets}개
             </div>
             <div className="synth-confirm-btns">
               <button className="synth-confirm-cancel" onClick={() => setConfirmData(null)}>취소</button>
@@ -380,7 +380,7 @@ function ConditionSubTab({ gs, setGs, isGuest }) {
 
       {/* 안내 */}
       <div style={{ padding:'10px 12px', background:'rgba(124,58,237,0.08)', borderRadius:8, margin:'4px 0 12px', fontSize:'0.8rem', color:'rgba(255,255,255,0.7)' }}>
-        카드를 선택하면 도토리 {CONDITION_RESET_COST}장으로 컨디션을 1~10 사이로 무작위 재설정합니다.
+        카드를 선택하면 도토리 {CONDITION_RESET_COST}개로 컨디션을 1~10 사이로 무작위 재설정합니다.
       </div>
 
       {/* 카드 선택 그리드 */}

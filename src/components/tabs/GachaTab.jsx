@@ -164,7 +164,6 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
   const [drawn, setDrawn]       = useState(null);
   const [flash, setFlash]       = useState(null);
   const [toast, setToast]       = useState(null);
-  const [floats, setFloats]     = useState([]);
   const [draw10Results, setDraw10Results] = useState(null);
   const [draw10Key, setDraw10Key]         = useState(0);
   const [zoomItem, setZoomItem] = useState(null);
@@ -203,7 +202,7 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
   const resetDraw = () => { setFlipped(false); setDrawn(null); };
 
   const doDraw10 = () => {
-    if (gs.tickets < 10) { showToast('도토리가 부족해요! 10장이 필요해요'); return; }
+    if (gs.tickets < 10) { showToast('도토리가 부족해요! 10개가 필요해요'); return; }
     const results = [];
     let currentOwned = [...gs.ownedCards];
     for (let i = 0; i < 10; i++) {
@@ -216,25 +215,6 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
     setGs(prev => ({ ...prev, tickets: prev.tickets - 10, ownedCards: currentOwned }));
     setDraw10Key(k => k + 1);
     setDraw10Results(results);
-  };
-
-  const handleClick = (e) => {
-    if (gs.clickDone) { showToast('오늘 클릭 뽑기는 이미 완료했어요!'); return; }
-    const fid = Date.now() + Math.random();
-    setFloats(prev => [...prev, { id: fid, x: e.clientX, y: e.clientY }]);
-    setTimeout(() => setFloats(prev => prev.filter(f => f.id !== fid)), 800);
-    setGs(prev => {
-      const newCount = (prev.clickCount || 0) + 1;
-      if (newCount % 100 === 0) {
-        const newRound = (prev.clickRound || 0) + 1;
-        const done = newRound >= 10;
-        setTimeout(() => showToast(
-          done ? '오늘 클릭 뽑기 완료! 총 10장 획득!' : `${newRound}번째 100클릭 달성! 도토리 +1장!`
-        ), 0);
-        return { ...prev, tickets: prev.tickets + 1, clickCount: newCount, clickRound: newRound, clickDone: done };
-      }
-      return { ...prev, clickCount: newCount };
-    });
   };
 
   const doAttendance = () => {
@@ -253,12 +233,11 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
       attendDate: today,
       attendStreak: finalStreak,
     }));
-    showToast(`출석 완료! 도토리 ${amount}장 획득!${bonus ? ' 7일 개근 달성 +100장!' : ''}`);
+    showToast(`출석 완료! 도토리 ${amount}개 획득!${bonus ? ' 7일 개근 달성 +100개!' : ''}`);
   };
 
-  const today        = new Date().toDateString();
-  const attendDone   = gs.attendDate === today;
-  const clickProgress = (gs.clickCount || 0) % 100;
+  const today      = new Date().toDateString();
+  const attendDone = gs.attendDate === today;
 
   const dc = drawn?.card;
   const cs = drawn ? condStyle(drawn.card.grade, drawn.cond) : 'normal';
@@ -331,7 +310,7 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
             </div>
             <div className="draw10-btn-row">
               <button className="draw10-btn-again" onClick={doDraw10} disabled={gs.tickets < 10}>
-                한번 더 뽑기 ({gs.tickets}장)
+                한번 더 뽑기 ({gs.tickets}개)
               </button>
               <button className="draw10-btn-close" onClick={() => setDraw10Results(null)}>닫기 ✕</button>
             </div>
@@ -345,9 +324,6 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
         </div>
       )}
       {toast && <div className="cw-toast">{toast}</div>}
-      {floats.map(f => (
-        <div key={f.id} className="float-num" style={{ left: f.x - 15, top: f.y - 20 }}>+1</div>
-      ))}
 
       <div className="tab-content">
         <div className="draw-section">
@@ -384,7 +360,9 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
                 </div>
               </div>
             </div>
+          </div>
 
+          <div className="draw-col-right">
             <div className="draw-actions">
               {isGuest ? (
                 <div className="guest-action-block">
@@ -392,37 +370,20 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
                 </div>
               ) : !flipped ? (
                 <button className="draw-btn primary" onClick={doDraw} disabled={gs.tickets <= 0}>
-                  {gs.tickets > 0 ? `도토리 사용 (${gs.tickets}장 보유)` : '도토리가 없어요'}
+                  {gs.tickets > 0 ? `도토리 사용 (${gs.tickets}개 보유)` : '도토리가 없어요'}
                 </button>
               ) : (
                 <button className="draw-btn secondary" onClick={resetDraw}>다음 뽑기 →</button>
               )}
               {!isGuest && (
                 <button className="draw-btn draw-btn-10" disabled={gs.tickets < 10} onClick={doDraw10}>
-                  10뽑 (10장)
+                  10뽑 (10개)
                 </button>
               )}
             </div>
-          </div>
-
-          <div className="draw-col-right">
-            <div className="click-section">
-              <div className="click-label">클릭 뽑기 (100번마다 +1장 · 하루 최대 10회)</div>
-              <button className="click-btn" onClick={handleClick} disabled={gs.clickDone || isGuest}>🐾</button>
-              <div className="click-count-text">
-                {gs.clickDone ? (
-                  <span style={{ color: '#4a9eff', fontWeight: 700 }}>오늘 완료 ✓</span>
-                ) : (
-                  <span>{clickProgress} / 100 &nbsp;({gs.clickRound || 0}/10회 완료)</span>
-                )}
-              </div>
-              <div className="prog-track">
-                <div className="prog-fill" style={{ width: gs.clickDone ? '100%' : `${clickProgress}%` }} />
-              </div>
-            </div>
 
             <div className="click-section">
-              <div className="click-label">출석체크 (하루 1회 · 5~15장 지급)</div>
+              <div className="click-label">출석체크 (하루 1회 · 5~15개 지급)</div>
               <button
                 className="draw-btn primary"
                 onClick={doAttendance}
@@ -434,7 +395,7 @@ function NormalGachaSubTab({ gs, setGs, isGuest }) {
               <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
                 {(gs.attendStreak || 0) > 0
                   ? `${gs.attendStreak}일 연속 출석 중`
-                  : '7일 개근하면 보너스 100장!'}
+                  : '7일 개근하면 보너스 100개!'}
               </div>
             </div>
           </div>
@@ -454,6 +415,7 @@ function AwakenGachaSubTab({ gs, setGs, isGuest }) {
   const [toast, setToast]   = useState(null);
   const [result, setResult] = useState(null); // { type:'awakened'|'fragments', charId, amount?, card? }
   const [flash, setFlash]   = useState(null);
+  const [zoomCard, setZoomCard] = useState(null);
   const toastTimer = useRef(null);
 
   useEffect(() => {
@@ -472,7 +434,7 @@ function AwakenGachaSubTab({ gs, setGs, isGuest }) {
 
   const doAwakenDraw = () => {
     if (!selectedChar) { showToast('캐릭터를 선택해주세요'); return; }
-    if ((gs.tickets || 0) < AWAKEN_COST) { showToast(`도토리가 부족해요! ${AWAKEN_COST}장이 필요해요`); return; }
+    if ((gs.tickets || 0) < AWAKEN_COST) { showToast(`도토리가 부족해요! ${AWAKEN_COST}개가 필요해요`); return; }
 
     const awCardId = AWAKENED_CARD_MAP[selectedChar.id];
     const awCard = CARDS.find(c => c.id === awCardId);
@@ -546,6 +508,23 @@ function AwakenGachaSubTab({ gs, setGs, isGuest }) {
       )}
       {toast && <div className="cw-toast">{toast}</div>}
 
+      {/* 각성카드 이미지 확대 */}
+      {zoomCard && (
+        <div className="card-zoom-overlay" onClick={() => setZoomCard(null)}>
+          <div className="awaken-img-zoom-wrap" onClick={e => e.stopPropagation()}>
+            <div className={`zoom-card grade-awakened`}>
+              <div className="card-header">
+                <span className="card-name">{zoomCard.name}</span>
+                <span className="grade-badge">AWAKENED</span>
+              </div>
+              <div className="card-art"><img src={`/${zoomCard.img}`} alt={zoomCard.name} /></div>
+              <div className="card-aurora" />
+            </div>
+            <button className="zoom-close" onClick={() => setZoomCard(null)}>닫기 ✕</button>
+          </div>
+        </div>
+      )}
+
       {/* 결과 오버레이 */}
       {result && (
         <div className="card-zoom-overlay" onClick={() => setResult(null)}>
@@ -593,6 +572,7 @@ function AwakenGachaSubTab({ gs, setGs, isGuest }) {
           {CHARACTERS.map(char => {
             const fragCount = fragments[char.id] || 0;
             const awCardId  = AWAKENED_CARD_MAP[char.id];
+            const awCard    = CARDS.find(c => c.id === awCardId);
             const owns      = gs.ownedCards.some(c => c.id === awCardId);
             const canExch   = fragCount >= AWAKEN_FRAG_TO_CARD;
             const isSelected = selectedChar?.id === char.id;
@@ -603,7 +583,14 @@ function AwakenGachaSubTab({ gs, setGs, isGuest }) {
                 onClick={() => setSelectedChar(isSelected ? null : char)}
               >
                 <div className="awaken-char-name">{char.name}</div>
-                <div className="awaken-char-species" style={{ color: 'var(--muted)', fontSize: '0.65rem' }}>{char.species}</div>
+                {awCard && (
+                  <div
+                    className="awaken-char-img-wrap"
+                    onClick={e => { e.stopPropagation(); setZoomCard(awCard); }}
+                  >
+                    <img src={`/${awCard.img}`} alt={char.name} className="awaken-char-img" />
+                  </div>
+                )}
                 <div className="awaken-char-frag" style={{ color: canExch ? '#b347ff' : 'var(--muted)', fontWeight: canExch ? 700 : 400, fontSize: '0.75rem', marginTop: 4 }}>
                   {fragCount.toLocaleString()} / {AWAKEN_FRAG_TO_CARD.toLocaleString()}
                 </div>
@@ -632,7 +619,7 @@ function AwakenGachaSubTab({ gs, setGs, isGuest }) {
                 {selectedChar.name} 각성 뽑기
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 8 }}>
-                보유 도토리: {gs.tickets}장
+                보유 도토리: {gs.tickets}개
               </div>
             </>
           ) : (
@@ -646,7 +633,7 @@ function AwakenGachaSubTab({ gs, setGs, isGuest }) {
             onClick={doAwakenDraw}
             disabled={!selectedChar || isGuest || (gs.tickets || 0) < AWAKEN_COST}
           >
-            {isGuest ? '로그인이 필요합니다' : `각성 뽑기 (${AWAKEN_COST}장)`}
+            {isGuest ? '로그인이 필요합니다' : `각성 뽑기 (${AWAKEN_COST}개)`}
           </button>
           <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
             각성조각 {AWAKEN_FRAG_TO_CARD.toLocaleString()}개 모으면 각성카드와 교환 가능

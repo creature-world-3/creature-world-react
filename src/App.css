@@ -324,6 +324,10 @@
 .awaken-frag-fill { height:100%; background:linear-gradient(90deg,#6a00cc,#b347ff); border-radius:2px; transition:width 0.3s; }
 .awaken-owns-badge { position:absolute; top:4px; right:4px; font-size:0.55rem; font-weight:700; color:#b347ff; background:rgba(179,71,255,0.15); border:1px solid #b347ff; border-radius:4px; padding:1px 4px; }
 .awaken-exchange-btn { display:block; width:100%; margin-top:6px; padding:4px 0; font-size:0.72rem; font-weight:700; background:linear-gradient(135deg,#6a00cc,#b347ff); color:#fff; border:none; border-radius:6px; cursor:pointer; }
+.awaken-char-img-wrap { margin:6px 0 4px; cursor:zoom-in; border-radius:8px; overflow:hidden; }
+.awaken-char-img { width:100%; display:block; border-radius:8px; transition:transform 0.15s; }
+.awaken-char-img-wrap:hover .awaken-char-img { transform:scale(1.04); }
+.awaken-img-zoom-wrap { display:flex; flex-direction:column; align-items:center; gap:14px; }
 .awaken-draw-panel { background:rgba(255,255,255,0.06); border-radius:12px; padding:16px; text-align:center; }
 .awaken-selected-name { font-size:1rem; margin-bottom:4px; }
 
@@ -606,6 +610,19 @@
   padding: 0;
 }
 .dex-character-group { margin-bottom:24px; }
+
+/* 도감 보너스 설명 */
+.dex-bonus-info { background:rgba(74,158,255,0.06); border:1px solid rgba(74,158,255,0.15); border-radius:10px; padding:8px 12px; margin-bottom:12px; }
+.dex-bonus-desc { font-size:0.65rem; color:var(--muted); margin-bottom:6px; line-height:1.4; }
+.dex-bonus-grades { display:flex; flex-wrap:wrap; gap:4px; }
+.dex-bonus-grade { font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:99px; background:rgba(255,255,255,0.08); }
+.dex-bonus-grade-n { color:#888; }
+.dex-bonus-grade-r { color:#4a9eff; }
+.dex-bonus-grade-sr { color:#c084fc; }
+.dex-bonus-grade-ur { color:#fbbf24; }
+.dex-bonus-grade-lg { color:#ff6b6b; }
+.dex-bonus-grade-raid { color:#ffd700; }
+.dex-bonus-grade-awakened { color:#b347ff; }
 .dex-char-name { font-size:0.8rem; font-weight:900; color:var(--muted); letter-spacing:1px; margin-bottom:10px; }
 
 /* 도감 등급 필터 탭 */
@@ -2205,17 +2222,17 @@
   /* 탭바 */
   .page-tab { font-size: 0.74rem; padding: 7px 9px; }
 
-  /* ── 뽑기탭: 카드(왼) + 클릭/출석(오른) 2열 ── */
+  /* ── 뽑기탭: 카드(왼) + 버튼/출석(오른) 2열 ── */
   .draw-title { display: none; }
   .draw-section { flex-direction: row; align-items: flex-start; gap: 8px; }
   .draw-col-left { flex: 0 0 auto; width: auto; gap: 4px; }
   .draw-col-right { flex: 1; min-width: 0; width: auto; gap: 6px; align-items: stretch; }
   .draw-col-right .click-section { width: 100%; box-sizing: border-box; }
+  .draw-col-right .draw-actions { width: 100%; box-sizing: border-box; }
   .draw-card-wrap { width: 148px; height: 222px; }
   .draw-actions { width: 148px; gap: 6px; }
   .draw-btn { padding: 9px 6px; font-size: 0.74rem; }
   .click-label { font-size: 0.64rem; }
-  .click-count-text { font-size: 0.64rem; }
 
   /* 수집북 3열 + 페이지네이션 */
   .card-grid { grid-template-columns: repeat(3, 1fr); gap: 7px; }
@@ -3439,6 +3456,7 @@ body.raid-theme .music-toggle-btn {
   /* 뽑기탭: 더 압축 */
   .draw-card-wrap { width: 136px; height: 204px; }
   .draw-actions   { width: 136px; }
+  .draw-col-right .draw-actions { width: 100%; }
 
   /* 거래소: 카드이미지 작게 */
   .trade-card-img { width: 36px; height: 48px; }

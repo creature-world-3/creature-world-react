@@ -128,7 +128,7 @@ export default function TradeTab({ gs, setGs, user }) {
   // ── 구매 (트랜잭션) ──
   const handleBuy = async (trade) => {
     if (!user || submitting) return;
-    if ((gs?.tickets ?? 0) < trade.price) { showToast('뽑기권이 부족해요!'); return; }
+    if ((gs?.tickets ?? 0) < trade.price) { showToast('도토리가 부족해요!'); return; }
     setSubmitting(true);
     const newCardUid = genCardUid();
     try {
@@ -157,7 +157,7 @@ export default function TradeTab({ gs, setGs, user }) {
       showToast(`${trade.cardName} (${GRADE_LABEL[trade.cardGrade]}) 구매 완료!`);
     } catch (e) {
       if (e.message === 'already_sold')  showToast('이미 판매된 카드예요!');
-      else if (e.message === 'insufficient') showToast('뽑기권이 부족해요!');
+      else if (e.message === 'insufficient') showToast('도토리가 부족해요!');
       else { console.error(e); showToast('구매 중 오류가 발생했어요'); }
     }
     setSubmitting(false);
@@ -198,7 +198,7 @@ export default function TradeTab({ gs, setGs, user }) {
   const handlePostBuyOrder = async () => {
     if (!buySelectedCard || !buyPrice || submitting) return;
     const priceNum = Math.max(1, parseInt(buyPrice) || 0);
-    if ((gs?.tickets ?? 0) < priceNum) { showToast('뽑기권이 부족해요!'); return; }
+    if ((gs?.tickets ?? 0) < priceNum) { showToast('도토리가 부족해요!'); return; }
     if (myActiveBuy.length >= MAX_MY_LISTINGS) {
       showToast(`최대 ${MAX_MY_LISTINGS}개까지 등록할 수 있어요`); return;
     }
@@ -248,7 +248,7 @@ export default function TradeTab({ gs, setGs, user }) {
         tx.delete(orderRef);
       });
       setGs(prev => ({ ...prev, tickets: prev.tickets + order.price }));
-      showToast(`구매 요청이 취소됐어요. 뽑기권 ${order.price}장이 돌아왔어요!`);
+      showToast(`구매 요청이 취소됐어요. 도토리 ${order.price}개가 돌아왔어요!`);
     } catch (e) {
       console.error(e);
       showToast('취소 중 오류가 발생했어요');
@@ -295,7 +295,7 @@ export default function TradeTab({ gs, setGs, user }) {
         ownedCards: prev.ownedCards.filter(c => c.uid !== cardInst.uid),
       }));
       setSellPicker(null);
-      showToast(`판매 완료! 뽑기권 ${buyOrder.price}장을 받았어요!`);
+      showToast(`판매 완료! 도토리 ${buyOrder.price}개를 받았어요!`);
     } catch (e) {
       if (e.message === 'already_filled') showToast('이미 체결된 요청이에요!');
       else { console.error(e); showToast('판매 중 오류가 발생했어요'); }
@@ -460,7 +460,7 @@ export default function TradeTab({ gs, setGs, user }) {
                         </div>
                       </div>
                       <div className="trade-price-input-wrap">
-                        <span className="trade-price-label">원하는 뽑기권</span>
+                        <span className="trade-price-label">원하는 도토리</span>
                         <div className="trade-price-field">
                           <input
                             type="number"
@@ -505,7 +505,7 @@ export default function TradeTab({ gs, setGs, user }) {
                         </span>
                       </div>
                       <div className="trade-item-cond">컨디션 {trade.cardCondition}</div>
-                      <div className="trade-item-price">뽑기권 {trade.price}장</div>
+                      <div className="trade-item-price">도토리 {trade.price}개</div>
                     </div>
                     <button className="trade-cancel-btn" onClick={() => handleCancel(trade)}>취소</button>
                   </div>
@@ -559,7 +559,7 @@ export default function TradeTab({ gs, setGs, user }) {
                   className="trade-buy-btn"
                   onClick={() => handleBuy(trade)}
                   disabled={submitting || (gs?.tickets ?? 0) < trade.price}
-                  title={(gs?.tickets ?? 0) < trade.price ? `뽑기권 부족 (보유 ${gs?.tickets ?? 0}장)` : ''}
+                  title={(gs?.tickets ?? 0) < trade.price ? `도토리 부족 (보유 ${gs?.tickets ?? 0}개)` : ''}
                 >
                   {(gs?.tickets ?? 0) >= trade.price ? '구매' : '부족'}
                 </button>
@@ -591,7 +591,7 @@ export default function TradeTab({ gs, setGs, user }) {
             <div className="trade-form">
               <div className="trade-form-title">원하는 카드 선택</div>
               <div className="trade-buy-form-hint">
-                뽑기권을 미리 내고 구매 요청을 올리면, 해당 카드를 가진 유저가 판매할 수 있어요.
+                도토리를 미리 내고 구매 요청을 올리면, 해당 카드를 가진 유저가 판매할 수 있어요.
               </div>
               <div className="trade-form-filter">
                 {GRADE_FILTERS.map(([val, label]) => (
@@ -635,7 +635,7 @@ export default function TradeTab({ gs, setGs, user }) {
                     </div>
                   </div>
                   <div className="trade-price-input-wrap">
-                    <span className="trade-price-label">제시할 뽑기권 (선불)</span>
+                    <span className="trade-price-label">제시할 도토리 (선불)</span>
                     <div className="trade-price-field">
                       <input
                         type="number"
@@ -677,7 +677,7 @@ export default function TradeTab({ gs, setGs, user }) {
                           &nbsp;{GRADE_LABEL[order.cardGrade]}
                         </span>
                       </div>
-                      <div className="trade-item-price">뽑기권 {order.price}장 제시 중</div>
+                      <div className="trade-item-price">도토리 {order.price}개 제시 중</div>
                     </div>
                     <button className="trade-cancel-btn" onClick={() => handleCancelBuyOrder(order)}>취소</button>
                   </div>
@@ -726,7 +726,7 @@ export default function TradeTab({ gs, setGs, user }) {
                     <div className="trade-seller">
                       <span>{order.buyerName}</span>
                     </div>
-                    <div className="trade-item-price trade-buy-order-price">뽑기권 {order.price}장 제시</div>
+                    <div className="trade-item-price trade-buy-order-price">도토리 {order.price}개 제시</div>
                   </div>
                   {canSell ? (
                     <button

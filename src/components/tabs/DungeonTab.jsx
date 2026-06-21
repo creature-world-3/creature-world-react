@@ -373,7 +373,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
                     '단계를 선택하고 카드를 출격시켜 10분간 자동 전투합니다.',
                     '카드는 1장 이상이면 시작 가능. 등급별 최대 1장, 총 6장까지.',
                     '10분 안에 목표 데미지를 달성하면 클리어 보상을 드려요.',
-                    '실패해도 위로 보상으로 도토리 30장을 드립니다.',
+                    '실패해도 위로 보상으로 도토리 30개를 드립니다.',
                     '앱을 꺼도 전투는 자동으로 진행돼요. 클리어 후 재시작은 없어요.',
                     '하루 총 3회 도전 가능. 성공·실패 모두 차감됩니다.',
                   ].map((rule, i) => (
@@ -409,7 +409,7 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
                           <div className="dg-info-ticket-row">
                             <span className="dg-info-ticket-badge">50%</span>
                             <span className="dg-info-ticket-label">도토리</span>
-                            <span className="dg-info-ticket-val">+{s.tickets}장</span>
+                            <span className="dg-info-ticket-val">+{s.tickets}개</span>
                           </div>
                           <div className="dg-info-ticket-row" style={{marginBottom:4}}>
                             <span className="dg-info-ticket-badge">50%</span>
@@ -720,13 +720,13 @@ export default function DungeonTab({ gs, setGs, user, isGuest, onSubTabChange: _
               <span className="farming-done-stat-label">획득 보상</span>
               <span className="farming-done-stat-val">
                 {result.type === 'tickets'
-                  ? `도토리 +${result.amount}장`
+                  ? `도토리 +${result.amount}개`
                   : `${GRADE_LABEL[result.grade]} 성장석 ×1`}
               </span>
             </div>
             {!result.success && (
               <div style={{fontSize:'0.78rem',color:'var(--muted)',textAlign:'center'}}>
-                위로 보상으로 도토리 30장을 드렸어요
+                위로 보상으로 도토리 30개를 드렸어요
               </div>
             )}
           </div>

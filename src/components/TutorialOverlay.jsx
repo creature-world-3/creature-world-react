@@ -138,7 +138,7 @@ export default function TutorialOverlay({ user, onComplete, onSkip }) {
               borderRadius: 12, padding: '10px 14px', marginBottom: 14,
             }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#d97706' }}>튜토리얼 완료 보상</div>
-              <div style={{ fontSize: '0.78rem', color: '#92400e' }}>도토리 50장 지급!</div>
+              <div style={{ fontSize: '0.78rem', color: '#92400e' }}>도토리 50개 지급!</div>
             </div>
           )}
 

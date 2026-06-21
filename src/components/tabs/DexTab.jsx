@@ -19,7 +19,7 @@ const GRADE_TABS = [
 
 const GRADE_RANGE   = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
 const STONE_GRADES  = new Set(['n', 'r', 'sr', 'ur', 'lg', 'raid']);
-const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10 };
+const BONUS_MULT   = { n:0.5, r:1, sr:2, ur:3, lg:5, raid:10, awakened:15 };
 function calcBonus(ownedCards) {
   let b = 0;
   const seen = new Set();
@@ -270,6 +270,15 @@ export default function DexTab({ gs, setGs }) {
       <div className="col-header">
         <span className="col-title">도감</span>
         <span className="col-count">{uniqueOwned} / {COLLECTIBLE_IDS.size}</span>
+      </div>
+
+      <div className="dex-bonus-info">
+        <div className="dex-bonus-desc">카드 1종 보유 시 해당 등급 보너스 데미지 영구 적용 (중복 보유 추가 없음)</div>
+        <div className="dex-bonus-grades">
+          {[['n','N',0.5],['r','R',1],['sr','SR',2],['ur','UR',3],['lg','LG',5],['raid','RAID',10],['awakened','각성',15]].map(([g,label,val]) => (
+            <span key={g} className={`dex-bonus-grade dex-bonus-grade-${g}`}>{label} +{val}</span>
+          ))}
+        </div>
       </div>
 
       <div className="dex-grade-tabs">
