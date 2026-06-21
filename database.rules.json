@@ -1,0 +1,20 @@
+{
+  "rules": {
+    "towerRooms": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "pvpQueue": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "pvpMatches": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "pvpUserMatch": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

@@ -2,11 +2,12 @@ const MAIN_TABS = [
   { id: 'gacha',   label: '뽑기' },
   { id: 'synth',   label: '공방' },
   { id: 'dungeon', label: '던전' },
-  { id: 'bag',     label: '가방' },
   { id: 'raid',    label: '레이드' },
+  { id: 'pvp',     label: 'PvP' },
 ];
 
 const MORE_TABS = [
+  { id: 'bag',     label: '가방' },
   { id: 'shop',    label: '상점' },
   { id: 'board',   label: '게시판' },
   { id: 'mailbox', label: '우편함' },

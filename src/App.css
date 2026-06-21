@@ -6474,3 +6474,122 @@ body.raid-theme .music-toggle-btn {
 .raid-channel-card.defeated { border-color:rgba(100,220,120,0.4); opacity:0.85; }
 .raid-channel-card.defeated:hover { border-color:rgba(100,220,120,0.8); transform:translateY(-2px); }
 .raid-channel-total-dmg { font-size:0.65rem; color:rgba(100,220,120,0.7); font-weight:600; }
+
+/* ══════════════════════════════════════════════
+   PvP 대전 탭
+══════════════════════════════════════════════ */
+.pvp-wrap { padding: 12px 8px; max-width: 520px; margin: 0 auto; }
+.pvp-center-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:300px; gap:14px; }
+
+/* 헤더 */
+.pvp-header-row { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; }
+.pvp-header-sub { font-size:0.7rem; color:var(--muted); }
+
+/* 덱 빌더 */
+.pvp-deck-area { background:rgba(255,255,255,0.06); border-radius:12px; padding:10px 12px; margin-bottom:12px; }
+.pvp-deck-label { font-size:0.75rem; color:var(--muted); margin-bottom:8px; }
+.pvp-deck-stat { font-weight:700; color:var(--text); }
+.pvp-cost-max { color:#ef4444 !important; }
+.pvp-deck-slots { display:flex; gap:6px; }
+.pvp-deck-slot { width:52px; height:72px; border-radius:8px; border:1.5px solid rgba(255,255,255,0.15); overflow:hidden; position:relative; cursor:pointer; transition:all 0.15s; flex-shrink:0; }
+.pvp-deck-slot.filled { border-width:2px; }
+.pvp-deck-slot.filled img { width:100%; height:100%; object-fit:cover; }
+.pvp-deck-slot.filled:hover { opacity:0.8; }
+.pvp-deck-slot.empty { display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.04); }
+.pvp-slot-plus { font-size:1.2rem; color:rgba(255,255,255,0.3); }
+.pvp-slot-cost { position:absolute; bottom:2px; right:2px; font-size:0.55rem; font-weight:900; color:#fff; padding:1px 4px; border-radius:4px; }
+
+/* 매칭 버튼 */
+.pvp-match-btn { width:100%; padding:12px; border-radius:999px; border:none; font-family:'Noto Sans KR',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; box-shadow:0 4px 0 #312e81; transition:all 0.15s; margin-bottom:12px; }
+.pvp-match-btn:hover:not(:disabled) { transform:translateY(-1px); }
+.pvp-match-btn:active:not(:disabled) { transform:translateY(2px); box-shadow:0 2px 0 #312e81; }
+.pvp-match-btn:disabled { background:#6b7280; box-shadow:none; cursor:not-allowed; }
+
+/* 카드 목록 */
+.pvp-card-list { display:flex; flex-direction:column; gap:6px; }
+.pvp-card-item { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.06); border:1.5px solid rgba(255,255,255,0.1); border-radius:10px; padding:7px 10px; cursor:pointer; transition:all 0.15s; position:relative; }
+.pvp-card-item:hover { background:rgba(255,255,255,0.1); }
+.pvp-card-item.in-deck { background:rgba(99,102,241,0.15); }
+.pvp-card-item.blocked { opacity:0.45; cursor:not-allowed; }
+.pvp-card-thumb { width:40px; height:54px; object-fit:cover; border-radius:6px; flex-shrink:0; }
+.pvp-card-info { flex:1; min-width:0; }
+.pvp-card-name-row { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+.pvp-card-name { font-size:0.82rem; font-weight:700; }
+.pvp-grade-badge { font-size:0.6rem; font-weight:800; color:#fff; padding:1px 5px; border-radius:4px; flex-shrink:0; }
+.pvp-card-stats { display:flex; gap:8px; flex-wrap:wrap; }
+.pvp-card-stats span { font-size:0.65rem; color:var(--muted); }
+.pvp-in-deck { font-size:0.65rem; font-weight:700; color:#818cf8; flex-shrink:0; }
+.pvp-empty-msg { text-align:center; color:var(--muted); font-size:0.8rem; padding:24px 0; }
+
+/* 매칭 화면 */
+.pvp-spinner { width:40px; height:40px; border:3px solid rgba(99,102,241,0.3); border-top-color:#6366f1; border-radius:50%; animation:pvpSpin 0.8s linear infinite; }
+@keyframes pvpSpin { to { transform:rotate(360deg); } }
+.pvp-matching-text { font-size:1rem; font-weight:700; color:var(--text); }
+.pvp-matching-sub { font-size:0.75rem; color:var(--muted); }
+.pvp-cancel-btn { padding:8px 24px; border-radius:999px; border:1.5px solid rgba(255,255,255,0.2); background:transparent; color:var(--muted); font-size:0.8rem; cursor:pointer; transition:all 0.15s; }
+.pvp-cancel-btn:hover { background:rgba(255,255,255,0.08); color:var(--text); }
+
+/* ── 전투 화면 ── */
+.pvp-battle-wrap { display:flex; flex-direction:column; gap:8px; max-width:360px; margin:0 auto; padding:8px; }
+.pvp-side { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.pvp-side-opp { order:0; }
+.pvp-side-me  { order:2; }
+.pvp-log-area { order:1; background:rgba(255,255,255,0.06); border-radius:10px; padding:8px 12px; text-align:center; }
+.pvp-log-text { font-size:0.75rem; color:var(--text); line-height:1.5; }
+.pvp-turn-badge { font-size:0.65rem; color:var(--muted); margin-top:4px; }
+.pvp-fighter-name { font-size:0.75rem; font-weight:700; color:var(--muted); }
+.pvp-my-name { color:var(--text); }
+.pvp-deck-pips { display:flex; gap:5px; align-items:center; }
+.pvp-pip { width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,0.2); transition:all 0.2s; }
+.pvp-pip.active { transform:scale(1.3); box-shadow:0 0 6px currentColor; }
+.pvp-pip.dead { background:#374151 !important; opacity:0.4; }
+.pvp-switch-hint { font-size:0.6rem; color:#fbbf24; font-weight:700; margin-left:4px; }
+.pvp-opp-ready { font-size:0.6rem; color:#4ade80; font-weight:700; margin-left:4px; }
+
+/* 배틀 카드 */
+.pvp-active-card { width:130px; height:175px; border-radius:12px; position:relative; overflow:hidden; flex-shrink:0; }
+.pvp-hp-wrap { width:130px; }
+.pvp-hp-bar { height:6px; background:rgba(255,255,255,0.12); border-radius:3px; overflow:hidden; }
+.pvp-hp-fill { height:100%; border-radius:3px; transition:width 0.3s; }
+.pvp-hp-text { font-size:0.6rem; color:var(--muted); text-align:right; margin-top:2px; }
+
+/* 액션 패널 */
+.pvp-action-panel { order:3; }
+.pvp-pick-row { display:flex; gap:8px; justify-content:center; }
+.pvp-pick-btn { flex:1; padding:11px 0; border-radius:12px; border:none; font-family:'Noto Sans KR',sans-serif; font-size:0.85rem; font-weight:800; cursor:pointer; transition:all 0.15s; }
+.pvp-btn-attack { background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; box-shadow:0 3px 0 #991b1b; }
+.pvp-btn-attack:active { transform:translateY(2px); box-shadow:0 1px 0 #991b1b; }
+.pvp-btn-defend { background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; box-shadow:0 3px 0 #1e40af; }
+.pvp-btn-defend:active { transform:translateY(2px); box-shadow:0 1px 0 #1e40af; }
+.pvp-btn-dodge  { background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; box-shadow:0 3px 0 #312e81; }
+.pvp-btn-dodge:active { transform:translateY(2px); box-shadow:0 1px 0 #312e81; }
+.pvp-pick-done { text-align:center; font-size:0.82rem; font-weight:700; color:#4ade80; padding:10px 0; }
+.pvp-wait-sub { font-size:0.7rem; color:var(--muted); font-weight:400; margin-top:4px; }
+
+/* 교체 패널 */
+.pvp-switch-panel { text-align:center; }
+.pvp-switch-title { font-size:0.8rem; font-weight:700; color:#fbbf24; margin-bottom:8px; }
+.pvp-switch-cards { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.pvp-switch-opt { width:80px; border-radius:10px; overflow:hidden; cursor:pointer; border:2px solid rgba(255,255,255,0.15); transition:all 0.15s; text-align:center; padding-bottom:4px; }
+.pvp-switch-opt:hover { transform:translateY(-2px); }
+.pvp-switch-opt img { width:100%; height:100px; object-fit:cover; display:block; }
+.pvp-switch-opt-name { font-size:0.6rem; font-weight:700; padding:2px 4px; }
+.pvp-switch-opt-hp { font-size:0.58rem; color:var(--muted); }
+
+/* 나가기 */
+.pvp-quit-btn { order:4; width:100%; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); background:transparent; color:var(--muted); font-size:0.75rem; cursor:pointer; transition:all 0.15s; margin-top:2px; }
+.pvp-quit-btn:hover { background:rgba(255,80,80,0.1); border-color:rgba(255,80,80,0.3); color:#f87171; }
+
+/* 결과 화면 */
+.pvp-result-badge { font-size:2.5rem; font-weight:900; padding:12px 32px; border-radius:16px; }
+.pvp-win  { color:#fbbf24; text-shadow:0 0 20px rgba(251,191,36,0.6); }
+.pvp-lose { color:#9ca3af; }
+.pvp-draw { color:#60a5fa; }
+.pvp-result-sub { font-size:0.85rem; color:var(--muted); }
+
+/* 모바일 대응 */
+@media (max-width: 480px) {
+  .pvp-battle-wrap { max-width:100%; }
+  .pvp-active-card { width:110px; height:148px; }
+  .pvp-hp-wrap { width:110px; }
+}

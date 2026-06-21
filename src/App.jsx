@@ -17,6 +17,7 @@ import RaidTab from './components/tabs/RaidTab.jsx';
 import MailboxTab from './components/tabs/MailboxTab.jsx';
 import RankingTab from './components/tabs/RankingTab.jsx';
 import BagTab from './components/tabs/BagTab.jsx';
+import PvPTab from './components/tabs/PvPTab.jsx';
 import TutorialOverlay from './components/TutorialOverlay.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
@@ -62,7 +63,7 @@ function migrateUserData(state) {
 }
 
 const COLLECTIBLE_CARD_COUNT = COLLECTIBLE_CARDS.length;
-const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'bag', 'raid', 'shop', 'board', 'mailbox', 'ranking'];
+const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'bag', 'raid', 'pvp', 'shop', 'board', 'mailbox', 'ranking'];
 
 
 export const BASE_STATE = {
@@ -494,7 +495,7 @@ export default function App() {
     return unsub;
   }, [user]);
 
-  const GUEST_BLOCKED = new Set(['raid', 'board', 'mailbox', 'dungeon']);
+  const GUEST_BLOCKED = new Set(['raid', 'board', 'mailbox', 'dungeon', 'pvp']);
 
   const handleTabChange = (newTab) => {
     if (isGuest && GUEST_BLOCKED.has(newTab)) {
@@ -561,6 +562,7 @@ export default function App() {
     mailbox: <MailboxTab gs={gs} setGs={setGs} user={user} />,
     ranking: <RankingTab />,
     bag:     <BagTab gs={gs} setGs={setGs} />,
+    pvp:     <PvPTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} />,
   };
 
   // ── 로딩 화면 ──
