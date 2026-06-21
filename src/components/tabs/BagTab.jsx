@@ -1,43 +1,46 @@
 import { useState, useRef } from 'react';
 import { CARDS } from '../../data/cards.js';
+import { calcDmgRange } from '../../utils/cardDraw.js';
 
 const GRADES = ['n', 'r', 'sr', 'ur', 'lg', 'raid'];
-const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID' };
-const GRADE_COLOR = { n: '#aaa', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700' };
-const GRADE_RANGE = { n:[1,10], r:[11,20], sr:[21,30], ur:[31,40], lg:[51,60], raid:[56,65] };
+const GRADE_LABEL = { n: 'N', r: 'R', sr: 'SR', ur: 'UR', lg: 'LEGEND', raid: 'RAID', awakened: 'AWAKENED' };
+const GRADE_COLOR = { n: '#aaa', r: '#4a9eff', sr: '#c084fc', ur: '#fbbf24', lg: '#ff6b6b', raid: '#ffd700', awakened: '#b347ff' };
 
-// 카드의 최대 데미지(upper bound) 계산 — 정렬 기준
+function getBestInstance(instances) {
+  if (!instances.length) return null;
+  return instances.reduce((best, cur) => {
+    if ((cur.enhanceLevel || 0) > (best.enhanceLevel || 0)) return cur;
+    if ((cur.condition || 1) > (best.condition || 1)) return cur;
+    return best;
+  });
+}
+
 function calcMaxDmg(card, ownedCards, growthMap) {
-  const [, mx] = GRADE_RANGE[card.grade] || [1, 10];
   const instances = ownedCards.filter(c => c.id === card.id);
-  const bestEnhance = instances.length ? Math.max(...instances.map(c => c.enhanceLevel || 0)) : 0;
-  const bestCond    = instances.length ? Math.max(...instances.map(c => c.condition || 1))    : 1;
-  const growth      = growthMap[card.id] || 0;
-  const mult        = 1 + bestEnhance * 0.1;
-  return Math.floor((mx + bestCond) * mult) + growth;
+  const best = getBestInstance(instances);
+  if (!best) return 0;
+  const growth = growthMap[best.uid] || 0;
+  const [, mx] = calcDmgRange(card.grade, best.condition || 1, best.enhanceLevel || 0, best.levelCount || 0, growth);
+  return mx;
 }
 
-// 화면에 표시할 데미지 범위 문자열
 function dmgRangeStr(card, ownedCards, growthMap) {
-  const [mn, mx] = GRADE_RANGE[card.grade] || [1, 10];
   const instances = ownedCards.filter(c => c.id === card.id);
-  const bestEnhance = instances.length ? Math.max(...instances.map(c => c.enhanceLevel || 0)) : 0;
-  const bestCond    = instances.length ? Math.max(...instances.map(c => c.condition || 1))    : 1;
-  const growth      = growthMap[card.id] || 0;
-  const mult        = 1 + bestEnhance * 0.1;
-  return `${Math.floor((mn + bestCond) * mult) + growth}~${Math.floor((mx + bestCond) * mult) + growth}`;
+  const best = getBestInstance(instances);
+  if (!best) return '0~0';
+  const growth = growthMap[best.uid] || 0;
+  const [mn, mx] = calcDmgRange(card.grade, best.condition || 1, best.enhanceLevel || 0, best.levelCount || 0, growth);
+  return `${mn}~${mx}`;
 }
 
-// 특정 인스턴스 기준 데미지 범위
 function instDmgRange(card, inst, growth) {
-  const [mn, mx] = GRADE_RANGE[card.grade] || [1, 10];
-  const mult = 1 + (inst.enhanceLevel || 0) * 0.1;
-  const g = growth || 0;
-  return `${Math.floor((mn + (inst.condition||1)) * mult) + g}~${Math.floor((mx + (inst.condition||1)) * mult) + g}`;
+  const [mn, mx] = calcDmgRange(card.grade, inst.condition || 1, inst.enhanceLevel || 0, inst.levelCount || 0, growth || 0);
+  return `${mn}~${mx}`;
 }
 
 export default function BagTab({ gs, setGs }) {
   const [selectedGrade, setSelectedGrade]     = useState(null);
+  const [showAwakened, setShowAwakened]       = useState(false);
   const [stoneConfirm, setStoneConfirm]       = useState(null); // { card, inst }
   const [stoneInstPick, setStoneInstPick]     = useState(null); // card def — 복수 장일 때 인스턴스 선택
   const [toast, setToast]                     = useState(null);
@@ -52,6 +55,8 @@ export default function BagTab({ gs, setGs }) {
     setToast(msg);
     toastTimer.current = setTimeout(() => setToast(null), 2500);
   };
+
+  const awakenedOwnedCards = CARDS.filter(c => c.grade === 'awakened' && ownedCards.some(oc => oc.id === c.id));
 
   const gradeCards = selectedGrade
     ? CARDS
@@ -219,7 +224,7 @@ export default function BagTab({ gs, setGs }) {
                       {growth > 0 && <div className="bag-stone-card-badge">성장+{growth}</div>}
                       <div className="bag-stone-card-footer">
                         <div className="bag-stone-card-name">{card.name}</div>
-                        {myCards.length > 1 && <div className="bag-stone-card-dup">×{myCards.length}</div>}
+                        {myCards.length > 1 ? <div className="bag-stone-card-dup">×{myCards.length}</div> : (myCards[0]?.levelCount > 0 ? <div className="bag-stone-card-dup" style={{ color: '#4ade80' }}>Lv.{myCards[0].levelCount}</div> : null)}
                       </div>
                       <div className="bag-stone-card-dmg">{dmgRangeStr(card, ownedCards, growthMap)}</div>
                       {canUse && <div className="bag-stone-card-use">+1</div>}
@@ -231,6 +236,28 @@ export default function BagTab({ gs, setGs }) {
           </div>
         )}
       </div>
+
+      {awakenedOwnedCards.length > 0 && (
+        <div className="bag-section">
+          <div className="bag-section-title" style={{ color: '#b347ff' }}>각성카드</div>
+          <div className="bag-stone-card-grid">
+            {awakenedOwnedCards.map(card => {
+              const inst   = ownedCards.find(c => c.id === card.id);
+              const growth = inst ? (growthMap[inst.uid] || 0) : 0;
+              return (
+                <div key={card.id} className={`bag-stone-card grade-awakened`}>
+                  <img src={`/${card.img}`} alt={card.name} loading="lazy" onError={e => { e.target.style.opacity='0.3'; }} />
+                  {growth > 0 && <div className="bag-stone-card-badge">성장+{growth}</div>}
+                  <div className="bag-stone-card-footer">
+                    <div className="bag-stone-card-name">{card.name}</div>
+                  </div>
+                  <div className="bag-stone-card-dmg">{dmgRangeStr(card, ownedCards, growthMap)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

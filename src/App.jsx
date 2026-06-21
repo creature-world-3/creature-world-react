@@ -13,7 +13,6 @@ import SynthTab from './components/tabs/SynthTab.jsx';
 import ShopTab from './components/tabs/ShopTab.jsx';
 import DungeonTab from './components/tabs/DungeonTab.jsx';
 import BoardTab from './components/tabs/BoardTab.jsx';
-import TradeTab from './components/tabs/TradeTab.jsx';
 import RaidTab from './components/tabs/RaidTab.jsx';
 import MailboxTab from './components/tabs/MailboxTab.jsx';
 import RankingTab from './components/tabs/RankingTab.jsx';
@@ -63,7 +62,7 @@ function migrateUserData(state) {
 }
 
 const COLLECTIBLE_CARD_COUNT = COLLECTIBLE_CARDS.length;
-const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'bag', 'raid', 'shop', 'board', 'trade', 'mailbox', 'ranking'];
+const TAB_ORDER = ['gacha', 'synth', 'dungeon', 'bag', 'raid', 'shop', 'board', 'mailbox', 'ranking'];
 
 
 export const BASE_STATE = {
@@ -83,6 +82,7 @@ export const BASE_STATE = {
   farmingAttempt: null,
   enhanceStones: {},
   lockedCardUids: [],
+  awakeningFragments: {},
 };
 
 function applyDailyReset(state) {
@@ -102,6 +102,18 @@ function applyDailyReset(state) {
 }
 
 const NOTICES = [
+  {
+    version: 'v2.0', date: '2026.06.21',
+    items: [
+      '카드 보유 규칙 변경 — 캐릭터+등급 조합당 1장 보유, 중복 뽑기 시 레벨 진행도 누적 (100장 = 레벨 1 / 레벨당 데미지 +2%)',
+      '각성 뽑기 시스템 추가 — 뽑기 탭 내 각성 뽑기 서브탭, 도토리 100장 소모, 0.01% 확률 각성카드 획득, 나머지는 캐릭터별 각성조각 10~50개 획득',
+      '각성조각 10,000개 모으면 해당 캐릭터 각성카드 교환 가능',
+      '공방 탭 개편 — 합성/교환 제거, 강화만 유지',
+      '컨디션 재설정 추가 — 강화 화면에서 뽑기권 250장으로 컨디션 무작위 재설정',
+      '거래소 탭 제거',
+      '기존 중복 카드 정리 보상 — 중복 카드 수만큼 뽑기권 우편 발송 완료',
+    ],
+  },
   {
     version: 'v1.5', date: '2026.06.03',
     items: [
@@ -478,7 +490,7 @@ export default function App() {
     return unsub;
   }, [user]);
 
-  const GUEST_BLOCKED = new Set(['raid', 'board', 'trade', 'mailbox', 'dungeon']);
+  const GUEST_BLOCKED = new Set(['raid', 'board', 'mailbox', 'dungeon']);
 
   const handleTabChange = (newTab) => {
     if (isGuest && GUEST_BLOCKED.has(newTab)) {
@@ -541,7 +553,6 @@ export default function App() {
     dungeon: <DungeonTab gs={gs} setGs={setGs} user={user} isGuest={isGuest} onSubTabChange={handleDungeonSubTabChange} />,
     shop:    <ShopTab {...tabProps} />,
     board:   <BoardTab gs={gs} user={user} />,
-    trade:   <TradeTab gs={gs} setGs={setGs} user={user} />,
     raid:    <RaidTab gs={gs} setGs={setGs} user={user} />,
     mailbox: <MailboxTab gs={gs} setGs={setGs} user={user} />,
     ranking: <RankingTab />,

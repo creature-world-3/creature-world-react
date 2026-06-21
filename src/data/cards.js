@@ -1,10 +1,11 @@
 export const GRADES = {
-  n:    { label: 'N',      className: 'grade-n',    dropRate: 0.55 },
-  r:    { label: 'R',      className: 'grade-r',    dropRate: 0.30 },
-  sr:   { label: 'SR',     className: 'grade-sr',   dropRate: 0.10 },
-  ur:   { label: 'UR',     className: 'grade-ur',   dropRate: 0.04 },
-  lg:   { label: 'LEGEND', className: 'grade-lg',   dropRate: 0.01 },
-  raid: { label: 'RAID',   className: 'grade-raid', dropRate: 0    },
+  n:       { label: 'N',       className: 'grade-n',       dropRate: 0.55 },
+  r:       { label: 'R',       className: 'grade-r',       dropRate: 0.30 },
+  sr:      { label: 'SR',      className: 'grade-sr',      dropRate: 0.10 },
+  ur:      { label: 'UR',      className: 'grade-ur',      dropRate: 0.04 },
+  lg:      { label: 'LEGEND',  className: 'grade-lg',      dropRate: 0.01 },
+  raid:    { label: 'RAID',    className: 'grade-raid',    dropRate: 0    },
+  awakened:{ label: 'AWAKENED',className: 'grade-awakened',dropRate: 0    },
 };
 
 export const CHARACTERS = [
@@ -62,11 +63,37 @@ export const CARDS = [
   { id: 'misti_sr2',    name: '미스티',  grade: 'sr', img: '서부유령.png',     slogan: '"유령 마을에 오신 걸 환영해요..."', special: 'western' },
   { id: 'daitron_sr2',  name: '다이트론', grade: 'sr', img: '서부악마기사.png', slogan: '"서부엔 법이 없다."',       special: 'western' },
 
+  // ── 월드컵 시리즈 UR (일반 뽑기/합성 제외, 상점 전용) ──
+  { id: 'worldcup_rumi',      name: '월드컵 루미',    grade: 'ur', img: 'worldcup/월드컵여우.png',       special: 'worldcup' },
+  { id: 'worldcup_totori',    name: '월드컵 토토리',  grade: 'ur', img: 'worldcup/월드컵햄스터.png',     special: 'worldcup' },
+  { id: 'worldcup_pinchoco',  name: '월드컵 핀초코',  grade: 'ur', img: 'worldcup/월드컵펭귄.png',       special: 'worldcup' },
+  { id: 'worldcup_lukanyong', name: '월드컵 루카뇽',  grade: 'ur', img: 'worldcup/월드컵공룡.png',       special: 'worldcup' },
+  { id: 'worldcup_misti',     name: '월드컵 미스티',  grade: 'ur', img: 'worldcup/월드컵귀신.png',       special: 'worldcup' },
+  { id: 'worldcup_daitron',   name: '월드컵 다이트론', grade: 'ur', img: 'worldcup/월드컵악마기사.png',  special: 'worldcup' },
+
   // ── RAID 한정 카드 (일반 뽑기/합성 제외) ──
   { id: 'raid_cursed_doll', name: '저주받은 인형의 왕', grade: 'raid', img: 'boss_cursed_doll.png', slogan: '"공허의 심연에서 깨어났다"', raid: true },
+
+  // ── 각성 카드 (각성 뽑기 전용, 레벨업 시스템 제외) ──
+  { id: 'awakened_rumi',    name: '각성 루미',    grade: 'awakened', img: 'awakened/awakened_lumi.png',     awakened: true },
+  { id: 'awakened_toto',    name: '각성 토토리',  grade: 'awakened', img: 'awakened/awakened_totori.png',   awakened: true },
+  { id: 'awakened_pin',     name: '각성 핀초코',  grade: 'awakened', img: 'awakened/awakened_pincho.png',   awakened: true },
+  { id: 'awakened_luka',    name: '각성 루카뇽',  grade: 'awakened', img: 'awakened/awakened_lukanyong.png',awakened: true },
+  { id: 'awakened_misti',   name: '각성 미스티',  grade: 'awakened', img: 'awakened/awakened_misty.png',    awakened: true },
+  { id: 'awakened_daitron', name: '각성 다이트론',grade: 'awakened', img: 'awakened/awakened_daitron.png',  awakened: true },
 ];
 
 export const CARD_MAP = Object.fromEntries(CARDS.map(c => [c.id, c]));
+
+// character id → awakened card id
+export const AWAKENED_CARD_MAP = {
+  rumi:    'awakened_rumi',
+  toto:    'awakened_toto',
+  pin:     'awakened_pin',
+  luka:    'awakened_luka',
+  misti:   'awakened_misti',
+  daitron: 'awakened_daitron',
+};
 
 // 수집 카운트 기준: 전체 카드
 export const COLLECTIBLE_CARDS = CARDS;
