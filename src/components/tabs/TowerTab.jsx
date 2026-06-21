@@ -109,9 +109,9 @@ function getMonster(floor) {
   else if (floor <= 24)  { name = '구름 고래';     img = '/tower/21-24.png'; }
   else if (floor === 25) { name = '다크 다이트론'; img = '/tower/25보스.png'; }
   else                   { name = '다크 미스티';   img = '/tower/레벨 ???.png'; }
-  const hp  = Math.floor((30 + floor * 15) * mult  * 0.65);
-  const atk = Math.floor((12 + floor * 4)  * atkMult * 0.65);
-  const def = Math.floor((floor * 2)        * mult  * 0.65);
+  const hp  = Math.floor((30 + floor * 15) * mult  * 0.80);
+  const atk = Math.floor((12 + floor * 4)  * atkMult * 0.80);
+  const def = Math.floor((floor * 2)        * mult  * 0.80);
   return { name, img, isBoss, hp, maxHp: hp, atk, def };
 }
 
